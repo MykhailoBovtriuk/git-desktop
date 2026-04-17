@@ -1,0 +1,39 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.DS_Store
+*.log
+
+# AI tools
+.claude/
+.superpowers/
+.cursor/
+.aider*
+.continue/
+docs/
+tasks/
+
+# IDE — VSCode / Cursor
+.vscode/
+*.code-workspace
+
+# IDE — JetBrains (WebStorm, IDEA, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE — Vim / Neovim
+*.swp
+*.swo
+.vim/
+
+# IDE — Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
