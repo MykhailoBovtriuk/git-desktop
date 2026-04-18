@@ -1,0 +1,13 @@
+appId: com.gitdesktop.app
+productName: Git Desktop
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+mac:
+  target: dmg
+win:
+  target: nsis
+linux:
+  target: AppImage
