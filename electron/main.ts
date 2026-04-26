@@ -1,9 +1,12 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
+import { registerIpcHandlers } from './ipc-handlers';
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
+  registerIpcHandlers();
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
