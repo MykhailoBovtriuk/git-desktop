@@ -1,0 +1,1 @@
+{ "changes": "Зміни", "staged": "Проіндексовано", "unstaged": "Не проіндексовано", "stageAll": "Проіндексувати все", "unstageAll": "Зняти індексування", "commitMessage": "Повідомлення коміту", "commitButton": "Зробити коміт", "discardChanges": "Відкинути зміни", "noChanges": "Змін немає", "charCounter": "{{count}}/72" }
