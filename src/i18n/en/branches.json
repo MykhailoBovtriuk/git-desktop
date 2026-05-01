@@ -1,0 +1,1 @@
+{ "searchPlaceholder": "Search branches...", "local": "Local", "remote": "Remote", "pull": "Pull", "checkout": "Checkout", "mergeIntoCurrent": "Merge into current", "rebaseOntoCurrent": "Rebase onto current", "deleteBranch": "Delete branch" }
