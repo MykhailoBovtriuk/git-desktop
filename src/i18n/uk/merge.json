@@ -1,0 +1,1 @@
+{ "conflicts": "{{count}} конфліктів", "conflictingFiles": "Конфліктні файли", "abortMerge": "Перервати злиття", "resolveConflicts": "Вирішити конфлікти", "markResolvedNext": "Відмітити як вирішено і далі", "current": "Поточна", "incoming": "Вхідна", "result": "Результат", "resolved": "{{resolved}} / {{total}} вирішено", "merging": "Злиття {{source}} в {{target}}" }

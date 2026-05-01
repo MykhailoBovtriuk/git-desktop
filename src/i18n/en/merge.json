@@ -1,0 +1,1 @@
+{ "conflicts": "{{count}} conflicts", "conflictingFiles": "Conflicting files", "abortMerge": "Abort Merge", "resolveConflicts": "Resolve Conflicts", "markResolvedNext": "Mark Resolved & Next", "current": "Current", "incoming": "Incoming", "result": "Result", "resolved": "{{resolved}} / {{total}} resolved", "merging": "Merging {{source}} into {{target}}" }

@@ -1,0 +1,1 @@
+{ "fetch": "Fetch", "pull": "Pull", "push": "Push", "ahead": "{{count}} ahead", "behind": "{{count}} behind" }
