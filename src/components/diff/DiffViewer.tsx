@@ -58,9 +58,8 @@ export function DiffViewer() {
 
   if (diffs.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-subtext text-sm gap-1">
-        <span>No diff to display for</span>
-        <span className="font-mono text-text">{selectedFile}</span>
+      <div className="h-full flex items-center justify-center text-subtext text-sm">
+        No diff to display
       </div>
     );
   }
