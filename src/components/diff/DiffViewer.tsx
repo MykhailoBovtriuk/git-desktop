@@ -5,34 +5,44 @@ import { gitApi } from '../../api/git-api';
 import { parseDiff } from './parse-diff';
 import type { FileDiff } from '../../types';
 
+
 export function DiffViewer() {
-  const { selectedFile, selectedCommit } = useUiStore();
-  const { status } = useRepoStore();
+  const { selectedFile, selectedCommit, activeView } = useUiStore();
+  const isStaged = useRepoStore(
+    s => !!selectedFile && s.status.staged.some(f => f.path === selectedFile),
+  );
+  const useCommitContext =
+    (activeView === 'history' || activeView === 'graph') && !!selectedCommit;
   const [diffs, setDiffs] = useState<FileDiff[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedFile) { setDiffs([]); return; }
 
+    let cancelled = false;
     setLoading(true);
-    const load = async () => {
+    (async () => {
       try {
         let raw = '';
-        if (selectedCommit) {
+        if (useCommitContext && selectedCommit) {
           raw = await gitApi.getFileDiff(selectedCommit, selectedFile);
         } else {
-          const isStaged = status.staged.some(f => f.path === selectedFile);
           raw = isStaged
             ? await gitApi.getStagedDiff(selectedFile)
             : await gitApi.getWorkingDiff(selectedFile);
         }
-        setDiffs(parseDiff(raw));
+        if (!cancelled) setDiffs(parseDiff(raw));
+      } catch (err) {
+        if (!cancelled) {
+          setDiffs([]);
+          console.error('diff load failed:', err);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    load();
-  }, [selectedFile, selectedCommit, status]);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedFile, selectedCommit, isStaged, useCommitContext]);
 
   if (!selectedFile) {
     return (
@@ -44,6 +54,15 @@ export function DiffViewer() {
 
   if (loading) {
     return <div className="h-full flex items-center justify-center text-subtext text-sm">Loading...</div>;
+  }
+
+  if (diffs.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-subtext text-sm gap-1">
+        <span>No diff to display for</span>
+        <span className="font-mono text-text">{selectedFile}</span>
+      </div>
+    );
   }
 
   return (

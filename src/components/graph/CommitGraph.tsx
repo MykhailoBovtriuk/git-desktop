@@ -2,19 +2,11 @@ import { useMemo } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
+import { relativeTime } from '../../lib/relative-time';
 
 const ROW_H = 28;
 const LANE_W = 20;
 const GRAPH_PAD = 10;
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 export function CommitGraph() {
   const { commits } = useRepoStore();
@@ -84,7 +76,7 @@ export function CommitGraph() {
               <div className="flex items-center gap-2 min-w-0 w-full pl-2">
                 <span className="text-subtext font-mono text-xs shrink-0">{commit.abbreviatedHash}</span>
                 <span className="text-text text-xs truncate flex-1">
-                  {commit.message.slice(0, 60)}
+                  {commit.message}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   {commit.refs.slice(0, 3).map(ref => (

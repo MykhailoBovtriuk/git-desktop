@@ -19,7 +19,7 @@ export interface Branch {
 
 export interface FileStatus {
   path: string;
-  status: 'A' | 'M' | 'D' | 'R' | 'C' | '?';
+  status: 'A' | 'M' | 'D' | 'R' | 'C' | 'U' | '?';
   staged: boolean;
 }
 
@@ -60,26 +60,6 @@ export interface FileDiff {
   hunks: DiffHunk[];
   additions: number;
   deletions: number;
-}
-
-// --- Merge editor types ---
-
-export interface ConflictRegion {
-  id: string;
-  currentLines: string[];
-  incomingLines: string[];
-  resolved: boolean;
-  resolution: 'current' | 'incoming' | 'manual' | null;
-}
-
-export interface MergeFileState {
-  path: string;
-  baseContent: string;
-  currentContent: string;
-  incomingContent: string;
-  resultContent: string;
-  conflicts: ConflictRegion[];
-  resolved: boolean;
 }
 
 // --- IPC types ---

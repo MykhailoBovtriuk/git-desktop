@@ -12,7 +12,7 @@ interface FileListProps {
 
 const STATUS_COLOR: Record<string, string> = {
   A: 'text-green', M: 'text-yellow', D: 'text-red',
-  R: 'text-blue', C: 'text-peach', '?': 'text-subtext',
+  R: 'text-blue', C: 'text-peach', U: 'text-red', '?': 'text-subtext',
 };
 
 export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelect, selectedFile }: FileListProps) {

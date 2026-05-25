@@ -21,14 +21,15 @@ const COLORS = [
 ];
 
 export function computeLayout(commits: Commit[]): LayoutCommit[] {
-  // lanes[i] = hash of commit expected next in lane i (null = free)
+  const rowByHash = new Map<string, number>();
+  commits.forEach((c, i) => rowByHash.set(c.hash, i));
+
   const lanes: (string | null)[] = [];
   const result: LayoutCommit[] = [];
 
   const findLane = (hash: string): number => {
     const idx = lanes.indexOf(hash);
     if (idx !== -1) return idx;
-    // Find first free lane
     const free = lanes.indexOf(null);
     if (free !== -1) return free;
     return lanes.length;
@@ -50,25 +51,22 @@ export function computeLayout(commits: Commit[]): LayoutCommit[] {
     const commit = commits[row];
     const lane = findLane(commit.hash);
 
-    // Ensure lanes array is large enough
     while (lanes.length <= lane) lanes.push(null);
-    lanes[lane] = null; // this commit is now processed
+    lanes[lane] = null;
 
     const color = COLORS[lane % COLORS.length];
     const edges: Edge[] = [];
 
     for (let p = 0; p < commit.parents.length; p++) {
       const parentHash = commit.parents[p];
-      const parentRow = commits.findIndex(c => c.hash === parentHash);
+      const parentRow = rowByHash.get(parentHash) ?? -1;
       if (parentRow === -1) continue;
 
       let targetLane: number;
       if (p === 0) {
-        // First parent continues in the same lane
         targetLane = lane;
         lanes[lane] = parentHash;
       } else {
-        // Additional parents get their own lane
         targetLane = allocateLane(parentHash);
       }
 

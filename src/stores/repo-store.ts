@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { gitApi } from '../api/git-api';
 import type { Commit, Branch, GitStatus, AheadBehind, MergeState } from '../types';
 
@@ -32,7 +33,9 @@ interface RepoState {
   abortMerge: () => Promise<void>;
 }
 
-export const useRepoStore = create<RepoState>()((set, get) => ({
+export const useRepoStore = create<RepoState>()(
+  persist(
+    (set, get) => ({
   repoPath: null,
   recentRepos: [],
   commits: [],
@@ -70,13 +73,12 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
   },
 
   loadStatus: async () => {
-    const status = await gitApi.getStatus();
-    set({ status });
+    const result = await gitApi.getStatus();
+    set({ status: { staged: result.staged, unstaged: result.unstaged }, aheadBehind: { ahead: result.ahead, behind: result.behind } });
   },
 
   loadAheadBehind: async () => {
-    const aheadBehind = await gitApi.getAheadBehind();
-    set({ aheadBehind });
+    await get().loadStatus();
   },
 
   refresh: async () => {
@@ -84,7 +86,6 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
       get().loadLog(),
       get().loadBranches(),
       get().loadStatus(),
-      get().loadAheadBehind(),
     ]);
   },
 
@@ -160,4 +161,11 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
     set({ mergeState: null });
     await get().refresh();
   },
-}));
+    }),
+    {
+      name: 'git-desktop-repo',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
+    },
+  ),
+);

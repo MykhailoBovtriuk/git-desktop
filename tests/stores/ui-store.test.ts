@@ -5,7 +5,6 @@ const INITIAL: Parameters<typeof useUiStore.setState>[0] = {
   activeView: 'changes',
   selectedCommit: null,
   selectedFile: null,
-  sidebarSections: { changes: true, history: false },
   activeMergeFile: null,
   toasts: [],
 };
@@ -16,21 +15,12 @@ describe('ui-store', () => {
   it('has correct initial state', () => {
     const s = useUiStore.getState();
     expect(s.activeView).toBe('changes');
-    expect(s.sidebarSections.changes).toBe(true);
-    expect(s.sidebarSections.history).toBe(false);
     expect(s.toasts).toHaveLength(0);
   });
 
   it('setActiveView changes activeView', () => {
     useUiStore.getState().setActiveView('history');
     expect(useUiStore.getState().activeView).toBe('history');
-  });
-
-  it('toggleSection flips boolean', () => {
-    useUiStore.getState().toggleSection('history');
-    expect(useUiStore.getState().sidebarSections.history).toBe(true);
-    useUiStore.getState().toggleSection('history');
-    expect(useUiStore.getState().sidebarSections.history).toBe(false);
   });
 
   it('addToast adds to toasts with generated id', () => {

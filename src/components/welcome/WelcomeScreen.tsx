@@ -9,7 +9,7 @@ export function WelcomeScreen() {
       <p className="text-subtext text-sm">Open a repository to get started</p>
       <button
         onClick={openDialog}
-        className="bg-blue text-base px-5 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity mt-2"
+        className="bg-blue text-mantle px-5 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity mt-2"
       >
         Open Repository
       </button>

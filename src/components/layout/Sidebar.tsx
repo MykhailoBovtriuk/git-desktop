@@ -5,34 +5,33 @@ import { ChangesSection } from '../staging/ChangesSection';
 
 export function Sidebar() {
   const { status } = useRepoStore();
-  const { sidebarSections, toggleSection, setActiveView, activeView } = useUiStore();
+  const { activeView, setActiveView } = useUiStore();
 
   const totalChanges = status.staged.length + status.unstaged.length;
-
-  const handleHistoryToggle = () => {
-    toggleSection('history');
-    if (!sidebarSections.history) {
-      setActiveView('history');
-    } else if (activeView === 'history') {
-      setActiveView('changes');
-    }
-  };
 
   return (
     <div className="w-56 bg-mantle border-r border-surface0 flex flex-col overflow-y-auto shrink-0">
       <Accordion
         title="Changes"
         badge={totalChanges}
-        open={sidebarSections.changes}
-        onToggle={() => toggleSection('changes')}
+        open={activeView === 'changes'}
+        onToggle={() => setActiveView('changes')}
       >
         <ChangesSection />
       </Accordion>
 
       <Accordion
         title="History"
-        open={sidebarSections.history}
-        onToggle={handleHistoryToggle}
+        open={activeView === 'history'}
+        onToggle={() => setActiveView('history')}
+      >
+        <div />
+      </Accordion>
+
+      <Accordion
+        title="Graph"
+        open={activeView === 'graph'}
+        onToggle={() => setActiveView('graph')}
       >
         <div />
       </Accordion>
