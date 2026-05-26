@@ -18,6 +18,6 @@
       </g>
     </g>
 
-    <text x="0" y="0" dy="0.25em" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FEAF9" text-anchor="middle" letter-spacing="-1">git</text>
+    <text x="0" y="0" dominant-baseline="central" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FEAF9" letter-spacing="-1">git</text>
   </g>
 </svg>

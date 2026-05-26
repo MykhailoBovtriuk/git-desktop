@@ -2,9 +2,6 @@
   "name": "git-desktop",
   "version": "1.0.0",
   "main": "dist-electron/electron/main.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "dev": "vite",
     "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
@@ -24,7 +21,7 @@
     "url": "https://github.com/MykhailoBovtriuk/git-desktop/issues"
   },
   "homepage": "https://github.com/MykhailoBovtriuk/git-desktop#readme",
-  "description": "",
+  "description": "A cross-platform Git desktop client with visual commit graph and conflict resolution",
   "dependencies": {
     "d3": "^7.9.0",
     "i18next": "^26.0.5",

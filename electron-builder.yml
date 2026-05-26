@@ -1,15 +1,21 @@
 appId: com.gitdesktop.app
 productName: Git Desktop
+artifactName: "Git Desktop-${version}-${arch}.${ext}"
 directories:
   output: release
+  buildResources: build
 files:
   - dist/**/*
+  - "!dist/*.dmg"
+  - "!dist/*.zip"
+  - "!dist/*.blockmap"
+  - "!dist/*.yml"
   - dist-electron/**/*
 mac:
   target: dmg
   icon: build/icon.icns
 win:
-  target: nsis
+  target: zip
   icon: build/icon.png
 linux:
   target: AppImage
