@@ -1,15 +1,7 @@
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { relativeTime } from '../../lib/relative-time';
 import type { Commit } from '../../types';
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 interface CommitListProps {
   filter: string;
@@ -38,7 +30,7 @@ export function CommitList({ filter }: CommitListProps) {
               isSelected ? 'bg-surface1 border-blue' : 'border-transparent hover:bg-surface0'
             }`}
           >
-            <p className="text-text text-xs truncate">{commit.message.slice(0, 60)}</p>
+            <p className="text-text text-xs truncate">{commit.message}</p>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-subtext text-xs">{commit.author}</span>
               <span className="text-subtext text-xs">·</span>

@@ -44,7 +44,7 @@ export function CommitForm() {
       <button
         onClick={handleCommit}
         disabled={!canCommit}
-        className="w-full bg-blue text-base rounded py-1.5 text-xs font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
+        className="w-full bg-blue text-mantle rounded py-1.5 text-xs font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
       >
         {loading ? '...' : 'Commit'}
       </button>

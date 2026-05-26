@@ -1,5 +1,7 @@
 import type { Commit, Branch, GitStatus, AheadBehind } from '../types';
 
+type StatusResult = GitStatus & { ahead: number; behind: number };
+
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = await window.electronAPI.invoke(channel, ...args);
   if (result && typeof result === 'object' && 'error' in result) {
@@ -13,7 +15,7 @@ export const gitApi = {
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
-  getStatus: () => invoke<GitStatus>('git:get-status'),
+  getStatus: () => invoke<StatusResult>('git:get-status'),
   stageFiles: (paths: string[]) => invoke<null>('git:stage-files', paths),
   unstageFiles: (paths: string[]) => invoke<null>('git:unstage-files', paths),
   discardChanges: (paths: string[]) => invoke<null>('git:discard-changes', paths),
@@ -34,4 +36,8 @@ export const gitApi = {
   abortMerge: () => invoke<null>('git:abort-merge'),
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
+  readFile: (p: string) => invoke<string>('git:read-file', p),
+  writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
+  getConflictSides: (p: string) =>
+    invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
 };

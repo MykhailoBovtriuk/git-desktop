@@ -46,7 +46,7 @@ export function MergeConflictModal() {
           </button>
           <button
             onClick={handleResolve}
-            className="px-3 py-1.5 text-sm bg-blue text-base rounded hover:opacity-90 transition-opacity"
+            className="px-3 py-1.5 text-sm bg-blue text-mantle rounded hover:opacity-90 transition-opacity"
           >
             Resolve Conflicts
           </button>

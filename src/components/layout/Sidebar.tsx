@@ -5,37 +5,59 @@ import { ChangesSection } from '../staging/ChangesSection';
 
 export function Sidebar() {
   const { status } = useRepoStore();
-  const { sidebarSections, toggleSection, setActiveView, activeView } = useUiStore();
+  const { activeView, setActiveView } = useUiStore();
 
   const totalChanges = status.staged.length + status.unstaged.length;
 
-  const handleHistoryToggle = () => {
-    toggleSection('history');
-    if (!sidebarSections.history) {
-      setActiveView('history');
-    } else if (activeView === 'history') {
-      setActiveView('changes');
-    }
-  };
-
   return (
-    <div className="w-56 bg-mantle border-r border-surface0 flex flex-col overflow-y-auto shrink-0">
+    <div className="w-56 bg-mantle border-r border-surface0 flex flex-col">
+
+      {/* Top block — Changes accordion with triangle */}
       <Accordion
         title="Changes"
         badge={totalChanges}
-        open={sidebarSections.changes}
-        onToggle={() => toggleSection('changes')}
+        open={activeView === 'changes'}
+        onToggle={() => setActiveView('changes')}
       >
         <ChangesSection />
       </Accordion>
 
-      <Accordion
-        title="History"
-        open={sidebarSections.history}
-        onToggle={handleHistoryToggle}
-      >
-        <div />
-      </Accordion>
+      {/* Spacer pushes bottom block to the bottom */}
+      <div className="flex-1" />
+
+      {/* Bottom block — History + Graph nav buttons, no triangle */}
+      <div className="border-t-2 border-surface1 flex flex-col">
+        <button
+          onClick={() => setActiveView('history')}
+          className={`
+            flex items-center w-full px-3 py-2 text-left
+            border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide
+            ${activeView === 'history'
+              ? 'bg-surface0 border-blue text-text'
+              : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'
+            }
+          `}
+        >
+          History
+        </button>
+
+        <div className="border-t border-surface0" />
+
+        <button
+          onClick={() => setActiveView('graph')}
+          className={`
+            flex items-center w-full px-3 py-2 text-left
+            border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide
+            ${activeView === 'graph'
+              ? 'bg-surface0 border-blue text-text'
+              : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'
+            }
+          `}
+        >
+          Graph
+        </button>
+      </div>
+
     </div>
   );
 }

@@ -43,7 +43,7 @@ export function CredentialModal({ remoteUrl, onCancel, onSubmit }: CredentialMod
             <button
               type="submit"
               disabled={!username || !password}
-              className="px-3 py-1.5 text-sm bg-blue text-base rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
+              className="px-3 py-1.5 text-sm bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
               Authenticate
             </button>

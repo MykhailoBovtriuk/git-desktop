@@ -99,4 +99,13 @@ export function registerIpcHandlers() {
 
   ipcMain.handle('git:get-repo-path', () =>
     ({ data: gitService.getRepoPath() }));
+
+  ipcMain.handle('git:read-file', (_e, p: string) =>
+    wrap(() => gitService.readFile(p)));
+
+  ipcMain.handle('git:write-file', (_e, p: string, c: string) =>
+    wrap(() => gitService.writeFile(p, c).then(() => null)));
+
+  ipcMain.handle('git:get-conflict-sides', (_e, p: string) =>
+    wrap(() => gitService.getConflictSides(p)));
 }

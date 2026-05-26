@@ -1,4 +1,6 @@
 import simpleGit, { SimpleGit } from 'simple-git';
+import fs from 'fs/promises';
+import path from 'path';
 import type { Commit, Branch, GitStatus, FileStatus, AheadBehind } from '../src/types';
 
 export class GitService {
@@ -62,14 +64,20 @@ export class GitService {
     return branches;
   }
 
-  async getStatus(): Promise<GitStatus> {
+  async getStatus(): Promise<GitStatus & { ahead: number; behind: number }> {
     const git = this.ensureRepo();
     const status = await git.status();
 
     const staged: FileStatus[] = [];
     const unstaged: FileStatus[] = [];
+    const conflicted = new Set(status.conflicted);
 
     for (const file of status.files) {
+      if (conflicted.has(file.path)) {
+        unstaged.push({ path: file.path, status: 'U', staged: false });
+        continue;
+      }
+
       const stagedCode = file.index;
       const unstagedCode = file.working_dir;
 
@@ -86,12 +94,12 @@ export class GitService {
       }
     }
 
-    return { staged, unstaged };
+    return { staged, unstaged, ahead: status.ahead, behind: status.behind };
   }
 
   private mapStatus(code: string): FileStatus['status'] {
     const map: Record<string, FileStatus['status']> = {
-      A: 'A', M: 'M', D: 'D', R: 'R', C: 'C', '?': '?',
+      A: 'A', M: 'M', D: 'D', R: 'R', C: 'C', U: 'U', '?': '?',
     };
     return map[code] ?? 'M';
   }
@@ -119,7 +127,10 @@ export class GitService {
 
   async pull(): Promise<string> {
     const result = await this.ensureRepo().pull();
-    return `${result.summary.changes} changes, ${result.summary.insertions} insertions, ${result.summary.deletions} deletions`;
+    const s = result.summary ?? { changes: 0, insertions: 0, deletions: 0 };
+    const ch = s.changes ?? 0, ins = s.insertions ?? 0, del = s.deletions ?? 0;
+    if (ch === 0 && ins === 0 && del === 0) return 'Already up to date';
+    return `${ch} changes, ${ins} insertions, ${del} deletions`;
   }
 
   async push(): Promise<void> {
@@ -150,8 +161,20 @@ export class GitService {
     await this.ensureRepo().deleteLocalBranch(branch, true);
   }
 
+  private async hasParent(hash: string): Promise<boolean> {
+    try {
+      await this.ensureRepo().raw(['rev-parse', '--verify', `${hash}^`]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async getCommitDiff(hash: string): Promise<{ path: string; status: string }[]> {
-    const diff = await this.ensureRepo().diffSummary([`${hash}^`, hash]);
+    const range = (await this.hasParent(hash))
+      ? [`${hash}^`, hash]
+      : ['4b825dc642cb6eb9a060e54bf8d69288fbee4904', hash];
+    const diff = await this.ensureRepo().diffSummary(range);
     return diff.files.map((f) => ({
       path: f.file,
       status: (f as any).status || 'M',
@@ -159,11 +182,56 @@ export class GitService {
   }
 
   async getFileDiff(hash: string, filePath: string): Promise<string> {
-    return this.ensureRepo().diff([`${hash}^`, hash, '--', filePath]);
+    const range = (await this.hasParent(hash))
+      ? [`${hash}^`, hash]
+      : ['4b825dc642cb6eb9a060e54bf8d69288fbee4904', hash];
+    return this.ensureRepo().diff([...range, '--', filePath]);
   }
 
   async getWorkingDiff(filePath: string): Promise<string> {
-    return this.ensureRepo().diff(['--', filePath]);
+    const git = this.ensureRepo();
+    const status = await git.status();
+    if (status.not_added.includes(filePath)) {
+      return this.synthesizeUntrackedDiff(filePath);
+    }
+    return git.diff(['--', filePath]);
+  }
+
+  private async synthesizeUntrackedDiff(filePath: string): Promise<string> {
+    try {
+      const content = await this.readFile(filePath);
+      if (content.includes('\0')) {
+        return [
+          `diff --git a/${filePath} b/${filePath}`,
+          `new file mode 100644`,
+          `Binary files /dev/null and b/${filePath} differ`,
+        ].join('\n');
+      }
+      const hasTrailingNewline = content.endsWith('\n');
+      const all = content.split('\n');
+      const lines = hasTrailingNewline ? all.slice(0, -1) : all;
+      const lineCount = lines.length;
+      if (lineCount === 0) {
+        return [
+          `diff --git a/${filePath} b/${filePath}`,
+          `new file mode 100644`,
+          `--- /dev/null`,
+          `+++ b/${filePath}`,
+        ].join('\n');
+      }
+      const header = [
+        `diff --git a/${filePath} b/${filePath}`,
+        `new file mode 100644`,
+        `index 0000000..0000000`,
+        `--- /dev/null`,
+        `+++ b/${filePath}`,
+        `@@ -0,0 +1,${lineCount} @@`,
+      ].join('\n');
+      const body = lines.map(l => `+${l}`).join('\n');
+      return `${header}\n${body}`;
+    } catch {
+      return '';
+    }
   }
 
   async getStagedDiff(filePath: string): Promise<string> {
@@ -194,6 +262,28 @@ export class GitService {
 
   async stashPop(): Promise<void> {
     await this.ensureRepo().stash(['pop']);
+  }
+
+  async readFile(filePath: string): Promise<string> {
+    if (!this.repoPath) throw new Error('No repository opened');
+    const abs = path.join(this.repoPath, filePath);
+    return fs.readFile(abs, 'utf-8');
+  }
+
+  async writeFile(filePath: string, content: string): Promise<void> {
+    if (!this.repoPath) throw new Error('No repository opened');
+    const abs = path.join(this.repoPath, filePath);
+    await fs.writeFile(abs, content, 'utf-8');
+  }
+
+  async getConflictSides(filePath: string): Promise<{ ours: string; theirs: string; base: string }> {
+    const git = this.ensureRepo();
+    const [ours, theirs, base] = await Promise.all([
+      git.show([`:2:${filePath}`]).catch(() => ''),
+      git.show([`:3:${filePath}`]).catch(() => ''),
+      git.show([`:1:${filePath}`]).catch(() => ''),
+    ]);
+    return { ours, theirs, base };
   }
 
   getRepoPath(): string | null {

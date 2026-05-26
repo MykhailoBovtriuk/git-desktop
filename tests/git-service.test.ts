@@ -110,4 +110,40 @@ describe('GitService', () => {
     const diff = await git.getWorkingDiff('file.txt');
     expect(diff).toContain('+world');
   });
+
+  it('getCommitDiff works on the initial commit (no parent)', async () => {
+    await git.openRepo(tmpDir);
+    const log = await git.getLog(10, 0);
+    const initialHash = log[log.length - 1].hash;
+    const files = await git.getCommitDiff(initialHash);
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.some((f) => f.path === 'file.txt')).toBe(true);
+  });
+
+  it('getFileDiff works on the initial commit (no parent)', async () => {
+    await git.openRepo(tmpDir);
+    const log = await git.getLog(10, 0);
+    const initialHash = log[log.length - 1].hash;
+    const diff = await git.getFileDiff(initialHash, 'file.txt');
+    expect(diff).toContain('+hello');
+  });
+
+  it('getWorkingDiff synthesizes a diff for an untracked file', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'newfile.txt'), 'line1\nline2\n');
+
+    const diff = await git.getWorkingDiff('newfile.txt');
+    expect(diff).toContain('diff --git a/newfile.txt b/newfile.txt');
+    expect(diff).toContain('new file mode 100644');
+    expect(diff).toContain('--- /dev/null');
+    expect(diff).toContain('+++ b/newfile.txt');
+    expect(diff).toContain('+line1');
+    expect(diff).toContain('+line2');
+  });
+
+  it('getWorkingDiff returns empty diff for a clean tracked file', async () => {
+    await git.openRepo(tmpDir);
+    const diff = await git.getWorkingDiff('file.txt');
+    expect(diff).toBe('');
+  });
 });
