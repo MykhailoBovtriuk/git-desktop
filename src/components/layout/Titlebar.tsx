@@ -28,7 +28,12 @@ export function Titlebar() {
     >
       {/* Space for macOS traffic lights (hiddenInset = ~80px) */}
       <div className="w-20 shrink-0" />
-      <span className="text-text font-semibold text-sm">Git Desktop</span>
+      <div className="flex items-center gap-2">
+        <span className="text-text font-semibold text-sm">Git Desktop</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider bg-peach/20 text-peach px-1.5 py-0.5 rounded">
+          Beta
+        </span>
+      </div>
 
       {/* flex-1 empty space — inherits drag from parent */}
       <div className="flex-1 flex justify-center">

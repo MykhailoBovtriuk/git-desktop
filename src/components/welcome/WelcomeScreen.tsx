@@ -5,7 +5,12 @@ export function WelcomeScreen() {
 
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-base gap-4">
-      <h1 className="text-2xl text-text font-bold">Git Desktop</h1>
+      <h1 className="text-2xl text-text font-bold flex items-center gap-2">
+        Git Desktop
+        <span className="text-xs font-semibold uppercase tracking-wider bg-peach/20 text-peach px-1.5 py-0.5 rounded">
+          Beta
+        </span>
+      </h1>
       <p className="text-subtext text-sm">Open a repository to get started</p>
       <button
         onClick={openDialog}
