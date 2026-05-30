@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { Button } from '../../shared/ui';
 
 export function Footer() {
   const { currentBranch, commits, aheadBehind, fetch, pull, push } = useRepoStore();
@@ -37,14 +38,16 @@ export function Footer() {
 
       <div className="flex items-center gap-1">
         {(['fetch', 'pull', 'push'] as const).map(op => (
-          <button
+          <Button
             key={op}
+            variant="surface"
+            size="sm"
             disabled={!!loading}
             onClick={() => run(op, op === 'fetch' ? fetch : op === 'pull' ? pull : push)}
-            className="px-2 py-1 rounded bg-surface0 hover:bg-surface1 text-xs text-text disabled:opacity-50 transition-colors capitalize"
+            className="capitalize"
           >
             {loading === op ? '...' : op.charAt(0).toUpperCase() + op.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

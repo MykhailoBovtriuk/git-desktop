@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
+import { Badge, DragRegion } from '../../shared/ui';
 
 export function Titlebar() {
   const { currentBranch, repoPath, mergeState } = useRepoStore();
@@ -22,22 +23,17 @@ export function Titlebar() {
   const repoName = repoPath?.split('/').pop() ?? '';
 
   return (
-    <div
-      className="h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-    >
+    <DragRegion className="h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none">
       {/* Space for macOS traffic lights (hiddenInset = ~80px) */}
       <div className="w-20 shrink-0" />
       <div className="flex items-center gap-2">
         <span className="text-text font-semibold text-sm">Git Desktop</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider bg-peach/20 text-peach px-1.5 py-0.5 rounded">
-          Beta
-        </span>
+        <Badge variant="beta">Beta</Badge>
       </div>
 
       {/* flex-1 empty space — inherits drag from parent */}
       <div className="flex-1 flex justify-center">
-        <div ref={branchRef} className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <DragRegion draggable={false} ref={branchRef} className="relative">
           <button
             onClick={() => !mergeState && setBranchOpen(o => !o)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors ${mergeState ? 'opacity-40 cursor-not-allowed' : ''}`}
@@ -47,10 +43,10 @@ export function Titlebar() {
             <span className="text-subtext text-xs">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
-        </div>
+        </DragRegion>
       </div>
 
-      <div ref={repoRef} className="relative pr-4" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <DragRegion draggable={false} ref={repoRef} className="relative pr-4">
         <button
           onClick={() => setRepoOpen(o => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors"
@@ -59,7 +55,7 @@ export function Titlebar() {
           <span className="text-subtext text-xs">▼</span>
         </button>
         {repoOpen && <RepoDropdown onClose={() => setRepoOpen(false)} />}
-      </div>
-    </div>
+      </DragRegion>
+    </DragRegion>
   );
 }
