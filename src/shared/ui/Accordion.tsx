@@ -6,9 +6,12 @@ interface AccordionProps {
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  action?: React.ReactNode;
+  indicateOpen?: boolean;
 }
 
-export function Accordion({ title, badge, open, onToggle, children }: AccordionProps) {
+export function Accordion({ title, badge, open, onToggle, children, action, indicateOpen }: AccordionProps) {
+  const showOpen = indicateOpen !== undefined ? indicateOpen : open;
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <button
@@ -16,7 +19,7 @@ export function Accordion({ title, badge, open, onToggle, children }: AccordionP
         className={`
           flex items-center justify-between w-full px-3 py-2 text-left
           border-l-2 transition-colors
-          ${open
+          ${showOpen
             ? 'bg-surface0 border-blue text-text'
             : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'
           }
@@ -34,8 +37,13 @@ export function Accordion({ title, badge, open, onToggle, children }: AccordionP
               {badge}
             </Badge>
           )}
+          {action && (
+            <div onClick={e => e.stopPropagation()} className="flex items-center ml-2">
+              {action}
+            </div>
+          )}
         </div>
-        <span className="text-xs opacity-50">{open ? '▼' : '▶'}</span>
+        <span className="text-xs opacity-50">{showOpen ? '▼' : '▶'}</span>
       </button>
 
       {open && (

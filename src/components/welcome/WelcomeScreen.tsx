@@ -1,4 +1,5 @@
 import { useRepoStore } from '../../stores/repo-store';
+import { Button, Badge } from '../../shared/ui';
 
 export function WelcomeScreen() {
   const { openDialog, openRepo, recentRepos } = useRepoStore();
@@ -7,17 +8,12 @@ export function WelcomeScreen() {
     <div className="h-screen flex flex-col items-center justify-center bg-base gap-4">
       <h1 className="text-2xl text-text font-bold flex items-center gap-2">
         Git Desktop
-        <span className="text-xs font-semibold uppercase tracking-wider bg-peach/20 text-peach px-1.5 py-0.5 rounded">
-          Beta
-        </span>
+        <Badge variant="beta">Beta</Badge>
       </h1>
       <p className="text-subtext text-sm">Open a repository to get started</p>
-      <button
-        onClick={openDialog}
-        className="bg-blue text-mantle px-5 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity mt-2"
-      >
+      <Button variant="primary" onClick={openDialog} className="px-5 py-2 mt-2 font-medium">
         Open Repository
-      </button>
+      </Button>
 
       {recentRepos.length > 0 && (
         <div className="mt-6 w-80">

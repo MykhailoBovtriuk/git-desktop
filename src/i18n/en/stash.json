@@ -1,0 +1,29 @@
+{
+  "title": "Stash",
+  "list": "List",
+  "stash": "Stash",
+  "messagePlaceholder": "Stash message…",
+  "noStashes": "No stashes",
+  "stashChanges": "Stash Changes",
+  "stashed": "Stashed",
+  "stashedMessage": "Changes saved to stash",
+  "stashFailed": "Stash failed",
+  "popped": "Stash popped",
+  "poppedMessage": "stash@{{index}} restored",
+  "popFailed": "Pop failed",
+  "applied": "Stash applied",
+  "appliedMessage": "stash@{{index}} applied (stash kept)",
+  "applyFailed": "Apply failed",
+  "dropped": "Stash dropped",
+  "droppedMessage": "stash@{{index}} deleted",
+  "dropFailed": "Drop failed",
+  "dropConfirm": "Drop stash@{{index}}? This cannot be undone.",
+  "popConflict": "Pop produced conflicts — resolve them in the merge editor.",
+  "selectStashHint": "Select a stash to preview",
+  "noStashesYet": "No stashes yet",
+  "actions": {
+    "apply": "Apply (keep stash)",
+    "pop": "Pop (restore and delete)",
+    "drop": "Drop (delete without restoring)"
+  }
+}

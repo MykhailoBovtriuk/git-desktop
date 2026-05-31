@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { gitApi } from '../api/git-api';
-import type { Commit, Branch, GitStatus, AheadBehind, MergeState } from '../types';
+import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../types';
 
 interface RepoState {
   repoPath: string | null;
@@ -12,6 +12,12 @@ interface RepoState {
   status: GitStatus;
   aheadBehind: AheadBehind;
   mergeState: MergeState | null;
+  stashes: StashEntry[];
+  loadStashes: () => Promise<void>;
+  stashSave: (message?: string) => Promise<void>;
+  stashApply: (index: number) => Promise<void>;
+  stashPop: (index: number) => Promise<void>;
+  stashDrop: (index: number) => Promise<void>;
   openRepo: (path: string) => Promise<void>;
   openDialog: () => Promise<void>;
   loadLog: () => Promise<void>;
@@ -44,6 +50,7 @@ export const useRepoStore = create<RepoState>()(
   status: { staged: [], unstaged: [] },
   aheadBehind: { ahead: 0, behind: 0 },
   mergeState: null,
+  stashes: [],
 
   openRepo: async (path) => {
     await gitApi.openRepo(path);
@@ -102,6 +109,38 @@ export const useRepoStore = create<RepoState>()(
   discardChanges: async (paths) => {
     await gitApi.discardChanges(paths);
     await get().loadStatus();
+  },
+
+  loadStashes: async () => {
+    if (!get().repoPath) return;
+    try {
+      const list = await gitApi.getStashList();
+      set({ stashes: list });
+    } catch {
+      set({ stashes: [] });
+    }
+  },
+
+  stashSave: async (message) => {
+    await gitApi.stashSave(message);
+    await get().loadStashes();
+    await get().loadStatus();
+  },
+
+  stashApply: async (index) => {
+    await gitApi.stashApply(index);
+    await get().loadStatus();
+  },
+
+  stashPop: async (index) => {
+    await gitApi.stashPop(index);
+    await get().loadStashes();
+    await get().loadStatus();
+  },
+
+  stashDrop: async (index) => {
+    await gitApi.stashDrop(index);
+    await get().loadStashes();
   },
 
   commit: async (message) => {

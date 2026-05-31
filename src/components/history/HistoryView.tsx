@@ -4,6 +4,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
 import { CommitList } from './CommitList';
 import { DiffViewer } from '../diff/DiffViewer';
+import { TextInput } from '../../shared/ui';
 
 export function HistoryView() {
   const { setActiveView, selectedCommit, setSelectedFile, selectedFile } = useUiStore();
@@ -29,11 +30,12 @@ export function HistoryView() {
           >
             ← Back
           </button>
-          <input
+          <TextInput
+            variant="filter"
             value={filter}
             onChange={e => setFilter(e.target.value)}
             placeholder="Filter commits..."
-            className="flex-1 bg-surface0 text-text text-xs rounded px-2 py-1 outline-none placeholder:text-subtext"
+            className="flex-1"
           />
         </div>
         <CommitList filter={filter} />

@@ -1,4 +1,5 @@
 import { useRepoStore } from '../../stores/repo-store';
+import { DropdownPanel } from '../../shared/ui';
 
 interface RepoDropdownProps {
   onClose: () => void;
@@ -18,7 +19,7 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
   };
 
   return (
-    <div className="absolute top-full right-0 mt-1 bg-surface0 rounded-lg shadow-xl z-50 w-56 py-1">
+    <DropdownPanel align="right" width="w-56" className="py-1">
       {recentRepos.map(repo => (
         <button
           key={repo}
@@ -38,6 +39,6 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
       >
         Add Repository...
       </button>
-    </div>
+    </DropdownPanel>
   );
 }

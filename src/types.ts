@@ -80,7 +80,7 @@ export type IpcResult<T> = { data: T } | IpcError;
 
 // --- UI types ---
 
-export type ActiveView = 'changes' | 'diff' | 'history' | 'graph' | 'merge-editor' | 'stash';
+export type ActiveView = 'changes' | 'diff' | 'history' | 'graph' | 'merge-editor' | 'stash' | 'stash-create';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 

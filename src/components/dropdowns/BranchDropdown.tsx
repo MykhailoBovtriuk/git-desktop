@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
 
 interface BranchDropdownProps {
   onClose: () => void;
@@ -43,11 +44,11 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
 
       {contextOpen && (
         <div className="absolute left-full top-0 ml-1 bg-surface1 rounded-lg shadow-xl z-10 py-1 w-44">
-          <button onClick={onCheckout} className="menu-item">Checkout</button>
-          <button onClick={onMerge} className="menu-item">Merge into current</button>
-          <button onClick={onRebase} className="menu-item">Rebase onto current</button>
+          <MenuItem onClick={onCheckout}>Checkout</MenuItem>
+          <MenuItem onClick={onMerge}>Merge into current</MenuItem>
+          <MenuItem onClick={onRebase}>Rebase onto current</MenuItem>
           <div className="border-t border-surface2 my-1" />
-          <button onClick={onDelete} className="menu-item text-red">Delete branch</button>
+          <MenuItem tone="danger" onClick={onDelete}>Delete branch</MenuItem>
         </div>
       )}
     </div>
@@ -86,21 +87,23 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
     setOpenMenu(prev => (prev === name ? null : name));
 
   return (
-    <div
-      className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-surface0 rounded-lg shadow-xl z-50 w-64 p-2"
-      style={{ opacity: mergeState ? 0.5 : 1, pointerEvents: mergeState ? 'none' : 'auto' }}
+    <DropdownPanel
+      align="center"
+      width="w-64"
+      className={cn('p-2', mergeState ? 'opacity-50 pointer-events-none' : '')}
     >
-      <input
+      <TextInput
+        variant="search"
         autoFocus
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search branches..."
-        className="w-full bg-mantle text-text text-sm rounded px-2 py-1 mb-2 outline-none placeholder:text-subtext"
+        className="w-full mb-2"
       />
 
       {local.length > 0 && (
         <>
-          <p className="text-subtext text-xs uppercase tracking-wide px-2 py-1">Local</p>
+          <SectionLabel>Local</SectionLabel>
           {local.map(b => (
             <BranchItem
               key={b.name}
@@ -120,7 +123,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
 
       {remote.length > 0 && (
         <>
-          <p className="text-subtext text-xs uppercase tracking-wide px-2 py-1 mt-1">Remote</p>
+          <SectionLabel className="mt-1">Remote</SectionLabel>
           {remote.map(b => (
             <BranchItem
               key={b.name}
@@ -137,6 +140,6 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
           ))}
         </>
       )}
-    </div>
+    </DropdownPanel>
   );
 }

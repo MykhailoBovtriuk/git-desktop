@@ -1,4 +1,4 @@
-import type { Commit, Branch, GitStatus, AheadBehind } from '../types';
+import type { Commit, Branch, GitStatus, AheadBehind, StashEntry } from '../types';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
@@ -40,4 +40,10 @@ export const gitApi = {
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
   getConflictSides: (p: string) =>
     invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
+  getStashList: () => invoke<StashEntry[]>('git:get-stash-list'),
+  stashSave: (message?: string) => invoke<null>('git:stash-save', message),
+  stashApply: (index: number) => invoke<null>('git:stash-apply', index),
+  stashPop: (index: number) => invoke<null>('git:stash-pop', index),
+  stashDrop: (index: number) => invoke<null>('git:stash-drop', index),
+  getStashDiff: (index: number) => invoke<string>('git:get-stash-diff', index),
 };
