@@ -7,12 +7,14 @@ interface UiState {
   selectedFile: string | null;
   activeMergeFile: string | null;
   toasts: Toast[];
+  selectedStash: number | null;
   setActiveView: (view: ActiveView) => void;
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null) => void;
   setActiveMergeFile: (path: string | null) => void;
   addToast: (toast: { variant: ToastVariant; title: string; message: string; action?: Toast['action'] }) => void;
   removeToast: (id: string) => void;
+  setSelectedStash: (index: number | null) => void;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -21,6 +23,7 @@ export const useUiStore = create<UiState>()((set) => ({
   selectedFile: null,
   activeMergeFile: null,
   toasts: [],
+  selectedStash: null,
 
   setActiveView: (view) => set({ activeView: view }),
   setSelectedCommit: (hash) => set({ selectedCommit: hash }),
@@ -31,4 +34,5 @@ export const useUiStore = create<UiState>()((set) => ({
       toasts: [...s.toasts, { ...toast, id: crypto.randomUUID() }],
     })),
   removeToast: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
+  setSelectedStash: (index) => set({ selectedStash: index }),
 }));

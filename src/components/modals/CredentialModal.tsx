@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button, Modal, TextInput } from '../../shared/ui';
 
 interface CredentialModalProps {
   remoteUrl: string;
@@ -16,40 +17,29 @@ export function CredentialModal({ remoteUrl, onCancel, onSubmit }: CredentialMod
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface0 rounded-xl p-6 w-96 shadow-xl">
-        <h2 className="text-text text-lg font-semibold mb-1">Authentication Required</h2>
-        <p className="text-subtext text-xs mb-4 truncate">{remoteUrl}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            autoFocus
-            className="bg-mantle text-text text-sm rounded px-3 py-2 outline-none border border-surface1 focus:border-blue placeholder:text-subtext"
-          />
-          <input
-            type="password"
-            placeholder="Password / Token"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="bg-mantle text-text text-sm rounded px-3 py-2 outline-none border border-surface1 focus:border-blue placeholder:text-subtext"
-          />
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={onCancel} className="px-3 py-1.5 text-sm text-subtext hover:text-text transition-colors">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!username || !password}
-              className="px-3 py-1.5 text-sm bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
-            >
-              Authenticate
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal
+      title="Authentication Required"
+      subtitle={<span className="truncate block">{remoteUrl}</span>}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!username || !password}
+            form="credential-form"
+          >
+            Authenticate
+          </Button>
+        </>
+      }
+    >
+      <form id="credential-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <TextInput variant="modal" type="text" placeholder="Username" autoFocus
+          value={username} onChange={e => setUsername(e.target.value)} />
+        <TextInput variant="modal" type="password" placeholder="Password / Token"
+          value={password} onChange={e => setPassword(e.target.value)} />
+      </form>
+    </Modal>
   );
 }

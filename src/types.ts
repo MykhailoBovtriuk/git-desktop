@@ -19,7 +19,7 @@ export interface Branch {
 
 export interface FileStatus {
   path: string;
-  status: 'A' | 'M' | 'D' | 'R' | 'C' | 'U' | '?';
+  status: 'A' | 'M' | 'D' | 'R' | 'C' | 'U' | 'N';
   staged: boolean;
 }
 
@@ -37,6 +37,13 @@ export interface MergeState {
   sourceBranch: string;
   targetBranch: string;
   conflictingFiles: string[];
+}
+
+export interface StashEntry {
+  index: number;        // 0 for stash@{0}
+  message: string;      // full reflog message e.g. "WIP on main: fix nav"
+  branch: string | null; // parsed from "WIP on <branch>:" or null for custom messages
+  date: string;         // ISO 8601
 }
 
 export interface DiffHunk {
@@ -73,7 +80,7 @@ export type IpcResult<T> = { data: T } | IpcError;
 
 // --- UI types ---
 
-export type ActiveView = 'changes' | 'history' | 'graph' | 'merge-editor';
+export type ActiveView = 'changes' | 'diff' | 'history' | 'graph' | 'merge-editor' | 'stash' | 'stash-create';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 

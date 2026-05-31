@@ -3,6 +3,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
 import { relativeTime } from '../../lib/relative-time';
+import { Badge } from '../../shared/ui';
 
 const ROW_H = 28;
 const LANE_W = 20;
@@ -80,9 +81,9 @@ export function CommitGraph() {
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   {commit.refs.slice(0, 3).map(ref => (
-                    <span key={ref} className="bg-surface0 text-blue text-xs px-1 rounded">
+                    <Badge key={ref} variant="ref">
                       {ref.replace('HEAD -> ', '').slice(0, 15)}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
                 <span className="text-subtext text-xs shrink-0">{relativeTime(commit.date)}</span>

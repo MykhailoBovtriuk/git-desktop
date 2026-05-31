@@ -10,6 +10,7 @@ import { CommitGraph } from '../graph/CommitGraph';
 import { HistoryView } from '../history/HistoryView';
 import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
+import { StashView } from '../stash/StashView';
 
 function MainContent() {
   const { activeView } = useUiStore();
@@ -21,6 +22,8 @@ function MainContent() {
       return <MergeEditor />;
     case 'graph':
       return <CommitGraph />;
+    case 'stash':
+      return <StashView />;
     default:
       return <DiffViewer />;
   }

@@ -1,4 +1,5 @@
 import type { FileStatus } from '../../types';
+import { IconButton, ListItem } from '../../shared/ui';
 
 interface FileListProps {
   files: FileStatus[];
@@ -12,7 +13,7 @@ interface FileListProps {
 
 const STATUS_COLOR: Record<string, string> = {
   A: 'text-green', M: 'text-yellow', D: 'text-red',
-  R: 'text-blue', C: 'text-peach', U: 'text-red', '?': 'text-subtext',
+  R: 'text-blue', C: 'text-peach', U: 'text-red', N: 'text-sky',
 };
 
 export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelect, selectedFile }: FileListProps) {
@@ -25,14 +26,11 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
         const isSelected = selectedFile === file.path;
 
         return (
-          <div
+          <ListItem
             key={file.path}
+            selected={isSelected}
             onClick={() => onSelect(file.path)}
-            className={`group flex items-center justify-between px-3 py-1 cursor-pointer text-xs border-l-2 transition-colors ${
-              isSelected
-                ? 'bg-surface1 border-blue'
-                : 'border-transparent hover:bg-surface0'
-            }`}
+            className="group flex items-center justify-between px-3 py-1 text-xs"
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <span className={`font-mono font-bold ${STATUS_COLOR[file.status] ?? 'text-text'}`}>
@@ -43,34 +41,28 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
 
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               {!staged && onStage && (
-                <button
-                  onClick={e => { e.stopPropagation(); onStage(file.path); }}
-                  className="text-green hover:bg-surface1 rounded px-1 py-0.5"
+                <IconButton
+                  tint="green"
                   title="Stage"
-                >
-                  +
-                </button>
+                  onClick={e => { e.stopPropagation(); onStage(file.path); }}
+                >+</IconButton>
               )}
               {!staged && onDiscard && (
-                <button
-                  onClick={e => { e.stopPropagation(); onDiscard(file.path); }}
-                  className="text-red hover:bg-surface1 rounded px-1 py-0.5"
+                <IconButton
+                  tint="red"
                   title="Discard"
-                >
-                  ×
-                </button>
+                  onClick={e => { e.stopPropagation(); onDiscard(file.path); }}
+                >×</IconButton>
               )}
               {staged && onUnstage && (
-                <button
-                  onClick={e => { e.stopPropagation(); onUnstage(file.path); }}
-                  className="text-yellow hover:bg-surface1 rounded px-1 py-0.5"
+                <IconButton
+                  tint="yellow"
                   title="Unstage"
-                >
-                  −
-                </button>
+                  onClick={e => { e.stopPropagation(); onUnstage(file.path); }}
+                >−</IconButton>
               )}
             </div>
-          </div>
+          </ListItem>
         );
       })}
     </div>

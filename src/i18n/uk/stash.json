@@ -1,0 +1,29 @@
+{
+  "title": "Stash",
+  "list": "Список",
+  "stash": "Стеш",
+  "messagePlaceholder": "Повідомлення стешу…",
+  "noStashes": "Немає stash",
+  "stashChanges": "Зберегти в stash",
+  "stashed": "Збережено",
+  "stashedMessage": "Зміни збережено в stash",
+  "stashFailed": "Помилка stash",
+  "popped": "Stash відновлено",
+  "poppedMessage": "stash@{{index}} відновлено",
+  "popFailed": "Помилка pop",
+  "applied": "Stash застосовано",
+  "appliedMessage": "stash@{{index}} застосовано (stash збережено)",
+  "applyFailed": "Помилка apply",
+  "dropped": "Stash видалено",
+  "droppedMessage": "stash@{{index}} видалено",
+  "dropFailed": "Помилка видалення",
+  "dropConfirm": "Видалити stash@{{index}}? Цю дію неможливо скасувати.",
+  "popConflict": "Pop призвів до конфліктів — вирішіть їх у редакторі злиття.",
+  "selectStashHint": "Виберіть stash для перегляду",
+  "noStashesYet": "Stash ще немає",
+  "actions": {
+    "apply": "Apply (залишити stash)",
+    "pop": "Pop (відновити та видалити)",
+    "drop": "Drop (видалити без відновлення)"
+  }
+}

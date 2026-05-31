@@ -91,11 +91,23 @@ export function registerIpcHandlers() {
   ipcMain.handle('git:mark-resolved', (_e, filePath: string) =>
     wrap(() => gitService.markResolved(filePath).then(() => null)));
 
-  ipcMain.handle('git:stash', () =>
-    wrap(() => gitService.stash().then(() => null)));
+  ipcMain.handle('git:get-stash-list', () =>
+    wrap(() => gitService.getStashList()));
 
-  ipcMain.handle('git:stash-pop', () =>
-    wrap(() => gitService.stashPop().then(() => null)));
+  ipcMain.handle('git:stash-save', (_e, message?: string) =>
+    wrap(() => gitService.stashSave(message).then(() => null)));
+
+  ipcMain.handle('git:stash-apply', (_e, index: number) =>
+    wrap(() => gitService.stashApply(index).then(() => null)));
+
+  ipcMain.handle('git:stash-pop', (_e, index: number) =>
+    wrap(() => gitService.stashPop(index).then(() => null)));
+
+  ipcMain.handle('git:stash-drop', (_e, index: number) =>
+    wrap(() => gitService.stashDrop(index).then(() => null)));
+
+  ipcMain.handle('git:get-stash-diff', (_e, index: number) =>
+    wrap(() => gitService.getStashDiff(index)));
 
   ipcMain.handle('git:get-repo-path', () =>
     ({ data: gitService.getRepoPath() }));

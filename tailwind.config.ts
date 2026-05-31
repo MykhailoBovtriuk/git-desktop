@@ -17,6 +17,7 @@ const config: Config = {
         yellow: '#f9e2af',
         red: '#f38ba8',
         peach: '#fab387',
+        sky: '#89dceb',
         overlay: 'rgba(17, 17, 27, 0.9)',
       },
     },

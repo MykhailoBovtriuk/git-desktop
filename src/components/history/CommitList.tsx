@@ -2,6 +2,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { relativeTime } from '../../lib/relative-time';
 import type { Commit } from '../../types';
+import { ListItem, Badge } from '../../shared/ui';
 
 interface CommitListProps {
   filter: string;
@@ -23,12 +24,11 @@ export function CommitList({ filter }: CommitListProps) {
       {filtered.map((commit: Commit) => {
         const isSelected = selectedCommit === commit.hash;
         return (
-          <div
+          <ListItem
             key={commit.hash}
+            selected={isSelected}
             onClick={() => setSelectedCommit(isSelected ? null : commit.hash)}
-            className={`px-3 py-2 cursor-pointer border-b border-surface0 border-l-2 transition-colors ${
-              isSelected ? 'bg-surface1 border-blue' : 'border-transparent hover:bg-surface0'
-            }`}
+            className="px-3 py-2 border-b border-surface0"
           >
             <p className="text-text text-xs truncate">{commit.message}</p>
             <div className="flex items-center gap-2 mt-0.5">
@@ -39,13 +39,13 @@ export function CommitList({ filter }: CommitListProps) {
             {commit.refs.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {commit.refs.slice(0, 3).map(ref => (
-                  <span key={ref} className="bg-surface0 text-blue text-xs px-1 rounded">
+                  <Badge key={ref} variant="ref">
                     {ref.replace('HEAD -> ', '').slice(0, 20)}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
-          </div>
+          </ListItem>
         );
       })}
     </div>

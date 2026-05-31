@@ -1,7 +1,7 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
-import type { Commit, Branch, GitStatus, FileStatus, AheadBehind } from '../src/types';
+import type { Commit, Branch, GitStatus, FileStatus, AheadBehind, StashEntry } from '../src/types';
 
 export class GitService {
   private git: SimpleGit | null = null;
@@ -88,7 +88,7 @@ export class GitService {
       if (unstagedCode && unstagedCode !== ' ') {
         unstaged.push({
           path: file.path,
-          status: unstagedCode === '?' ? '?' : this.mapStatus(unstagedCode),
+          status: unstagedCode === '?' ? 'N' : this.mapStatus(unstagedCode),
           staged: false,
         });
       }
@@ -99,7 +99,7 @@ export class GitService {
 
   private mapStatus(code: string): FileStatus['status'] {
     const map: Record<string, FileStatus['status']> = {
-      A: 'A', M: 'M', D: 'D', R: 'R', C: 'C', U: 'U', '?': '?',
+      A: 'A', M: 'M', D: 'D', R: 'R', C: 'C', U: 'U', '?': 'N',
     };
     return map[code] ?? 'M';
   }
@@ -109,7 +109,7 @@ export class GitService {
   }
 
   async unstageFiles(paths: string[]): Promise<void> {
-    await this.ensureRepo().reset(['HEAD', '--', ...paths]);
+    await this.ensureRepo().raw(['restore', '--staged', '--', ...paths]);
   }
 
   async discardChanges(paths: string[]): Promise<void> {
@@ -256,12 +256,42 @@ export class GitService {
     await this.ensureRepo().add([filePath]);
   }
 
-  async stash(): Promise<void> {
-    await this.ensureRepo().stash();
+  async getStashList(): Promise<StashEntry[]> {
+    const result = await this.ensureRepo().raw([
+      'stash', 'list', '--format=%gd|||%s|||%ai',
+    ]);
+    if (!result.trim()) return [];
+    return result.trim().split('\n').map(line => {
+      const [ref, message, date] = line.split('|||');
+      const index = parseInt(ref.match(/\{(\d+)\}/)?.[1] ?? '0', 10);
+      const wipMatch = message.match(/^WIP on ([^:]+):/);
+      const branch = wipMatch ? wipMatch[1] : null;
+      return { index, message, branch, date: (date ?? '').trim() };
+    });
   }
 
-  async stashPop(): Promise<void> {
-    await this.ensureRepo().stash(['pop']);
+  async stashSave(message?: string): Promise<void> {
+    const args = ['stash', 'push'];
+    if (message?.trim()) args.push('-m', message.trim());
+    await this.ensureRepo().raw(args);
+  }
+
+  async stashApply(index: number): Promise<void> {
+    await this.ensureRepo().raw(['stash', 'apply', `stash@{${index}}`]);
+  }
+
+  async stashPop(index: number): Promise<void> {
+    await this.ensureRepo().raw(['stash', 'pop', `stash@{${index}}`]);
+  }
+
+  async stashDrop(index: number): Promise<void> {
+    await this.ensureRepo().raw(['stash', 'drop', `stash@{${index}}`]);
+  }
+
+  async getStashDiff(index: number): Promise<string> {
+    return await this.ensureRepo().raw([
+      'stash', 'show', '-p', '--unified=3', `stash@{${index}}`,
+    ]);
   }
 
   async readFile(filePath: string): Promise<string> {

@@ -1,20 +1,25 @@
+import { Badge } from './Badge';
+
 interface AccordionProps {
   title: string;
   badge?: number;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  action?: React.ReactNode;
+  indicateOpen?: boolean;
 }
 
-export function Accordion({ title, badge, open, onToggle, children }: AccordionProps) {
+export function Accordion({ title, badge, open, onToggle, children, action, indicateOpen }: AccordionProps) {
+  const showOpen = indicateOpen !== undefined ? indicateOpen : open;
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col flex-1 min-h-0">
       <button
         onClick={onToggle}
         className={`
           flex items-center justify-between w-full px-3 py-2 text-left
           border-l-2 transition-colors
-          ${open
+          ${showOpen
             ? 'bg-surface0 border-blue text-text'
             : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'
           }
@@ -25,20 +30,24 @@ export function Accordion({ title, badge, open, onToggle, children }: AccordionP
             {title}
           </span>
           {badge !== undefined && badge > 0 && (
-            <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
-              open ? 'bg-surface1 text-text' : 'bg-surface0 text-subtext'
-            }`}>
+            <Badge
+              variant="count"
+              className={open ? 'bg-surface1 text-text' : ''}
+            >
               {badge}
-            </span>
+            </Badge>
+          )}
+          {action && (
+            <div onClick={e => e.stopPropagation()} className="flex items-center ml-2">
+              {action}
+            </div>
           )}
         </div>
-        <span className="text-xs opacity-50">{open ? '▼' : '▶'}</span>
+        <span className="text-xs opacity-50">{showOpen ? '▼' : '▶'}</span>
       </button>
 
       {open && (
-        <>
-          <div className="bg-base">{children}</div>
-        </>
+        <div className="bg-base flex-1 overflow-hidden">{children}</div>
       )}
     </div>
   );

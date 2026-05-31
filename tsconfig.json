@@ -17,6 +17,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "electron/**/*", "src/vite-env.d.ts"],
+  "include": ["src/**/*", "electron/**/*", "src/vite-env.d.ts", "tests/**/*"],
   "exclude": ["node_modules"]
 }
