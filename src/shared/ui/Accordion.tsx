@@ -6,12 +6,18 @@ interface AccordionProps {
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+<<<<<<< Updated upstream
   action?: React.ReactNode;
   indicateOpen?: boolean;
 }
 
 export function Accordion({ title, badge, open, onToggle, children, action, indicateOpen }: AccordionProps) {
   const showOpen = indicateOpen !== undefined ? indicateOpen : open;
+=======
+}
+
+export function Accordion({ title, badge, open, onToggle, children }: AccordionProps) {
+>>>>>>> Stashed changes
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <button
@@ -19,7 +25,11 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
         className={`
           flex items-center justify-between w-full px-3 py-2 text-left
           border-l-2 transition-colors
+<<<<<<< Updated upstream
           ${showOpen
+=======
+          ${open
+>>>>>>> Stashed changes
             ? 'bg-surface0 border-blue text-text'
             : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'
           }
@@ -37,6 +47,7 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
               {badge}
             </Badge>
           )}
+<<<<<<< Updated upstream
           {action && (
             <div onClick={e => e.stopPropagation()} className="flex items-center ml-2">
               {action}
@@ -44,6 +55,10 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
           )}
         </div>
         <span className="text-xs opacity-50">{showOpen ? '▼' : '▶'}</span>
+=======
+        </div>
+        <span className="text-xs opacity-50">{open ? '▼' : '▶'}</span>
+>>>>>>> Stashed changes
       </button>
 
       {open && (

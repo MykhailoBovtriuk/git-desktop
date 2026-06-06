@@ -27,6 +27,11 @@ import { useUiStore } from '../../../src/stores/ui-store';
 
 const baseRepo = {
   stashes: [],
+<<<<<<< Updated upstream
+=======
+  status: { staged: [], unstaged: [] },
+  stashSave: vi.fn().mockResolvedValue(undefined),
+>>>>>>> Stashed changes
   stashApply: vi.fn().mockResolvedValue(undefined),
   stashPop: vi.fn().mockResolvedValue(undefined),
   stashDrop: vi.fn().mockResolvedValue(undefined),

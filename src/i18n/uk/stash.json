@@ -1,8 +1,11 @@
 {
   "title": "Stash",
   "list": "Список",
+<<<<<<< Updated upstream
   "stash": "Стеш",
   "messagePlaceholder": "Повідомлення стешу…",
+=======
+>>>>>>> Stashed changes
   "noStashes": "Немає stash",
   "stashChanges": "Зберегти в stash",
   "stashed": "Збережено",

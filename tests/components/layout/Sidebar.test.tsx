@@ -14,14 +14,18 @@ vi.mock('../../../src/stores/ui-store', () => ({
 vi.mock('../../../src/components/staging/ChangesSection', () => ({
   ChangesSection: () => <div data-testid="changes-section" />,
 }));
+<<<<<<< Updated upstream
 vi.mock('../../../src/components/stash/StashSection', () => ({
   StashSection: () => <div data-testid="stash-section" />,
 }));
+=======
+>>>>>>> Stashed changes
 
 import { Sidebar } from '../../../src/components/layout/Sidebar';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 
+<<<<<<< Updated upstream
 const baseRepo = { status: { staged: [], unstaged: [] }, stashes: [] };
 
 describe('Sidebar', () => {
@@ -30,15 +34,34 @@ describe('Sidebar', () => {
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
     render(<Sidebar />);
     expect(screen.getByText('stash:title')).toBeInTheDocument();
+=======
+const baseRepo = {
+  status: { staged: [], unstaged: [] },
+  stashes: [],
+};
+
+describe('Sidebar', () => {
+  it('renders STASH title and List toggle button', () => {
+    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn(), setSelectedStash: vi.fn() } as any);
+    render(<Sidebar />);
+    expect(screen.getByText('stash:title')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'stash:list' })).toBeInTheDocument();
+>>>>>>> Stashed changes
   });
 
   it('shows stash count badge when stashes.length > 0', () => {
     vi.mocked(useRepoStore).mockReturnValue({ ...baseRepo, stashes: [{ index: 0 }, { index: 1 }] } as any);
+<<<<<<< Updated upstream
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
+=======
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn(), setSelectedStash: vi.fn() } as any);
+>>>>>>> Stashed changes
     render(<Sidebar />);
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
+<<<<<<< Updated upstream
   it('stash accordion is open when activeView is stash-create', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash-create', setActiveView: vi.fn() } as any);
@@ -89,6 +112,24 @@ describe('Sidebar', () => {
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash-create', setActiveView } as any);
     render(<Sidebar />);
     fireEvent.click(screen.getByText('stash:title').closest('button')!);
+=======
+  it('clicking List toggle calls setActiveView("stash") when not active', () => {
+    const setActiveView = vi.fn();
+    const setSelectedStash = vi.fn();
+    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView, setSelectedStash } as any);
+    render(<Sidebar />);
+    fireEvent.click(screen.getByRole('button', { name: 'stash:list' }));
+    expect(setActiveView).toHaveBeenCalledWith('stash');
+  });
+
+  it('clicking List toggle calls setActiveView("diff") when stash is active', () => {
+    const setActiveView = vi.fn();
+    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash', setActiveView, setSelectedStash: vi.fn() } as any);
+    render(<Sidebar />);
+    fireEvent.click(screen.getByRole('button', { name: 'stash:list' }));
+>>>>>>> Stashed changes
     expect(setActiveView).toHaveBeenCalledWith('diff');
   });
 });
