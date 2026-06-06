@@ -1,8 +1,11 @@
 {
   "title": "Stash",
   "list": "List",
+<<<<<<< Updated upstream
   "stash": "Stash",
   "messagePlaceholder": "Stash message…",
+=======
+>>>>>>> Stashed changes
   "noStashes": "No stashes",
   "stashChanges": "Stash Changes",
   "stashed": "Stashed",
