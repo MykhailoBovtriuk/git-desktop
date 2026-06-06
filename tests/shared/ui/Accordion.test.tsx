@@ -61,35 +61,36 @@ describe('Accordion', () => {
   });
 
   it('badge = undefined: badge NOT rendered', () => {
-    render(
+    const { container } = render(
       <Accordion title="Section" open={false} onToggle={vi.fn()}>
         <span>content</span>
       </Accordion>,
     );
-    // Only the title text and arrow should be present — no numeric span beyond those
-    const button = screen.getByRole('button');
-    // The badge span is conditionally rendered; when badge is undefined, the button
-    // should only contain the title and the arrow indicator
-    const spans = button.querySelectorAll('span');
+    // When badge is undefined, the header should only contain the title span and
+    // the arrow indicator span — no extra badge span. (children are not rendered
+    // while closed.)
+    const spans = container.querySelectorAll('span');
     // title span + arrow span = 2; no extra badge span
     expect(spans).toHaveLength(2);
   });
 
-  it('header button has bg-surface0 when open=true', () => {
+  it('header has bg-surface0 when open=true', () => {
     render(
       <Accordion title="Section" open={true} onToggle={vi.fn()}>
         <span>content</span>
       </Accordion>,
     );
-    expect(screen.getByRole('button')).toHaveClass('bg-surface0');
+    // The header styling lives on the container div; the toggle button is a
+    // transparent overlay inside it.
+    expect(screen.getByRole('button').parentElement).toHaveClass('bg-surface0');
   });
 
-  it('header button does NOT have bg-surface0 when open=false', () => {
+  it('header does NOT have bg-surface0 when open=false', () => {
     render(
       <Accordion title="Section" open={false} onToggle={vi.fn()}>
         <span>content</span>
       </Accordion>,
     );
-    expect(screen.getByRole('button')).not.toHaveClass('bg-surface0');
+    expect(screen.getByRole('button').parentElement).not.toHaveClass('bg-surface0');
   });
 });

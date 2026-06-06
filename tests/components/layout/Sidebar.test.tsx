@@ -79,7 +79,10 @@ describe('Sidebar', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView } as any);
     render(<Sidebar />);
-    fireEvent.click(screen.getByText('stash:title').closest('button')!);
+    // The toggle is an overlay button that is a sibling of the title; reach it via
+    // the title's header container.
+    const stashHeader = screen.getByText('stash:title').closest('div')!.parentElement!;
+    fireEvent.click(stashHeader.querySelector('button')!);
     expect(setActiveView).toHaveBeenCalledWith('stash-create');
   });
 
@@ -88,7 +91,8 @@ describe('Sidebar', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash-create', setActiveView } as any);
     render(<Sidebar />);
-    fireEvent.click(screen.getByText('stash:title').closest('button')!);
+    const stashHeader = screen.getByText('stash:title').closest('div')!.parentElement!;
+    fireEvent.click(stashHeader.querySelector('button')!);
     expect(setActiveView).toHaveBeenCalledWith('diff');
   });
 });
