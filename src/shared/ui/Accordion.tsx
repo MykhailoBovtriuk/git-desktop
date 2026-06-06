@@ -14,10 +14,9 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
   const showOpen = indicateOpen !== undefined ? indicateOpen : open;
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <button
-        onClick={onToggle}
+      <div
         className={`
-          flex items-center justify-between w-full px-3 py-2 text-left
+          relative flex items-center justify-between w-full px-3 py-2
           border-l-2 transition-colors
           ${showOpen
             ? 'bg-surface0 border-blue text-text'
@@ -25,7 +24,14 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
           }
         `}
       >
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={title}
+          className="absolute inset-0 w-full cursor-pointer"
+        />
+        <div className="relative flex items-center gap-2 pointer-events-none">
           <span className="text-xs font-semibold uppercase tracking-wide">
             {title}
           </span>
@@ -38,13 +44,13 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
             </Badge>
           )}
           {action && (
-            <div onClick={e => e.stopPropagation()} className="flex items-center ml-2">
+            <div className="flex items-center ml-2 pointer-events-auto">
               {action}
             </div>
           )}
         </div>
-        <span className="text-xs opacity-50">{showOpen ? '▼' : '▶'}</span>
-      </button>
+        <span className="relative text-xs opacity-50 pointer-events-none">{showOpen ? '▼' : '▶'}</span>
+      </div>
 
       {open && (
         <div className="bg-base flex-1 overflow-hidden">{children}</div>
