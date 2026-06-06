@@ -99,7 +99,7 @@ describe('repo-store', () => {
 
   it('loadStashes populates stashes array', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    (gitApi.getStashList as any).mockResolvedValueOnce([
+    (gitApi.getStashList as any).mockResolvedValue([
       { index: 0, message: 'WIP on main: x', branch: 'main', date: '2024-01-01T00:00:00Z' },
     ]);
     await useRepoStore.getState().openRepo('/tmp/test-repo');

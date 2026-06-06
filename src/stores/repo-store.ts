@@ -93,6 +93,7 @@ export const useRepoStore = create<RepoState>()(
       get().loadLog(),
       get().loadBranches(),
       get().loadStatus(),
+      get().loadStashes(),
     ]);
   },
 
