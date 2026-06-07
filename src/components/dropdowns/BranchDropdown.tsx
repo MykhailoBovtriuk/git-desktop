@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRepoStore, CheckoutConflictError } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
@@ -20,6 +21,21 @@ interface ItemProps {
 }
 
 function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onCheckout, onMerge, onRebase, onDelete }: ItemProps) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!contextOpen || !btnRef.current) { setPos(null); return; }
+    const r = btnRef.current.getBoundingClientRect();
+    const MENU_W = 176; // w-44
+    const MENU_H = 152;
+    let left = r.right + 4;
+    if (left + MENU_W > window.innerWidth) left = r.left - MENU_W - 4;
+    let top = r.top;
+    if (top + MENU_H > window.innerHeight) top = window.innerHeight - MENU_H - 8;
+    setPos({ top, left });
+  }, [contextOpen]);
+
   return (
     <div className="relative">
       <div className="flex items-center justify-between w-full px-2 py-1.5 rounded hover:bg-surface1 text-sm">
@@ -34,6 +50,7 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
         </button>
         {current && <span className="text-blue text-xs">✓</span>}
         <button
+          ref={btnRef}
           onClick={e => { e.stopPropagation(); onToggleContext(); }}
           className="ml-2 px-1 text-subtext hover:text-text"
           aria-label="More actions"
@@ -42,14 +59,19 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
         </button>
       </div>
 
-      {contextOpen && (
-        <div className="absolute left-full top-0 ml-1 bg-surface1 rounded-lg shadow-xl z-10 py-1 w-44">
+      {contextOpen && pos && createPortal(
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          className="fixed bg-surface1 rounded-lg shadow-xl z-[60] py-1 w-44"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <MenuItem onClick={onCheckout}>Checkout</MenuItem>
           <MenuItem onClick={onMerge}>Merge into current</MenuItem>
           <MenuItem onClick={onRebase}>Rebase onto current</MenuItem>
           <div className="border-t border-surface2 my-1" />
           <MenuItem tone="danger" onClick={onDelete}>Delete branch</MenuItem>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -103,6 +125,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
         className="w-full mb-2"
       />
 
+      <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
       {local.length > 0 && (
         <>
           <SectionLabel>Local</SectionLabel>
@@ -142,6 +165,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
           ))}
         </>
       )}
+      </div>
     </DropdownPanel>
   );
 }
