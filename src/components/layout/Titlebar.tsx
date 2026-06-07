@@ -2,14 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
-import { Badge, DragRegion } from '../../shared/ui';
+import { Badge, DragRegion, IconButton } from '../../shared/ui';
 
 export function Titlebar() {
-  const { currentBranch, repoPath, mergeState } = useRepoStore();
+  const { currentBranch, repoPath, mergeState, loadStatus } = useRepoStore();
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const branchRef = useRef<HTMLDivElement>(null);
   const repoRef = useRef<HTMLDivElement>(null);
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try { await loadStatus(); } finally { setRefreshing(false); }
+  };
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -32,7 +39,7 @@ export function Titlebar() {
         <Badge variant="beta">Beta</Badge>
       </div>
 
-      <div className="flex-1 flex justify-center">
+      <div className="flex-1 flex justify-center items-center gap-2">
         <DragRegion draggable={false} ref={branchRef} className="relative">
           <button
             onClick={() => !mergeState && setBranchOpen(o => !o)}
@@ -43,6 +50,17 @@ export function Titlebar() {
             <span className="text-subtext text-xs">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
+        </DragRegion>
+        <DragRegion draggable={false}>
+          <IconButton
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="Check for changes"
+            title="Check for changes"
+            className={refreshing ? 'animate-spin' : ''}
+          >
+            ↻
+          </IconButton>
         </DragRegion>
       </div>
 
