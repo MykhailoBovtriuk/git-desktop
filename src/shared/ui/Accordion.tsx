@@ -2,7 +2,7 @@ import { Badge } from './Badge';
 
 interface AccordionProps {
   title: string;
-  badge?: number;
+  badge?: number | string;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -35,14 +35,14 @@ export function Accordion({ title, badge, open, onToggle, children, action, indi
           <span className="text-xs font-semibold uppercase tracking-wide">
             {title}
           </span>
-          {badge !== undefined && badge > 0 && (
+          {badge ? (
             <Badge
               variant="count"
               className={open ? 'bg-surface1 text-text' : ''}
             >
               {badge}
             </Badge>
-          )}
+          ) : null}
           {action && (
             <div className="flex items-center ml-2 pointer-events-auto">
               {action}
