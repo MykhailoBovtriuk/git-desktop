@@ -10,6 +10,7 @@ import { CommitGraph } from '../graph/CommitGraph';
 import { HistoryView } from '../history/HistoryView';
 import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
+import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { StashView } from '../stash/StashView';
 
 function MainContent() {
@@ -53,6 +54,7 @@ export function Shell() {
       <Footer />
       <Toast />
       <MergeConflictModal />
+      <CheckoutConflictModal />
     </div>
   );
 }

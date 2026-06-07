@@ -3,6 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { gitApi } from '../api/git-api';
 import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../types';
 
+export class CheckoutConflictError extends Error {
+  constructor() {
+    super('checkout blocked: local changes would be overwritten');
+    this.name = 'CheckoutConflictError';
+  }
+}
+
 interface RepoState {
   repoPath: string | null;
   recentRepos: string[];
@@ -12,6 +19,7 @@ interface RepoState {
   status: GitStatus;
   aheadBehind: AheadBehind;
   mergeState: MergeState | null;
+  checkoutConflict: { branch: string } | null;
   stashes: StashEntry[];
   loadStashes: () => Promise<void>;
   stashSave: (message?: string) => Promise<void>;
@@ -33,6 +41,10 @@ interface RepoState {
   pull: () => Promise<string>;
   push: () => Promise<void>;
   checkout: (branch: string) => Promise<void>;
+  stashAndCheckout: () => Promise<void>;
+  migrateCheckout: () => Promise<void>;
+  forceCheckout: () => Promise<void>;
+  cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
   deleteBranch: (branch: string) => Promise<void>;
@@ -50,6 +62,7 @@ export const useRepoStore = create<RepoState>()(
   status: { staged: [], unstaged: [] },
   aheadBehind: { ahead: 0, behind: 0 },
   mergeState: null,
+  checkoutConflict: null,
   stashes: [],
 
   openRepo: async (path) => {
@@ -93,6 +106,7 @@ export const useRepoStore = create<RepoState>()(
       get().loadLog(),
       get().loadBranches(),
       get().loadStatus(),
+      get().loadStashes(),
     ]);
   },
 
@@ -165,9 +179,55 @@ export const useRepoStore = create<RepoState>()(
   },
 
   checkout: async (branch) => {
-    await gitApi.checkout(branch);
+    const known = get().branches.find(b => b.name === branch);
+    const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
+    try {
+      await gitApi.checkout(target);
+      await get().refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // git aborts the checkout when uncommitted changes would be clobbered.
+      // Surface a modal (via checkoutConflict) instead of a raw error toast.
+      if (/overwritten by checkout|commit your changes or stash/i.test(msg)) {
+        set({ checkoutConflict: { branch: target } });
+        throw new CheckoutConflictError();
+      }
+      throw err;
+    }
+  },
+
+  // Set the blocked changes aside in a stash, then switch. Changes stay in the
+  // stash (recoverable with stash pop later).
+  stashAndCheckout: async () => {
+    const conflict = get().checkoutConflict;
+    if (!conflict) return;
+    set({ checkoutConflict: null });
+    await gitApi.stashSave(`WIP before switching to ${conflict.branch}`);
+    await gitApi.checkout(conflict.branch);
     await get().refresh();
   },
+
+  // Carry the blocked changes over to the target branch (stash → switch → pop).
+  migrateCheckout: async () => {
+    const conflict = get().checkoutConflict;
+    if (!conflict) return;
+    set({ checkoutConflict: null });
+    await gitApi.stashSave(`Migrating changes to ${conflict.branch}`);
+    await gitApi.checkout(conflict.branch);
+    await gitApi.stashPop(0);
+    await get().refresh();
+  },
+
+  // Discard the blocked changes and switch anyway.
+  forceCheckout: async () => {
+    const conflict = get().checkoutConflict;
+    if (!conflict) return;
+    set({ checkoutConflict: null });
+    await gitApi.checkoutForce(conflict.branch);
+    await get().refresh();
+  },
+
+  cancelCheckout: () => set({ checkoutConflict: null }),
 
   merge: async (branch) => {
     const result = await gitApi.merge(branch);
@@ -205,6 +265,20 @@ export const useRepoStore = create<RepoState>()(
       name: 'git-desktop-repo',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
+      // Once the persisted repoPath is restored — on a fresh launch and after a
+      // dev hot-reload — re-open it so branches/status/stashes are repopulated.
+      // Without this the UI shows an empty "no branch" until the next action.
+      // Deferred to a macrotask so `useRepoStore` is assigned before we use it
+      // (localStorage rehydrates synchronously, during store creation).
+      onRehydrateStorage: () => (state) => {
+        if (!state?.repoPath) return;
+        const path = state.repoPath;
+        setTimeout(() => {
+          useRepoStore.getState().openRepo(path).catch(() => {
+            useRepoStore.setState({ repoPath: null });
+          });
+        }, 0);
+      },
     },
   ),
 );

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRepoStore } from '../../stores/repo-store';
+import { useRepoStore, CheckoutConflictError } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
 
@@ -73,6 +73,8 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       await action();
       addToast({ variant: 'success', title: 'Done', message: successMsg });
     } catch (err: unknown) {
+      // Checkout blocked by local changes — a modal handles it, no error toast.
+      if (err instanceof CheckoutConflictError) return;
       addToast({ variant: 'error', title: 'Error', message: err instanceof Error ? err.message : String(err) });
     }
   };

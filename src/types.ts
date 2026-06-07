@@ -96,6 +96,8 @@ export interface Toast {
 
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+  /** Node's process.platform, e.g. 'darwin' | 'win32' | 'linux'. */
+  platform: string;
 }
 
 declare global {
