@@ -36,7 +36,7 @@ describe('Sidebar', () => {
     vi.mocked(useRepoStore).mockReturnValue({ ...baseRepo, stashes: [{ index: 0 }, { index: 1 }] } as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
     render(<Sidebar />);
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('stash:list · 2')).toBeInTheDocument();
   });
 
   it('stash accordion is open when activeView is stash-create', () => {

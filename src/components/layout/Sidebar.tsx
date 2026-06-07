@@ -62,7 +62,7 @@ export function Sidebar() {
       <div className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}>
         <Accordion
           title={t('stash:title')}
-          badge={stashOpen ? 0 : stashes.length}
+          badge={!stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined}
           open={stashOpen}
           indicateOpen={stashOpen && !listMode}
           onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
