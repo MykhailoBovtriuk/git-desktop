@@ -16,6 +16,7 @@ vi.mock('../../src/api/git-api', () => ({
     pull: vi.fn().mockResolvedValue('1 change'),
     push: vi.fn().mockResolvedValue(null),
     checkout: vi.fn().mockResolvedValue(null),
+    checkoutForce: vi.fn().mockResolvedValue(null),
     merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
     rebase: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
@@ -147,5 +148,77 @@ describe('repo-store', () => {
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     await useRepoStore.getState().stashDrop(1);
     expect(gitApi.stashDrop).toHaveBeenCalledWith(1);
+  });
+
+  it('checkout passes a local branch name as-is', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      branches: [{ name: 'feature', current: false, remote: false }],
+    } as any);
+    await useRepoStore.getState().checkout('feature');
+    expect(gitApi.checkout).toHaveBeenCalledWith('feature');
+  });
+
+  it('checkout strips the remote prefix so HEAD is not detached', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      branches: [{ name: 'origin/dev', current: false, remote: true }],
+    } as any);
+    await useRepoStore.getState().checkout('origin/dev');
+    expect(gitApi.checkout).toHaveBeenCalledWith('dev');
+  });
+
+  it('checkout sets checkoutConflict and throws when local changes block it', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const { CheckoutConflictError } = await import('../../src/stores/repo-store');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', branches: [] } as any);
+    (gitApi.checkout as any).mockRejectedValueOnce(
+      new Error('Your local changes to the following files would be overwritten by checkout: a.ts'),
+    );
+    await expect(useRepoStore.getState().checkout('feature')).rejects.toBeInstanceOf(CheckoutConflictError);
+    expect(useRepoStore.getState().checkoutConflict).toEqual({ branch: 'feature' });
+  });
+
+  it('checkout rethrows non-conflict errors without setting checkoutConflict', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', branches: [], checkoutConflict: null } as any);
+    (gitApi.checkout as any).mockRejectedValueOnce(new Error('some other failure'));
+    await expect(useRepoStore.getState().checkout('feature')).rejects.toThrow('some other failure');
+    expect(useRepoStore.getState().checkoutConflict).toBeNull();
+  });
+
+  it('stashAndCheckout stashes then switches', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    await useRepoStore.getState().stashAndCheckout();
+    expect(gitApi.stashSave).toHaveBeenCalled();
+    expect(gitApi.checkout).toHaveBeenCalledWith('feature');
+    expect(useRepoStore.getState().checkoutConflict).toBeNull();
+  });
+
+  it('migrateCheckout stashes, switches, then pops', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    await useRepoStore.getState().migrateCheckout();
+    expect(gitApi.stashSave).toHaveBeenCalled();
+    expect(gitApi.checkout).toHaveBeenCalledWith('feature');
+    expect(gitApi.stashPop).toHaveBeenCalledWith(0);
+    expect(useRepoStore.getState().checkoutConflict).toBeNull();
+  });
+
+  it('forceCheckout discards changes and switches', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    await useRepoStore.getState().forceCheckout();
+    expect(gitApi.checkoutForce).toHaveBeenCalledWith('feature');
+    expect(useRepoStore.getState().checkoutConflict).toBeNull();
+  });
+
+  it('cancelCheckout clears the conflict', () => {
+    useRepoStore.setState({ checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.getState().cancelCheckout();
+    expect(useRepoStore.getState().checkoutConflict).toBeNull();
   });
 });

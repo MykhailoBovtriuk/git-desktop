@@ -24,6 +24,7 @@ export const gitApi = {
   pull: () => invoke<string>('git:pull'),
   push: () => invoke<null>('git:push'),
   checkout: (branch: string) => invoke<null>('git:checkout', branch),
+  checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
   rebase: (branch: string) => invoke<null>('git:rebase', branch),
   deleteBranch: (branch: string) => invoke<null>('git:delete-branch', branch),

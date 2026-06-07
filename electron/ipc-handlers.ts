@@ -58,6 +58,9 @@ export function registerIpcHandlers() {
   ipcMain.handle('git:checkout', (_e, branch: string) =>
     wrap(() => gitService.checkout(branch).then(() => null)));
 
+  ipcMain.handle('git:checkout-force', (_e, branch: string) =>
+    wrap(() => gitService.checkoutForce(branch).then(() => null)));
+
   ipcMain.handle('git:merge', (_e, branch: string) =>
     wrap(() => gitService.merge(branch)));
 

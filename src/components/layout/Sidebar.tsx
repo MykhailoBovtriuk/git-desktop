@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
@@ -5,17 +6,45 @@ import { Accordion } from '../../shared/ui';
 import { ChangesSection } from '../staging/ChangesSection';
 import { StashSection } from '../stash/StashSection';
 
+const MIN_WIDTH = 224;
+const MAX_WIDTH = 480;
+
+function loadWidth(): number {
+  const saved = Number(localStorage.getItem('sidebar-width'));
+  return saved >= MIN_WIDTH && saved <= MAX_WIDTH ? saved : MIN_WIDTH;
+}
+
 export function Sidebar() {
   const { t } = useTranslation();
   const { status, stashes } = useRepoStore();
   const { activeView, setActiveView } = useUiStore();
+
+  const [width, setWidth] = useState(loadWidth);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) =>
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX)));
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      setWidth(w => { localStorage.setItem('sidebar-width', String(w)); return w; });
+    };
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   const totalChanges = status.staged.length + status.unstaged.length;
   const stashOpen = activeView === 'stash' || activeView === 'stash-create';
   const listMode = activeView === 'stash';
 
   return (
-    <div className="w-56 bg-mantle border-r border-surface0 flex flex-col overflow-hidden">
+    <div
+      className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0"
+      style={{ width }}
+    >
 
       {/* Changes accordion — flex-1 when stash is closed */}
       <div className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}>
@@ -74,6 +103,12 @@ export function Sidebar() {
           Graph
         </button>
       </div>
+
+      {/* Drag handle to resize the sidebar */}
+      <div
+        onMouseDown={startResize}
+        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-blue/40 active:bg-blue/60 transition-colors z-10"
+      />
     </div>
   );
 }

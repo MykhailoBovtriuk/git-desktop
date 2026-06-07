@@ -22,16 +22,16 @@ export function Titlebar() {
 
   const repoName = repoPath?.split('/').pop() ?? '';
 
+  const isMac = (window.electronAPI?.platform ?? 'darwin') === 'darwin';
+
   return (
     <DragRegion className="h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none">
-      {/* Space for macOS traffic lights (hiddenInset = ~80px) */}
-      <div className="w-20 shrink-0" />
+      <div className={isMac ? 'w-20 shrink-0' : 'w-3 shrink-0'} />
       <div className="flex items-center gap-2">
         <span className="text-text font-semibold text-sm">Git Desktop</span>
         <Badge variant="beta">Beta</Badge>
       </div>
 
-      {/* flex-1 empty space — inherits drag from parent */}
       <div className="flex-1 flex justify-center">
         <DragRegion draggable={false} ref={branchRef} className="relative">
           <button
@@ -56,6 +56,8 @@ export function Titlebar() {
         </button>
         {repoOpen && <RepoDropdown onClose={() => setRepoOpen(false)} />}
       </DragRegion>
+
+      {!isMac && <div className="w-36 shrink-0" />}
     </DragRegion>
   );
 }

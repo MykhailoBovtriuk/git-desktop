@@ -141,6 +141,10 @@ export class GitService {
     await this.ensureRepo().checkout(branch);
   }
 
+  async checkoutForce(branch: string): Promise<void> {
+    await this.ensureRepo().checkout(['-f', branch]);
+  }
+
   async merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
     try {
       await this.ensureRepo().merge([branch]);

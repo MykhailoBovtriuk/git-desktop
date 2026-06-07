@@ -11,7 +11,7 @@ export function CommitForm() {
 
   const hasStaged = status.staged.length > 0;
   const canCommit = message.trim().length > 0 && hasStaged && !loading;
-  const overLimit = message.length > 72;
+  const overLimit = message.length > 100;
 
   const handleCommit = async () => {
     if (!canCommit) return;
@@ -38,7 +38,7 @@ export function CommitForm() {
           rows={3}
         />
         <span className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}>
-          {message.length}/72
+          {message.length}/100
         </span>
       </div>
       <Button

@@ -57,10 +57,10 @@ describe('CommitForm', () => {
     expect(screen.getByRole('button', { name: 'Commit' })).not.toBeDisabled();
   });
 
-  it('counter shows "0/72" initially', () => {
+  it('counter shows "0/100" initially', () => {
     setupMocks();
     render(<CommitForm />);
-    expect(screen.getByText('0/72')).toBeInTheDocument();
+    expect(screen.getByText('0/100')).toBeInTheDocument();
   });
 
   it('counter shows correct count after typing', () => {
@@ -68,25 +68,25 @@ describe('CommitForm', () => {
     render(<CommitForm />);
     const textarea = screen.getByPlaceholderText('Commit message');
     fireEvent.change(textarea, { target: { value: 'hello' } });
-    expect(screen.getByText('5/72')).toBeInTheDocument();
+    expect(screen.getByText('5/100')).toBeInTheDocument();
   });
 
-  it('counter has text-subtext class when at or below 72 chars', () => {
+  it('counter has text-subtext class when at or below 100 chars', () => {
     setupMocks();
     render(<CommitForm />);
     const textarea = screen.getByPlaceholderText('Commit message');
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(72) } });
-    const counter = screen.getByText('72/72');
+    fireEvent.change(textarea, { target: { value: 'a'.repeat(100) } });
+    const counter = screen.getByText('100/100');
     expect(counter).toHaveClass('text-subtext');
     expect(counter).not.toHaveClass('text-red');
   });
 
-  it('counter has text-red class when over 72 chars', () => {
+  it('counter has text-red class when over 100 chars', () => {
     setupMocks();
     render(<CommitForm />);
     const textarea = screen.getByPlaceholderText('Commit message');
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(73) } });
-    const counter = screen.getByText('73/72');
+    fireEvent.change(textarea, { target: { value: 'a'.repeat(101) } });
+    const counter = screen.getByText('101/100');
     expect(counter).toHaveClass('text-red');
     expect(counter).not.toHaveClass('text-subtext');
   });
