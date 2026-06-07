@@ -45,12 +45,21 @@ function createWindow() {
 
   const icon = nativeImage.createFromPath(iconPath);
 
+  const titleBarOpts: Electron.BrowserWindowConstructorOptions =
+    process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' }
+      : {
+          titleBarStyle: 'hidden',
+          titleBarOverlay: { color: '#181825', symbolColor: '#cdd6f4', height: 40 },
+          autoHideMenuBar: true,
+        };
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
+    ...titleBarOpts,
     backgroundColor: '#1e1e2e',
     icon,
     webPreferences: {
