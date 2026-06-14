@@ -162,9 +162,12 @@ export class GitService {
   }
 
   async isMerging(): Promise<boolean> {
+    // With --quiet, simple-git does NOT throw when MERGE_HEAD is absent (it
+    // resolves with empty output), so check the output: a real MERGE_HEAD
+    // prints its SHA, otherwise it's empty.
     try {
-      await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
-      return true;
+      const out = await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
+      return out.trim().length > 0;
     } catch {
       return false;
     }

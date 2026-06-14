@@ -97,7 +97,12 @@ export const useRepoStore = create<RepoState>()(
   },
 
   loadStatus: async () => {
-    const [result, merging] = await Promise.all([gitApi.getStatus(), gitApi.isMerging()]);
+    const result = await gitApi.getStatus();
+    // isMerging must never block the status update: if it fails (e.g. an older
+    // main process without the handler), default to false instead of throwing
+    // — otherwise status/merging freeze on stale values.
+    let merging = false;
+    try { merging = await gitApi.isMerging(); } catch { merging = false; }
     set({
       status: { staged: result.staged, unstaged: result.unstaged },
       aheadBehind: { ahead: result.ahead, behind: result.behind },
