@@ -49,6 +49,7 @@ interface RepoState {
   rebase: (branch: string) => Promise<void>;
   deleteBranch: (branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;
+  clearMergeState: () => void;
 }
 
 export const useRepoStore = create<RepoState>()(
@@ -260,6 +261,10 @@ export const useRepoStore = create<RepoState>()(
     set({ mergeState: null });
     await get().refresh();
   },
+
+  // Clear the conflict UI without touching git — used once all files are
+  // resolved & staged, so the merge can be committed from the Changes view.
+  clearMergeState: () => set({ mergeState: null }),
     }),
     {
       name: 'git-desktop-repo',

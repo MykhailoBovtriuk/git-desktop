@@ -11,13 +11,22 @@ export function DiffViewer() {
   const isStaged = useRepoStore(
     s => !!selectedFile && s.status.staged.some(f => f.path === selectedFile),
   );
+  const inChanges = useRepoStore(
+    s => !!selectedFile && (
+      s.status.staged.some(f => f.path === selectedFile) ||
+      s.status.unstaged.some(f => f.path === selectedFile)
+    ),
+  );
   const useCommitContext =
     (activeView === 'history' || activeView === 'graph') && !!selectedCommit;
+  // A selection is only valid while viewing a commit, or while the file is still
+  // among the current changes. Otherwise (e.g. after commit/discard) show empty.
+  const hasSelection = !!selectedFile && (useCommitContext || inChanges);
   const [diffs, setDiffs] = useState<FileDiff[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!selectedFile) { setDiffs([]); return; }
+    if (!hasSelection) { setDiffs([]); return; }
 
     let cancelled = false;
     setLoading(true);
@@ -42,9 +51,9 @@ export function DiffViewer() {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedFile, selectedCommit, isStaged, useCommitContext]);
+  }, [selectedFile, selectedCommit, isStaged, useCommitContext, hasSelection]);
 
-  if (!selectedFile) {
+  if (!hasSelection) {
     return (
       <div className="h-full flex items-center justify-center text-subtext text-sm">
         Select a file to view diff
