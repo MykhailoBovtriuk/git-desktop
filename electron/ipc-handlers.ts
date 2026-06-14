@@ -91,6 +91,15 @@ export function registerIpcHandlers() {
   ipcMain.handle('git:abort-merge', () =>
     wrap(() => gitService.abortMerge().then(() => null)));
 
+  ipcMain.handle('git:is-merging', () =>
+    wrap(() => gitService.isMerging()));
+
+  ipcMain.handle('git:conclude-merge', () =>
+    wrap(() => gitService.concludeMerge().then(() => null)));
+
+  ipcMain.handle('git:get-merge-message', () =>
+    wrap(() => gitService.getMergeMessage()));
+
   ipcMain.handle('git:mark-resolved', (_e, filePath: string) =>
     wrap(() => gitService.markResolved(filePath).then(() => null)));
 

@@ -161,6 +161,29 @@ export class GitService {
     }
   }
 
+  async isMerging(): Promise<boolean> {
+    try {
+      await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async concludeMerge(): Promise<void> {
+    await this.ensureRepo().raw(['commit', '--no-edit']);
+  }
+
+  async getMergeMessage(): Promise<string> {
+    if (!this.repoPath) return '';
+    try {
+      const msg = await fs.readFile(path.join(this.repoPath, '.git', 'MERGE_MSG'), 'utf-8');
+      return msg.split('\n').find(l => l.trim() && !l.startsWith('#')) ?? '';
+    } catch {
+      return '';
+    }
+  }
+
   async rebase(branch: string): Promise<void> {
     await this.ensureRepo().rebase([branch]);
   }

@@ -56,10 +56,19 @@ function rebuild(segs: Segment[]): string {
 }
 
 export function MergeEditor() {
-  const { mergeState, abortMerge, refresh, clearMergeState } = useRepoStore();
+  const { mergeState, abortMerge, refresh, clearMergeState, concludeMerge } = useRepoStore();
   const { activeMergeFile, setActiveMergeFile, setActiveView, addToast } = useUiStore();
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
   const [resolved, setResolved] = useState<Set<string>>(new Set());
+  // Default ON: when all conflicts are resolved, the merge commit is created
+  // automatically. Off => land on Changes and commit it yourself.
+  const [autoCommit, setAutoCommit] = useState(() => localStorage.getItem('merge-auto-commit') !== 'false');
+
+  const toggleAutoCommit = () => {
+    const next = !autoCommit;
+    setAutoCommit(next);
+    localStorage.setItem('merge-auto-commit', String(next));
+  };
 
   useEffect(() => {
     if (!activeMergeFile || segsByFile[activeMergeFile]) return;
@@ -101,12 +110,18 @@ export function MergeEditor() {
       const rem = files.filter(f => !next.has(f));
       if (rem.length > 0) {
         setActiveMergeFile(rem[0]);
+        return;
+      }
+      setActiveMergeFile(null);
+      if (autoCommit) {
+        await concludeMerge();
+        setActiveView('changes');
+        addToast({ variant: 'success', title: 'Merge complete', message: `Merged ${mergeState.sourceBranch} into ${mergeState.targetBranch}` });
       } else {
         clearMergeState();
-        setActiveMergeFile(null);
         await refresh();
         setActiveView('changes');
-        addToast({ variant: 'success', title: 'Conflicts resolved', message: `Resolved ${mergeState.sourceBranch} → ${mergeState.targetBranch}. Commit to finish the merge.` });
+        addToast({ variant: 'info', title: 'Conflicts resolved', message: `Commit to finish merging ${mergeState.sourceBranch} → ${mergeState.targetBranch}` });
       }
     } catch (err: unknown) {
       addToast({ variant: 'error', title: 'Error', message: err instanceof Error ? err.message : String(err) });
@@ -210,7 +225,18 @@ export function MergeEditor() {
           Merging <span className="text-green">{mergeState.sourceBranch}</span> → <span className="text-blue">{mergeState.targetBranch}</span>
           {remaining > 0 && <span className="text-red"> · {remaining} conflict{remaining !== 1 ? 's' : ''} remaining</span>}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleAutoCommit}
+            title="When all conflicts are resolved, create the merge commit automatically"
+            className="flex items-center gap-1.5 text-xs text-subtext hover:text-text transition-colors"
+          >
+            <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${autoCommit ? 'bg-blue' : 'bg-surface2'}`}>
+              <span className={`inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${autoCommit ? 'translate-x-3' : 'translate-x-0.5'}`} />
+            </span>
+            Auto-commit
+          </button>
           <button
             onClick={handleAbort}
             className="px-3 py-1 text-xs text-red hover:bg-surface0 rounded transition-colors"
