@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { gitApi } from '../../api/git-api';
 import { Button, Textarea } from '../../shared/ui';
 
 export function CommitForm() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { commit, status } = useRepoStore();
+  const { commit, status, merging } = useRepoStore();
   const { addToast } = useUiStore();
 
+  // While a merge is in progress, prefill git's default merge message once.
+  useEffect(() => {
+    if (merging && !message) {
+      gitApi.getMergeMessage().then(m => { if (m) setMessage(m); }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merging]);
+
   const hasStaged = status.staged.length > 0;
-  const canCommit = message.trim().length > 0 && hasStaged && !loading;
+  // During a merge, committing concludes it even with nothing extra staged.
+  const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading;
   const overLimit = message.length > 100;
 
   const handleCommit = async () => {

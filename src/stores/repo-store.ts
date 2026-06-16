@@ -19,6 +19,7 @@ interface RepoState {
   status: GitStatus;
   aheadBehind: AheadBehind;
   mergeState: MergeState | null;
+  merging: boolean;
   checkoutConflict: { branch: string } | null;
   stashes: StashEntry[];
   loadStashes: () => Promise<void>;
@@ -49,6 +50,8 @@ interface RepoState {
   rebase: (branch: string) => Promise<void>;
   deleteBranch: (branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;
+  clearMergeState: () => void;
+  concludeMerge: () => Promise<void>;
 }
 
 export const useRepoStore = create<RepoState>()(
@@ -62,6 +65,7 @@ export const useRepoStore = create<RepoState>()(
   status: { staged: [], unstaged: [] },
   aheadBehind: { ahead: 0, behind: 0 },
   mergeState: null,
+  merging: false,
   checkoutConflict: null,
   stashes: [],
 
@@ -94,7 +98,16 @@ export const useRepoStore = create<RepoState>()(
 
   loadStatus: async () => {
     const result = await gitApi.getStatus();
-    set({ status: { staged: result.staged, unstaged: result.unstaged }, aheadBehind: { ahead: result.ahead, behind: result.behind } });
+    // isMerging must never block the status update: if it fails (e.g. an older
+    // main process without the handler), default to false instead of throwing
+    // — otherwise status/merging freeze on stale values.
+    let merging = false;
+    try { merging = await gitApi.isMerging(); } catch { merging = false; }
+    set({
+      status: { staged: result.staged, unstaged: result.unstaged },
+      aheadBehind: { ahead: result.ahead, behind: result.behind },
+      merging,
+    });
   },
 
   loadAheadBehind: async () => {
@@ -257,6 +270,17 @@ export const useRepoStore = create<RepoState>()(
 
   abortMerge: async () => {
     await gitApi.abortMerge();
+    set({ mergeState: null });
+    await get().refresh();
+  },
+
+  // Clear the conflict UI without touching git — used once all files are
+  // resolved & staged, so the merge can be committed from the Changes view.
+  clearMergeState: () => set({ mergeState: null }),
+
+  // Auto mode: create the merge commit (default message) to finish the merge.
+  concludeMerge: async () => {
+    await gitApi.concludeMerge();
     set({ mergeState: null });
     await get().refresh();
   },

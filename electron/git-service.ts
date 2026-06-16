@@ -149,11 +149,41 @@ export class GitService {
     try {
       await this.ensureRepo().merge([branch]);
       return { success: true, conflicts: [] };
-    } catch (err: any) {
-      if (err.git?.conflicts?.length) {
-        return { success: false, conflicts: err.git.conflicts };
+    } catch (err) {
+      // Derive conflicting files from status (string paths) rather than the
+      // error shape: simple-git's err.git.conflicts holds objects, and a retry
+      // while already mid-conflict throws an error with no conflict info at all.
+      const conflicts = (await this.ensureRepo().status()).conflicted;
+      if (conflicts.length) {
+        return { success: false, conflicts };
       }
       throw err;
+    }
+  }
+
+  async isMerging(): Promise<boolean> {
+    // With --quiet, simple-git does NOT throw when MERGE_HEAD is absent (it
+    // resolves with empty output), so check the output: a real MERGE_HEAD
+    // prints its SHA, otherwise it's empty.
+    try {
+      const out = await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
+      return out.trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  async concludeMerge(): Promise<void> {
+    await this.ensureRepo().raw(['commit', '--no-edit']);
+  }
+
+  async getMergeMessage(): Promise<string> {
+    if (!this.repoPath) return '';
+    try {
+      const msg = await fs.readFile(path.join(this.repoPath, '.git', 'MERGE_MSG'), 'utf-8');
+      return msg.split('\n').find(l => l.trim() && !l.startsWith('#')) ?? '';
+    } catch {
+      return '';
     }
   }
 
