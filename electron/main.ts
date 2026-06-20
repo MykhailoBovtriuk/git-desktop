@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeImage, protocol } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 import { registerIpcHandlers } from './ipc-handlers';
+import { resolveAppAssetPath } from './app-asset-path';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -41,8 +42,6 @@ const iconPath = path.join(__dirname, '../../build/icon.png');
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
-  registerIpcHandlers();
-
   const icon = nativeImage.createFromPath(iconPath);
 
   const titleBarOpts: Electron.BrowserWindowConstructorOptions =
@@ -107,11 +106,16 @@ app.whenReady().then(() => {
     credits: 'A cross-platform Git desktop client with visual commit graph and conflict resolution.',
   });
 
+  const distRoot = path.resolve(__dirname, '../../dist');
+
   protocol.handle('app', async (request) => {
+    const resolved = resolveAppAssetPath(distRoot, request.url);
+    if (!resolved.ok) {
+      console.error(`[app://] 403 forbidden for ${request.url}`);
+      return new Response('Forbidden', { status: 403 });
+    }
+    const { filePath } = resolved;
     try {
-      const url = new URL(request.url);
-      const relativePath = decodeURIComponent(url.pathname.replace(/^\//, '')) || 'index.html';
-      const filePath = path.join(__dirname, '../../dist', relativePath);
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
       const data = await fs.readFile(filePath);
@@ -119,10 +123,15 @@ app.whenReady().then(() => {
       const body = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
       return new Response(body, { headers: { 'Content-Type': contentType } });
     } catch (err) {
+      // Directory reads and missing files both land here as 404.
       console.error(`[app://] 404 for ${request.url}:`, err);
       return new Response('Not Found', { status: 404 });
     }
   });
+
+  // Register IPC handlers once per app lifecycle, before any window exists.
+  // Doing this inside createWindow() would re-register on macOS `activate`.
+  registerIpcHandlers();
   createWindow();
 });
 

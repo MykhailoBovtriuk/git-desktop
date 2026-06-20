@@ -27,7 +27,9 @@ export const gitApi = {
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
   rebase: (branch: string) => invoke<null>('git:rebase', branch),
-  deleteBranch: (branch: string) => invoke<null>('git:delete-branch', branch),
+  deleteBranch: (branch: string, force?: boolean) => invoke<null>('git:delete-branch', branch, force),
+  deleteRemoteBranch: (remote: string, branch: string) =>
+    invoke<null>('git:delete-remote-branch', remote, branch),
   getCommitDiff: (hash: string) => invoke<{ path: string; status: string }[]>('git:get-commit-diff', hash),
   getFileDiff: (hash: string, filePath: string) => invoke<string>('git:get-file-diff', hash, filePath),
   getWorkingDiff: (filePath: string) => invoke<string>('git:get-working-diff', filePath),
@@ -45,7 +47,8 @@ export const gitApi = {
   getConflictSides: (p: string) =>
     invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
   getStashList: () => invoke<StashEntry[]>('git:get-stash-list'),
-  stashSave: (message?: string) => invoke<null>('git:stash-save', message),
+  stashSave: (message?: string, staged?: boolean) => invoke<null>('git:stash-save', message, staged),
+  getStashTop: () => invoke<string | null>('git:get-stash-top'),
   stashApply: (index: number) => invoke<null>('git:stash-apply', index),
   stashPop: (index: number) => invoke<null>('git:stash-pop', index),
   stashDrop: (index: number) => invoke<null>('git:stash-drop', index),

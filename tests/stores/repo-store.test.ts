@@ -22,6 +22,7 @@ vi.mock('../../src/api/git-api', () => ({
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
     getStashList: vi.fn().mockResolvedValue([]),
+    getStashTop: vi.fn().mockResolvedValue(null),
     stashSave: vi.fn().mockResolvedValue(null),
     stashApply: vi.fn().mockResolvedValue(null),
     stashPop: vi.fn().mockResolvedValue(null),
@@ -126,7 +127,9 @@ describe('repo-store', () => {
     const { gitApi } = await import('../../src/api/git-api');
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     await useRepoStore.getState().stashSave('my work');
-    expect(gitApi.stashSave).toHaveBeenCalledWith('my work');
+    // Manual stash flow forwards the `staged` flag; StashSection passes `true`,
+    // the store action forwards whatever it receives (undefined here).
+    expect(gitApi.stashSave).toHaveBeenCalledWith('my work', undefined);
   });
 
   it('stashApply calls gitApi.stashApply with index', async () => {
@@ -201,6 +204,9 @@ describe('repo-store', () => {
   it('migrateCheckout stashes, switches, then pops', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    // Empty stack before, a new stash after — proves a stash was created so the
+    // pop targets our own stash@{0}, not a pre-existing one.
+    (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('newstashsha');
     await useRepoStore.getState().migrateCheckout();
     expect(gitApi.stashSave).toHaveBeenCalled();
     expect(gitApi.checkout).toHaveBeenCalledWith('feature');

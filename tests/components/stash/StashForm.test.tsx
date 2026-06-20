@@ -11,7 +11,7 @@ describe('StashForm', () => {
   it('renders textarea, Stash button and List toggle in create mode', () => {
     render(<StashForm canStash listMode={false} onStash={vi.fn()} onToggle={vi.fn()} />);
     expect(screen.getByPlaceholderText('messagePlaceholder')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'stash' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'stashStaged' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'list' })).toBeInTheDocument();
   });
 
@@ -22,19 +22,19 @@ describe('StashForm', () => {
 
   it('Stash button disabled when canStash=false', () => {
     render(<StashForm canStash={false} listMode={false} onStash={vi.fn()} onToggle={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'stash' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'stashStaged' })).toBeDisabled();
   });
 
   it('Stash button disabled when message is empty', () => {
     render(<StashForm canStash listMode={false} onStash={vi.fn()} onToggle={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'stash' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'stashStaged' })).toBeDisabled();
   });
 
   it('calls onStash with trimmed message when Stash clicked', () => {
     const onStash = vi.fn();
     render(<StashForm canStash listMode={false} onStash={onStash} onToggle={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText('messagePlaceholder'), { target: { value: '  my stash  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'stash' }));
+    fireEvent.click(screen.getByRole('button', { name: 'stashStaged' }));
     expect(onStash).toHaveBeenCalledWith('my stash');
   });
 
@@ -42,7 +42,7 @@ describe('StashForm', () => {
     render(<StashForm canStash listMode={false} onStash={vi.fn()} onToggle={vi.fn()} />);
     const textarea = screen.getByPlaceholderText('messagePlaceholder');
     fireEvent.change(textarea, { target: { value: 'hello' } });
-    fireEvent.click(screen.getByRole('button', { name: 'stash' }));
+    fireEvent.click(screen.getByRole('button', { name: 'stashStaged' }));
     expect((textarea as HTMLTextAreaElement).value).toBe('');
   });
 

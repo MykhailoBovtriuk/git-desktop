@@ -17,6 +17,22 @@ export class GitService {
     return this.git;
   }
 
+  private resolveRepoPath(filePath: string): string {
+    if (!this.repoPath) throw new Error('No repository opened');
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+      throw new Error('Invalid file path');
+    }
+    if (path.isAbsolute(filePath)) {
+      throw new Error('Path is outside repository');
+    }
+    const repoRoot = path.resolve(this.repoPath);
+    const abs = path.resolve(repoRoot, filePath);
+    if (abs !== repoRoot && !abs.startsWith(repoRoot + path.sep)) {
+      throw new Error('Path is outside repository');
+    }
+    return abs;
+  }
+
   async getLog(limit: number, offset: number): Promise<Commit[]> {
     const git = this.ensureRepo();
     const result = await git.raw([
@@ -113,7 +129,20 @@ export class GitService {
   }
 
   async discardChanges(paths: string[]): Promise<void> {
-    await this.ensureRepo().checkout(['--', ...paths]);
+    const git = this.ensureRepo();
+    const status = await git.status();
+    const untracked = new Set(status.not_added);
+    const trackedPaths = paths.filter((p) => !untracked.has(p));
+    const untrackedPaths = paths.filter((p) => untracked.has(p));
+    // Tracked changes/deletions are restored from HEAD; `git checkout` cannot
+    // remove untracked files, so those are deleted with `clean` (-d to also
+    // remove fully-untracked directories).
+    if (trackedPaths.length) {
+      await git.checkout(['--', ...trackedPaths]);
+    }
+    if (untrackedPaths.length) {
+      await git.raw(['clean', '-f', '-d', '--', ...untrackedPaths]);
+    }
   }
 
   async commit(message: string): Promise<string> {
@@ -191,8 +220,14 @@ export class GitService {
     await this.ensureRepo().rebase([branch]);
   }
 
-  async deleteBranch(branch: string): Promise<void> {
-    await this.ensureRepo().deleteLocalBranch(branch, true);
+  async deleteBranch(branch: string, force = false): Promise<void> {
+    // Safe delete by default — Git refuses to drop a branch that isn't fully
+    // merged unless `force` is explicitly requested by the caller.
+    await this.ensureRepo().deleteLocalBranch(branch, force);
+  }
+
+  async deleteRemoteBranch(remote: string, branch: string): Promise<void> {
+    await this.ensureRepo().push([remote, '--delete', branch]);
   }
 
   private async hasParent(hash: string): Promise<boolean> {
@@ -304,10 +339,26 @@ export class GitService {
     });
   }
 
-  async stashSave(message?: string): Promise<void> {
+  async stashSave(message?: string, staged = false): Promise<void> {
     const args = ['stash', 'push'];
+    // `--staged` stashes only the index (Git 2.35+). Used by the manual stash
+    // UI; the checkout-conflict flows leave it false to stash all tracked work.
+    if (staged) args.push('--staged');
     if (message?.trim()) args.push('-m', message.trim());
     await this.ensureRepo().raw(args);
+  }
+
+  // SHA of the current top stash (refs/stash), or null when the stash stack is
+  // empty. Lets callers detect whether a `stashSave` actually created a stash
+  // before popping by index.
+  async getStashTop(): Promise<string | null> {
+    try {
+      const out = await this.ensureRepo().raw(['rev-parse', '-q', '--verify', 'refs/stash']);
+      const sha = out.trim();
+      return sha.length > 0 ? sha : null;
+    } catch {
+      return null;
+    }
   }
 
   async stashApply(index: number): Promise<void> {
@@ -329,14 +380,12 @@ export class GitService {
   }
 
   async readFile(filePath: string): Promise<string> {
-    if (!this.repoPath) throw new Error('No repository opened');
-    const abs = path.join(this.repoPath, filePath);
+    const abs = this.resolveRepoPath(filePath);
     return fs.readFile(abs, 'utf-8');
   }
 
   async writeFile(filePath: string, content: string): Promise<void> {
-    if (!this.repoPath) throw new Error('No repository opened');
-    const abs = path.join(this.repoPath, filePath);
+    const abs = this.resolveRepoPath(filePath);
     await fs.writeFile(abs, content, 'utf-8');
   }
 

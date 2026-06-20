@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: ['tests/setup.ts'],
     environmentMatchGlobs: [
       ['**/tests/shared/ui/**/*.test.tsx', 'jsdom'],
+      ['**/tests/components/**/*.test.tsx', 'jsdom'],
     ],
   },
 });

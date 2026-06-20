@@ -33,7 +33,10 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
             className="group flex items-center justify-between px-3 py-1 text-xs"
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className={`font-mono font-bold ${STATUS_COLOR[file.status] ?? 'text-text'}`}>
+              <span
+                className={`font-mono font-bold ${STATUS_COLOR[file.status] ?? 'text-text'}`}
+                title={file.status === 'N' ? 'Untracked (new file)' : undefined}
+              >
                 {file.status}
               </span>
               <span className="text-text truncate">{name}</span>
@@ -50,7 +53,7 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
               {!staged && onDiscard && (
                 <IconButton
                   tint="red"
-                  title="Discard"
+                  title={file.status === 'N' ? 'Delete untracked file' : 'Discard'}
                   onClick={e => { e.stopPropagation(); onDiscard(file.path); }}
                 >×</IconButton>
               )}

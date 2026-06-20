@@ -1,14 +1,25 @@
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { FileList } from './FileList';
 import { CommitForm } from './CommitForm';
 
 export function ChangesSection() {
+  const { t } = useTranslation('staging');
   const { status, stageFiles, unstageFiles, discardChanges } = useRepoStore();
   const { selectedFile, setSelectedFile } = useUiStore();
 
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);
+
+  const handleDiscard = (path: string) => {
+    const file = status.unstaged.find(f => f.path === path);
+    const isUntracked = file?.status === 'N';
+    const message = isUntracked
+      ? t('discardUntrackedConfirm', { name: path })
+      : t('discardConfirm', { name: path });
+    if (window.confirm(message)) discardChanges([path]);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -29,7 +40,7 @@ export function ChangesSection() {
               files={status.unstaged}
               staged={false}
               onStage={path => stageFiles([path])}
-              onDiscard={path => discardChanges([path])}
+              onDiscard={handleDiscard}
               onSelect={setSelectedFile}
               selectedFile={selectedFile}
             />
