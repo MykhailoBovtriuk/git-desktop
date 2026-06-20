@@ -5,12 +5,13 @@ import { useUiStore } from '../../stores/ui-store';
 import { Accordion } from '../../shared/ui';
 import { ChangesSection } from '../staging/ChangesSection';
 import { StashSection } from '../stash/StashSection';
+import { getLocalStorage } from '../../lib/storage';
 
 const MIN_WIDTH = 224;
 const MAX_WIDTH = 480;
 
 function loadWidth(): number {
-  const saved = Number(localStorage.getItem('sidebar-width'));
+  const saved = Number(getLocalStorage().getItem('sidebar-width'));
   return saved >= MIN_WIDTH && saved <= MAX_WIDTH ? saved : MIN_WIDTH;
 }
 
@@ -29,7 +30,7 @@ export function Sidebar() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
-      setWidth(w => { localStorage.setItem('sidebar-width', String(w)); return w; });
+      setWidth(w => { getLocalStorage().setItem('sidebar-width', String(w)); return w; });
     };
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);

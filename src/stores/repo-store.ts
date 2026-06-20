@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { gitApi } from '../api/git-api';
+import { getLocalStorage } from '../lib/storage';
 import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../types';
 
 export class CheckoutConflictError extends Error {
@@ -23,7 +24,7 @@ interface RepoState {
   checkoutConflict: { branch: string } | null;
   stashes: StashEntry[];
   loadStashes: () => Promise<void>;
-  stashSave: (message?: string) => Promise<void>;
+  stashSave: (message?: string, staged?: boolean) => Promise<void>;
   stashApply: (index: number) => Promise<void>;
   stashPop: (index: number) => Promise<void>;
   stashDrop: (index: number) => Promise<void>;
@@ -48,7 +49,8 @@ interface RepoState {
   cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
-  deleteBranch: (branch: string) => Promise<void>;
+  deleteBranch: (branch: string, force?: boolean) => Promise<void>;
+  deleteRemoteBranch: (remote: string, branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;
   clearMergeState: () => void;
   concludeMerge: () => Promise<void>;
@@ -148,8 +150,8 @@ export const useRepoStore = create<RepoState>()(
     }
   },
 
-  stashSave: async (message) => {
-    await gitApi.stashSave(message);
+  stashSave: async (message, staged) => {
+    await gitApi.stashSave(message, staged);
     await get().loadStashes();
     await get().loadStatus();
   },
@@ -225,7 +227,16 @@ export const useRepoStore = create<RepoState>()(
     const conflict = get().checkoutConflict;
     if (!conflict) return;
     set({ checkoutConflict: null });
+    // Confirm a *new* stash was actually created before popping by index, so we
+    // never pop a pre-existing/foreign stash if stashSave saved nothing.
+    const before = await gitApi.getStashTop();
     await gitApi.stashSave(`Migrating changes to ${conflict.branch}`);
+    const after = await gitApi.getStashTop();
+    if (!after || after === before) {
+      // Nothing was stashed — don't switch on a false premise.
+      await get().refresh();
+      throw new Error('No changes to migrate');
+    }
     await gitApi.checkout(conflict.branch);
     await gitApi.stashPop(0);
     await get().refresh();
@@ -263,8 +274,13 @@ export const useRepoStore = create<RepoState>()(
     await get().refresh();
   },
 
-  deleteBranch: async (branch) => {
-    await gitApi.deleteBranch(branch);
+  deleteBranch: async (branch, force) => {
+    await gitApi.deleteBranch(branch, force);
+    await get().loadBranches();
+  },
+
+  deleteRemoteBranch: async (remote, branch) => {
+    await gitApi.deleteRemoteBranch(remote, branch);
     await get().loadBranches();
   },
 
@@ -287,7 +303,7 @@ export const useRepoStore = create<RepoState>()(
     }),
     {
       name: 'git-desktop-repo',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => getLocalStorage()),
       partialize: (s) => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
       // Once the persisted repoPath is restored — on a fresh launch and after a
       // dev hot-reload — re-open it so branches/status/stashes are repopulated.

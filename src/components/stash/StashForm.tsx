@@ -39,7 +39,7 @@ export function StashForm({ canStash, onStash, listMode, onToggle }: StashFormPr
           onClick={handleStash}
           className="py-1.5 font-medium"
         >
-          {t('stash')}
+          {t('stashStaged')}
         </Button>
         <button
           type="button"

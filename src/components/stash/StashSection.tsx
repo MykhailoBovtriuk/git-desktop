@@ -17,6 +17,15 @@ export function StashSection() {
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);
 
+  const handleDiscard = (path: string) => {
+    const file = status.unstaged.find(f => f.path === path);
+    const isUntracked = file?.status === 'N';
+    const message = isUntracked
+      ? t('staging:discardUntrackedConfirm', { name: path })
+      : t('staging:discardConfirm', { name: path });
+    if (window.confirm(message)) discardChanges([path]);
+  };
+
   const handleToggle = () => {
     if (listMode) {
       setActiveView('stash-create');
@@ -29,7 +38,7 @@ export function StashSection() {
   const handleStash = async (message: string) => {
     setLoading(true);
     try {
-      await stashSave(message);
+      await stashSave(message, true);
       addToast({ variant: 'success', title: t('stashed'), message: t('stashedMessage') });
     } catch (err) {
       addToast({ variant: 'error', title: t('stashFailed'), message: err instanceof Error ? err.message : t('stashFailed') });
@@ -54,7 +63,7 @@ export function StashSection() {
                 files={status.unstaged}
                 staged={false}
                 onStage={path => stageFiles([path])}
-                onDiscard={path => discardChanges([path])}
+                onDiscard={handleDiscard}
                 onSelect={setSelectedFile}
                 selectedFile={selectedFile}
               />
