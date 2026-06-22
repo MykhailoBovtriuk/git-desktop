@@ -1,0 +1,14 @@
+{
+  "title": "Local changes would be overwritten",
+  "subtitle": "Switching to {{branch}} would overwrite your uncommitted changes. Choose how to proceed:",
+  "stashDesc": "Set changes aside in a stash, then switch.",
+  "stashAction": "Stash & Checkout",
+  "migrateDesc": "Carry your changes over to {{branch}} (may conflict).",
+  "migrateAction": "Migrate Changes",
+  "forceDesc": "Discard your changes and switch anyway.",
+  "forceAction": "Force Checkout",
+  "stashedSwitched": "Stashed changes, switched to {{branch}}",
+  "migrated": "Brought your changes to {{branch}}",
+  "forced": "Switched to {{branch}}, discarded changes",
+  "checkoutFailed": "Checkout failed"
+}

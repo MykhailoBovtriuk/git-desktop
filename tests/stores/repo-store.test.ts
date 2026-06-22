@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../src/api/git-api', () => ({
   gitApi: {
-    openRepo: vi.fn().mockResolvedValue(null),
+    openRepo: vi.fn((p: string) => Promise.resolve(p)),
     openDialog: vi.fn().mockResolvedValue('/tmp/test-repo'),
     getLog: vi.fn().mockResolvedValue([]),
     getBranches: vi.fn().mockResolvedValue([{ name: 'main', current: true, remote: false }]),

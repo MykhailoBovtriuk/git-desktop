@@ -1,21 +1,24 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button } from '../../shared/ui';
 
 export function Footer() {
+  const { t } = useTranslation('footer');
   const { currentBranch, commits, aheadBehind, fetch, pull, push } = useRepoStore();
   const { addToast } = useUiStore();
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
 
   const run = async (op: 'fetch' | 'pull' | 'push', action: () => Promise<unknown>) => {
     setLoading(op);
+    const label = t(op);
     try {
       const result = await action();
-      const msg = op === 'pull' && typeof result === 'string' ? result : `${op} successful`;
-      addToast({ variant: 'success', title: op.charAt(0).toUpperCase() + op.slice(1), message: msg });
+      const msg = op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
+      addToast({ variant: 'success', title: label, message: msg });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: `${op} failed`, message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('failed', { op: label }), message: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(null);
     }
@@ -46,7 +49,7 @@ export function Footer() {
             onClick={() => run(op, op === 'fetch' ? fetch : op === 'pull' ? pull : push)}
             className="capitalize"
           >
-            {loading === op ? '...' : op.charAt(0).toUpperCase() + op.slice(1)}
+            {loading === op ? '...' : t(op)}
           </Button>
         ))}
       </div>

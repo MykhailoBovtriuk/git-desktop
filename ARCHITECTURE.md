@@ -44,7 +44,7 @@ The app remembers the last-opened repository and recent repos list across restar
 | Git backend | **simple-git 3** | Wraps the user's installed `git` CLI. Simpler than a native libgit2 binding, and respects the user's existing git config (credentials, hooks, SSH keys, etc.). Trade-off: requires the user to have Git installed. |
 | Graph rendering | **SVG + D3 utilities** (custom layout) | SVG paths render Bezier curves between commits with crisp lines at any zoom. CSS-styleable. No canvas/WebGL setup. The lane layout is custom (see `src/components/graph/graph-layout.ts`) — D3 isn't actually invoked at runtime; only its types are pulled in. |
 | Styling | **Tailwind v4** + custom `@theme` tokens | Utility-first keeps style colocated with markup. v4 generates colors from `@theme` directives in CSS — no JS config needed. Custom palette via `--color-*` tokens (see §6). |
-| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Wired up for EN and UK with namespaced JSON resources. **Note:** translations exist but components currently hardcode English; the i18n setup is a placeholder for future activation. |
+| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN and UK with namespaced JSON resources. All user-facing components call `useTranslation`; language is detected from the browser and cached in localStorage. |
 | Diff parsing | Custom parser in `src/components/diff/parse-diff.ts` | The output of `git diff` is well-specified (unified diff format) but standalone NPM parsers add weight. The custom parser handles `--- /dev/null` (new file), `+++ /dev/null` (deletion), `Binary files differ`, and multi-file diffs. |
 | Testing | **Vitest 4** + `@testing-library/react` + `jsdom` | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for `GitService` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior. |
 | Packaging | **electron-builder** | Standard for shipping cross-platform Electron apps. Configured via `electron-builder.yml`. |
@@ -470,7 +470,7 @@ The duplicate compile of `electron/*.ts` (once for type-check, once for emit) is
 
 ## 11. Testing
 
-`vitest run` executes 36+ tests across 5 files:
+`vitest run` executes 220+ tests across the suite (GitService integration, store logic, pure-function units, and component tests). Highlights:
 
 - `tests/git-service.test.ts` — **real Git** integration tests. `beforeEach` creates a temp directory via `os.tmpdir()` + `fs.mkdtempSync`, `execSync('git init')`, sets test user, writes a file, commits. Then each test runs against this real repo. Covers: openRepo, log, branches, status, stage/unstage, commit, discard, checkout, working diff, **root commit diff**, **untracked file diff synthesis**.
 
@@ -488,7 +488,7 @@ The duplicate compile of `electron/*.ts` (once for type-check, once for emit) is
 - **Stores get mocked API.** We're testing store logic, not Git logic.
 - **Pure functions get unit tests.** `computeLayout`, `parseDiff`, `relativeTime`.
 
-The test runner uses `environment: 'node'` (set in `vitest.config.ts`). For the store tests that import React-via-Zustand bindings, this works because Zustand's vanilla API doesn't require a DOM. If we add component tests, we'll need to add `environment: 'jsdom'` per-file via the `// @vitest-environment jsdom` pragma.
+The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). Component tests run under `jsdom`, selected via `environmentMatchGlobs` for `tests/shared/ui/**` and `tests/components/**` (or the `// @vitest-environment jsdom` pragma per-file). `tests/setup.ts` polyfills `localStorage` for node-environment runs.
 
 ---
 
@@ -573,8 +573,8 @@ The test runner uses `environment: 'node'` (set in `vitest.config.ts`). For the 
 ### `src/i18n/`
 
 - **`config.ts`** — Initializes i18next with EN and UK resources, browser language detection, localStorage caching of language choice.
-- **`en/*.json` + `uk/*.json`** — Namespaced translations: `common`, `staging`, `graph`, `diff`, `footer`, `branches`, `merge`.
-- **Note:** no component currently calls `useTranslation`. This is scaffolding for future multilingual work.
+- **`en/*.json` + `uk/*.json`** — Namespaced translations: `common`, `staging`, `graph`, `diff`, `footer`, `branches`, `merge`, `stash`, `checkout`, `repo`.
+- **Status:** active — all user-facing components call `useTranslation`. Dynamic text uses interpolation (e.g. `t('merging', { source, target })`).
 
 ### `src/types.ts`
 
@@ -591,9 +591,9 @@ The shared type definitions. Imported by both renderer and main (the main proces
 ## 13. Notable trade-offs and known limitations
 
 - **Hard dependency on a system Git binary.** No bundled Git. Users without `git` on `PATH` will see "command not found" errors. Acceptable for a developer-targeted tool.
-- **i18n is scaffolded but inactive.** All UI text is hardcoded English. The translation JSON files exist for EN and UK but no component calls `useTranslation`. Either delete the i18n setup or wire it up — decided per release.
+- **i18n is active for EN and UK.** All user-facing components call `useTranslation`; language is browser-detected and cached in localStorage. There is no in-app language switcher yet — the choice follows the browser/`localStorage`.
 - **No hunk-level / line-level staging yet.** The current "Stage" button stages the whole file via `git add`. Hunk-level staging would require parsing the diff into hunks (we already do) and using `git apply --cached`.
-- **The 3-panel merge editor is not PhpStorm-grade.** It shows real conflict sides and lets you edit the result manually, but it doesn't yet auto-detect conflict regions or offer per-region "accept ours / accept theirs / both" controls.
+- **The 3-panel merge editor is not PhpStorm-grade.** It parses conflict regions and offers per-block "use current / use incoming / both / reset" controls plus auto-commit on full resolution, but it has no syntax highlighting, word-level diffing, or binary-conflict handling.
 - **Drag-and-drop merge/rebase/cherry-pick** is on the roadmap (Project memory) but not implemented.
 - **Commit graph lane allocation is approximate** for repos with very wide branching topology. The lane algorithm doesn't currently re-pack lanes after a branch terminates, so deep merges can leave lane drift. Fine for typical day-to-day usage.
 - **No virtualization.** The commit list and graph render up to 200 commits. For repos with 10k+ commits we'd want windowing (e.g. `@tanstack/react-virtual`).
@@ -626,7 +626,7 @@ git-desktop/
 │   ├── lib/
 │   │   └── relative-time.ts         # "5m ago" formatter
 │   ├── i18n/
-│   │   ├── config.ts                # i18next setup (currently inactive)
+│   │   ├── config.ts                # i18next setup (active, EN/UK)
 │   │   ├── en/{common,staging,...}.json
 │   │   └── uk/{common,staging,...}.json
 │   ├── styles/
@@ -639,16 +639,19 @@ git-desktop/
 │       ├── history/{HistoryView,CommitList}.tsx
 │       ├── graph/{CommitGraph,graph-layout}.{tsx,ts}
 │       ├── merge/{MergeEditor,MergeConflictModal}.tsx
+│       ├── checkout/CheckoutConflictModal.tsx
+│       ├── stash/{StashSection,StashView,StashList,StashForm,RawDiff}.tsx
 │       ├── dropdowns/{BranchDropdown,RepoDropdown}.tsx
-│       ├── modals/{CheckoutModal,CredentialModal}.tsx  # orphaned
-│       └── common/{Accordion,Toast}.tsx
+│       └── common/Toast.tsx
 ├── tests/                           # Vitest
 │   ├── git-service.test.ts          # Real Git integration tests
 │   ├── graph-layout.test.ts         # Pure unit tests
 │   ├── parse-diff.test.ts           # Pure unit tests
-│   └── stores/
-│       ├── repo-store.test.ts       # Store with mocked gitApi
-│       └── ui-store.test.ts         # Plain store tests
+│   ├── setup.ts                     # jest-dom + localStorage polyfill
+│   ├── stores/                      # repo-store, ui-store (mocked gitApi)
+│   ├── hooks/ + lib/                # use-auto-refresh, relative-time
+│   ├── shared/ui/                   # shared UI component tests (jsdom)
+│   └── components/                  # feature component tests (jsdom)
 ├── dist/                            # Vite build output (renderer)
 ├── dist-electron/                   # tsc output (main process)
 ├── package.json                     # Scripts + deps
@@ -658,7 +661,6 @@ git-desktop/
 ├── vitest.config.ts                 # Test runner config
 ├── tailwind.config.ts               # Legacy v3 config (Tailwind v4 ignores it; kept for reference)
 ├── electron-builder.yml             # Packaging config
-├── AUDIT.md                         # Bug audit (P0–P2 catalog + fixes)
 └── ARCHITECTURE.md                  # This file
 ```
 
@@ -679,4 +681,4 @@ That's the four-step ritual referenced in §4 plus UI and tests.
 
 ---
 
-End of document. For known bugs and their planned fixes, see `AUDIT.md`. For the current branch's work-in-progress notes, run `git log` — this file does not duplicate transient state.
+End of document. For the current branch's work-in-progress notes, run `git log` — this file does not duplicate transient state.

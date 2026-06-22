@@ -1,1 +1,1 @@
-{ "cancel": "Cancel", "confirm": "Confirm", "back": "Back", "error": "Error", "loading": "Loading...", "retry": "Retry" }
+{ "cancel": "Cancel", "confirm": "Confirm", "back": "Back", "error": "Error", "loading": "Loading...", "retry": "Retry", "done": "Done", "history": "History", "graph": "Graph", "filterCommits": "Filter commits...", "selectCommitHint": "Select a commit to view diff" }

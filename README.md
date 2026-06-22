@@ -189,7 +189,7 @@ git-desktop/
 │   ├── stores/                  # Zustand state (repo-store, ui-store)
 │   ├── hooks/                   # use-auto-refresh
 │   ├── lib/                     # relative-time util
-│   ├── i18n/                    # i18next setup (EN, UK) — scaffolded
+│   ├── i18n/                    # i18next setup (EN, UK) — active
 │   ├── styles/globals.css       # Tailwind v4 @theme tokens
 │   └── components/              # All React UI
 │       ├── layout/              # Shell, Titlebar, Sidebar, Footer
@@ -207,7 +207,6 @@ git-desktop/
 ├── dist-electron/               # Compiled main process (auto-gen)
 ├── release/                     # electron-builder output (auto-gen)
 ├── ARCHITECTURE.md              # Deep dive: how the code is organized
-├── AUDIT.md                     # Known bugs and planned fixes
 ├── electron-builder.yml         # Packaging config
 ├── vite.config.ts               # Vite + Tailwind plugins
 ├── vitest.config.ts             # Test runner config
@@ -236,6 +235,8 @@ git-desktop/
 - **Branch management** — checkout, merge, rebase, delete via a searchable dropdown; confirmation prompt before delete
 - **3-panel merge editor** — CURRENT / RESULT / INCOMING panes reading real conflict sides from the Git index (`:2:path`, `:3:path`), "Use this" buttons, write-back to disk before marking resolved
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
+- **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
+- **Localization** — English and Ukrainian, auto-detected from the browser and remembered across restarts
 - **Auto-refresh** — picks up external `git` activity every 30 seconds
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
 - **Catppuccin Mocha** dark palette out of the box
@@ -245,7 +246,6 @@ git-desktop/
 ## 📚 Deeper documentation
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Full architectural breakdown: process model, layered renderer, IPC contract, design system, edge cases handled, build workflow.
-- **[AUDIT.md](./AUDIT.md)** — Catalog of bugs found and planned fixes (P0 / P1 / P2 with concrete patches).
 
 ---
 

@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
 
 export function CheckoutConflictModal() {
+  const { t } = useTranslation('checkout');
   const {
     checkoutConflict,
     stashAndCheckout,
@@ -18,11 +20,11 @@ export function CheckoutConflictModal() {
   const run = (action: () => Promise<void>, successMsg: string) => async () => {
     try {
       await action();
-      addToast({ variant: 'success', title: 'Done', message: successMsg });
+      addToast({ variant: 'success', title: t('common:done'), message: successMsg });
     } catch (err: unknown) {
       addToast({
         variant: 'error',
-        title: 'Checkout failed',
+        title: t('checkoutFailed'),
         message: err instanceof Error ? err.message : String(err),
       });
     }
@@ -30,41 +32,36 @@ export function CheckoutConflictModal() {
 
   return (
     <Modal
-      title="Local changes would be overwritten"
+      title={t('title')}
       titleVariant="danger"
       level="high"
       width="w-[75%] max-w-xl"
-      subtitle={
-        <>
-          Switching to <span className="text-blue">{branch}</span> would overwrite your
-          uncommitted changes. Choose how to proceed:
-        </>
-      }
+      subtitle={t('subtitle', { branch })}
     >
       <div className="flex flex-col gap-3 mt-2">
         <div>
-          <p className="text-subtext text-xs mb-1">Set changes aside in a stash, then switch.</p>
-          <Button variant="primary" fullWidth onClick={run(stashAndCheckout, `Stashed changes, switched to ${branch}`)}>
-            Stash &amp; Checkout
+          <p className="text-subtext text-xs mb-1">{t('stashDesc')}</p>
+          <Button variant="primary" fullWidth onClick={run(stashAndCheckout, t('stashedSwitched', { branch }))}>
+            {t('stashAction')}
           </Button>
         </div>
 
         <div>
-          <p className="text-subtext text-xs mb-1">Carry your changes over to {branch} (may conflict).</p>
-          <Button variant="neutral" fullWidth onClick={run(migrateCheckout, `Brought your changes to ${branch}`)}>
-            Migrate Changes
+          <p className="text-subtext text-xs mb-1">{t('migrateDesc', { branch })}</p>
+          <Button variant="neutral" fullWidth onClick={run(migrateCheckout, t('migrated', { branch }))}>
+            {t('migrateAction')}
           </Button>
         </div>
 
         <div>
-          <p className="text-subtext text-xs mb-1">Discard your changes and switch anyway.</p>
-          <Button variant="danger" fullWidth onClick={run(forceCheckout, `Switched to ${branch}, discarded changes`)}>
-            Force Checkout
+          <p className="text-subtext text-xs mb-1">{t('forceDesc')}</p>
+          <Button variant="danger" fullWidth onClick={run(forceCheckout, t('forced', { branch }))}>
+            {t('forceAction')}
           </Button>
         </div>
 
         <Button variant="secondary" fullWidth onClick={cancelCheckout}>
-          Cancel
+          {t('common:cancel')}
         </Button>
       </div>
     </Modal>

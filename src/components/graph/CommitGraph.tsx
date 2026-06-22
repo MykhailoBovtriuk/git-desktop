@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
@@ -10,6 +11,7 @@ const LANE_W = 20;
 const GRAPH_PAD = 10;
 
 export function CommitGraph() {
+  const { t } = useTranslation('graph');
   const { commits } = useRepoStore();
   const { selectedCommit, setSelectedCommit } = useUiStore();
   const layout = useMemo(() => computeLayout(commits), [commits]);
@@ -17,7 +19,7 @@ export function CommitGraph() {
   if (commits.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-subtext text-sm">
-        No commits yet
+        {t('noCommits')}
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { DropdownPanel } from '../../shared/ui';
 
@@ -6,7 +7,9 @@ interface RepoDropdownProps {
 }
 
 export function RepoDropdown({ onClose }: RepoDropdownProps) {
+  const { t } = useTranslation('repo');
   const { repoPath, recentRepos, openRepo, openDialog } = useRepoStore();
+  const repos = recentRepos.filter(Boolean);
 
   const handleOpen = async (path: string) => {
     onClose();
@@ -20,7 +23,7 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
 
   return (
     <DropdownPanel align="right" width="w-56" className="py-1">
-      {recentRepos.map(repo => (
+      {repos.map(repo => (
         <button
           key={repo}
           onClick={() => handleOpen(repo)}
@@ -31,13 +34,13 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
         </button>
       ))}
 
-      {recentRepos.length > 0 && <div className="border-t border-surface1 my-1" />}
+      {repos.length > 0 && <div className="border-t border-surface1 my-1" />}
 
       <button
         onClick={handleAdd}
         className="w-full text-left px-3 py-1.5 text-blue text-sm hover:bg-surface1"
       >
-        Add Repository...
+        {t('addRepository')}
       </button>
     </DropdownPanel>
   );

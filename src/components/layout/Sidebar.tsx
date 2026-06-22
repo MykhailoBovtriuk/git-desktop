@@ -50,7 +50,7 @@ export function Sidebar() {
       {/* Changes accordion — flex-1 when stash is closed */}
       <div className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}>
         <Accordion
-          title="Changes"
+          title={t('staging:changes')}
           badge={totalChanges}
           open={activeView === 'changes'}
           onToggle={() => setActiveView(activeView === 'changes' ? 'diff' : 'changes')}
@@ -94,14 +94,14 @@ export function Sidebar() {
           onClick={() => setActiveView('history')}
           className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'history' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
         >
-          History
+          {t('history')}
         </button>
         <div className="border-t border-surface0" />
         <button
           onClick={() => setActiveView('graph')}
           className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'graph' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
         >
-          Graph
+          {t('graph')}
         </button>
       </div>
 

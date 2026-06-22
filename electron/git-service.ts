@@ -7,9 +7,19 @@ export class GitService {
   private git: SimpleGit | null = null;
   private repoPath: string | null = null;
 
-  async openRepo(dirPath: string): Promise<void> {
-    this.repoPath = dirPath;
-    this.git = simpleGit(dirPath);
+  async openRepo(dirPath: string): Promise<string> {
+    const git = simpleGit(dirPath);
+    const isRepo = await git.checkIsRepo();
+    if (!isRepo) {
+      throw new Error('Selected folder is not a Git repository');
+    }
+    // Normalize to the repository root so file paths (status/diff are relative
+    // to the root) and recent-repo entries are canonical, even when the user
+    // picked a subfolder inside the repo.
+    const root = (await git.revparse(['--show-toplevel'])).trim();
+    this.repoPath = root;
+    this.git = simpleGit(root);
+    return root;
   }
 
   private ensureRepo(): SimpleGit {
