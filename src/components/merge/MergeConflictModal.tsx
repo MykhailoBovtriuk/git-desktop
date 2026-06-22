@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
 
 export function MergeConflictModal() {
+  const { t } = useTranslation('merge');
   const { mergeState, abortMerge } = useRepoStore();
   const { activeView, setActiveView, setActiveMergeFile, addToast } = useUiStore();
 
@@ -11,9 +13,9 @@ export function MergeConflictModal() {
   const handleAbort = async () => {
     try {
       await abortMerge();
-      addToast({ variant: 'info', title: 'Merge aborted', message: 'Merge was aborted successfully' });
+      addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: 'Abort failed', message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('abortFailed'), message: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -24,25 +26,19 @@ export function MergeConflictModal() {
 
   return (
     <Modal
-      title="Merge Conflict"
+      title={t('mergeConflict')}
       titleVariant="danger"
       level="low"
-      subtitle={
-        <>
-          Merging <span className="text-blue">{mergeState.sourceBranch}</span> into{' '}
-          <span className="text-text">{mergeState.targetBranch}</span>
-        </>
-      }
+      subtitle={t('merging', { source: mergeState.sourceBranch, target: mergeState.targetBranch })}
       footer={
         <>
-          <Button variant="secondary" onClick={handleAbort}>Abort Merge</Button>
-          <Button variant="primary" onClick={handleResolve}>Resolve Conflicts</Button>
+          <Button variant="secondary" onClick={handleAbort}>{t('abortMerge')}</Button>
+          <Button variant="primary" onClick={handleResolve}>{t('resolveConflicts')}</Button>
         </>
       }
     >
       <p className="text-text text-xs font-medium mb-2">
-        {mergeState.conflictingFiles.length} conflicting file
-        {mergeState.conflictingFiles.length !== 1 ? 's' : ''}:
+        {t('conflictingFilesCount', { count: mergeState.conflictingFiles.length })}
       </p>
       <div className="bg-mantle rounded-lg p-2 mb-4 max-h-40 overflow-y-auto">
         {mergeState.conflictingFiles.map(f => (

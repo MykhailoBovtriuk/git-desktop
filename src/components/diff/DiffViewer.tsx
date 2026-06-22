@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/ui-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
@@ -7,6 +8,7 @@ import type { FileDiff } from '../../types';
 
 
 export function DiffViewer() {
+  const { t } = useTranslation('diff');
   const { selectedFile, selectedCommit, activeView } = useUiStore();
   const isStaged = useRepoStore(
     s => !!selectedFile && s.status.staged.some(f => f.path === selectedFile),
@@ -56,19 +58,19 @@ export function DiffViewer() {
   if (!hasSelection) {
     return (
       <div className="h-full flex items-center justify-center text-subtext text-sm">
-        Select a file to view diff
+        {t('noDiff')}
       </div>
     );
   }
 
   if (loading) {
-    return <div className="h-full flex items-center justify-center text-subtext text-sm">Loading...</div>;
+    return <div className="h-full flex items-center justify-center text-subtext text-sm">{t('common:loading')}</div>;
   }
 
   if (diffs.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-subtext text-sm">
-        No diff to display
+        {t('noDiffToDisplay')}
       </div>
     );
   }

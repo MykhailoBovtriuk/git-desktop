@@ -10,6 +10,8 @@ import enFooter from './en/footer.json';
 import enBranches from './en/branches.json';
 import enMerge from './en/merge.json';
 import enStash from './en/stash.json';
+import enCheckout from './en/checkout.json';
+import enRepo from './en/repo.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -19,6 +21,8 @@ import ukFooter from './uk/footer.json';
 import ukBranches from './uk/branches.json';
 import ukMerge from './uk/merge.json';
 import ukStash from './uk/stash.json';
+import ukCheckout from './uk/checkout.json';
+import ukRepo from './uk/repo.json';
 
 i18n
   .use(LanguageDetector)
@@ -27,8 +31,8 @@ i18n
     fallbackLng: 'en',
     defaultNS: 'common',
     resources: {
-      en: { common: enCommon, staging: enStaging, graph: enGraph, diff: enDiff, footer: enFooter, branches: enBranches, merge: enMerge, stash: enStash },
-      uk: { common: ukCommon, staging: ukStaging, graph: ukGraph, diff: ukDiff, footer: ukFooter, branches: ukBranches, merge: ukMerge, stash: ukStash },
+      en: { common: enCommon, staging: enStaging, graph: enGraph, diff: enDiff, footer: enFooter, branches: enBranches, merge: enMerge, stash: enStash, checkout: enCheckout, repo: enRepo },
+      uk: { common: ukCommon, staging: ukStaging, graph: ukGraph, diff: ukDiff, footer: ukFooter, branches: ukBranches, merge: ukMerge, stash: ukStash, checkout: ukCheckout, repo: ukRepo },
     },
     detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
     interpolation: { escapeValue: false },

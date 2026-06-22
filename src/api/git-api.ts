@@ -11,7 +11,7 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 export const gitApi = {
-  openRepo: (path: string) => invoke<null>('git:open-repo', path),
+  openRepo: (path: string) => invoke<string>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getBranches: () => invoke<Branch[]>('git:get-branches'),

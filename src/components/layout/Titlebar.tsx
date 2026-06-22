@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
 import { Badge, DragRegion, IconButton } from '../../shared/ui';
 
 export function Titlebar() {
+  const { t } = useTranslation('repo');
   const { currentBranch, repoPath, mergeState, loadStatus } = useRepoStore();
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
@@ -46,7 +48,7 @@ export function Titlebar() {
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors ${mergeState ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <span className="text-blue">●</span>
-            <span className="text-text">{currentBranch || 'no branch'}</span>
+            <span className="text-text">{currentBranch || t('noBranch')}</span>
             <span className="text-subtext text-xs">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
@@ -55,8 +57,8 @@ export function Titlebar() {
           <IconButton
             onClick={handleRefresh}
             disabled={refreshing}
-            aria-label="Check for changes"
-            title="Check for changes"
+            aria-label={t('checkForChanges')}
+            title={t('checkForChanges')}
             className={refreshing ? 'animate-spin' : ''}
           >
             ↻

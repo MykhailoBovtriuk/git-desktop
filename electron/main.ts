@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage, protocol } from 'electron';
+import { app, BrowserWindow, nativeImage, protocol, session } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 import { registerIpcHandlers } from './ipc-handlers';
@@ -80,6 +80,16 @@ function createWindow() {
     mainWindow.loadURL('app://localhost/index.html');
   }
 
+  // Desktop app has no legitimate popups or external navigation: deny new
+  // windows outright and block navigation to anything but our own origin.
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    const allowed = process.env.VITE_DEV_SERVER_URL
+      ? url.startsWith(process.env.VITE_DEV_SERVER_URL)
+      : url.startsWith('app://localhost');
+    if (!allowed) e.preventDefault();
+  });
+
   mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
     console.error(`[did-fail-load] code=${code} desc=${desc} url=${url}`);
   });
@@ -128,6 +138,32 @@ app.whenReady().then(() => {
       return new Response('Not Found', { status: 404 });
     }
   });
+
+  // Strict CSP for production only. In dev the renderer is served by the Vite
+  // dev server (HMR over ws), which a strict policy would break — so we leave
+  // dev unrestricted and lock down the packaged app where it actually matters.
+  if (!process.env.VITE_DEV_SERVER_URL) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            [
+              "default-src 'self' app:",
+              "script-src 'self'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: app:",
+              "font-src 'self' app: data:",
+              "connect-src 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          ],
+        },
+      });
+    });
+  }
 
   // Register IPC handlers once per app lifecycle, before any window exists.
   // Doing this inside createWindow() would re-register on macOS `activate`.

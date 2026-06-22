@@ -28,12 +28,12 @@ export function ChangesSection() {
         {status.unstaged.length > 0 && (
           <>
             <div className="flex items-center justify-between px-3 py-1">
-              <span className="text-subtext text-xs">Unstaged</span>
+              <span className="text-subtext text-xs">{t('unstaged')}</span>
               <button
                 onClick={() => stageFiles(unstagedPaths)}
                 className="text-green text-xs hover:text-text"
               >
-                Stage All
+                {t('stageAll')}
               </button>
             </div>
             <FileList
@@ -50,12 +50,12 @@ export function ChangesSection() {
         {status.staged.length > 0 && (
           <>
             <div className="flex items-center justify-between px-3 py-1 mt-1">
-              <span className="text-subtext text-xs">Staged</span>
+              <span className="text-subtext text-xs">{t('staged')}</span>
               <button
                 onClick={() => unstageFiles(stagedPaths)}
                 className="text-yellow text-xs hover:text-text"
               >
-                Unstage All
+                {t('unstageAll')}
               </button>
             </div>
             <FileList
@@ -69,7 +69,7 @@ export function ChangesSection() {
         )}
 
         {status.unstaged.length === 0 && status.staged.length === 0 && (
-          <p className="text-subtext text-xs text-center py-4">No changes</p>
+          <p className="text-subtext text-xs text-center py-4">{t('noChanges')}</p>
         )}
       </div>
 

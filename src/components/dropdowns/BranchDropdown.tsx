@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore, CheckoutConflictError } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
@@ -21,6 +22,7 @@ interface ItemProps {
 }
 
 function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onCheckout, onMerge, onRebase, onDelete }: ItemProps) {
+  const { t } = useTranslation('branches');
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -53,7 +55,7 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
           ref={btnRef}
           onClick={e => { e.stopPropagation(); onToggleContext(); }}
           className="ml-2 px-1 text-subtext hover:text-text"
-          aria-label="More actions"
+          aria-label={t('moreActions')}
         >
           ⋯
         </button>
@@ -65,15 +67,15 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
           className="fixed bg-surface1 rounded-lg shadow-xl z-[60] py-1 w-44"
           style={{ top: pos.top, left: pos.left }}
         >
-          <MenuItem onClick={onCheckout}>Checkout</MenuItem>
-          <MenuItem onClick={onMerge}>Merge into current</MenuItem>
-          <MenuItem onClick={onRebase}>Rebase onto current</MenuItem>
+          <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
+          <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
+          <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
           {/* No delete for the checked-out branch — Git refuses it anyway. */}
           {!current && (
             <>
               <div className="border-t border-surface2 my-1" />
               <MenuItem tone="danger" onClick={onDelete}>
-                {isRemote ? 'Delete remote branch' : 'Delete branch'}
+                {isRemote ? t('deleteRemoteBranch') : t('deleteBranch')}
               </MenuItem>
             </>
           )}
@@ -85,6 +87,7 @@ function BranchItem({ name, current, isRemote, contextOpen, onToggleContext, onC
 }
 
 export function BranchDropdown({ onClose }: BranchDropdownProps) {
+  const { t } = useTranslation('branches');
   const [search, setSearch] = useState('');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const { branches, checkout, merge, rebase, deleteBranch, deleteRemoteBranch, mergeState } = useRepoStore();
@@ -100,11 +103,11 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
     onClose();
     try {
       await action();
-      addToast({ variant: 'success', title: 'Done', message: successMsg });
+      addToast({ variant: 'success', title: t('common:done'), message: successMsg });
     } catch (err: unknown) {
       // Checkout blocked by local changes — a modal handles it, no error toast.
       if (err instanceof CheckoutConflictError) return;
-      addToast({ variant: 'error', title: 'Error', message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('common:error'), message: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -112,25 +115,25 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   // the branch isn't fully merged do we offer a force delete behind a second,
   // explicit confirm that spells out the consequence.
   const confirmDeleteLocal = async (name: string) => {
-    if (!window.confirm(`Delete branch "${name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t('deleteConfirm', { name }))) return;
     onClose();
     try {
       await deleteBranch(name);
-      addToast({ variant: 'success', title: 'Done', message: `Deleted ${name}` });
+      addToast({ variant: 'success', title: t('common:done'), message: t('deleted', { name }) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/not fully merged/i.test(msg)) {
-        if (window.confirm(`Branch "${name}" is not fully merged. Force delete? Unmerged commits will be lost.`)) {
+        if (window.confirm(t('forceDeleteConfirm', { name }))) {
           try {
             await deleteBranch(name, true);
-            addToast({ variant: 'success', title: 'Done', message: `Force-deleted ${name}` });
+            addToast({ variant: 'success', title: t('common:done'), message: t('forceDeleted', { name }) });
           } catch (e: unknown) {
-            addToast({ variant: 'error', title: 'Error', message: e instanceof Error ? e.message : String(e) });
+            addToast({ variant: 'error', title: t('common:error'), message: e instanceof Error ? e.message : String(e) });
           }
         }
         return;
       }
-      addToast({ variant: 'error', title: 'Error', message: msg });
+      addToast({ variant: 'error', title: t('common:error'), message: msg });
     }
   };
 
@@ -140,8 +143,8 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
     if (slash === -1) return;
     const remote = name.slice(0, slash);
     const branch = name.slice(slash + 1);
-    if (window.confirm(`Delete remote branch "${branch}" on "${remote}"? This removes it on the remote for everyone.`)) {
-      handle(() => deleteRemoteBranch(remote, branch), `Deleted ${name}`);
+    if (window.confirm(t('deleteRemoteConfirm', { branch, remote }))) {
+      handle(() => deleteRemoteBranch(remote, branch), t('deleted', { name }));
     }
   };
 
@@ -159,14 +162,14 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
         autoFocus
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Search branches..."
+        placeholder={t('searchPlaceholder')}
         className="w-full mb-2"
       />
 
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
       {local.length > 0 && (
         <>
-          <SectionLabel>Local</SectionLabel>
+          <SectionLabel>{t('local')}</SectionLabel>
           {local.map(b => (
             <BranchItem
               key={b.name}
@@ -175,9 +178,9 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
               isRemote={false}
               contextOpen={openMenu === b.name}
               onToggleContext={() => toggleMenu(b.name)}
-              onCheckout={() => handle(() => checkout(b.name), `Switched to ${b.name}`)}
-              onMerge={() => handle(() => merge(b.name), `Merged ${b.name}`)}
-              onRebase={() => handle(() => rebase(b.name), `Rebased onto ${b.name}`)}
+              onCheckout={() => handle(() => checkout(b.name), t('switchedTo', { name: b.name }))}
+              onMerge={() => handle(() => merge(b.name), t('merged', { name: b.name }))}
+              onRebase={() => handle(() => rebase(b.name), t('rebasedOnto', { name: b.name }))}
               onDelete={() => confirmDeleteLocal(b.name)}
             />
           ))}
@@ -186,7 +189,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
 
       {remote.length > 0 && (
         <>
-          <SectionLabel className="mt-1">Remote</SectionLabel>
+          <SectionLabel className="mt-1">{t('remote')}</SectionLabel>
           {remote.map(b => (
             <BranchItem
               key={b.name}
@@ -195,9 +198,9 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
               isRemote={true}
               contextOpen={openMenu === b.name}
               onToggleContext={() => toggleMenu(b.name)}
-              onCheckout={() => handle(() => checkout(b.name), `Switched to ${b.name}`)}
-              onMerge={() => handle(() => merge(b.name), `Merged ${b.name}`)}
-              onRebase={() => handle(() => rebase(b.name), `Rebased onto ${b.name}`)}
+              onCheckout={() => handle(() => checkout(b.name), t('switchedTo', { name: b.name }))}
+              onMerge={() => handle(() => merge(b.name), t('merged', { name: b.name }))}
+              onRebase={() => handle(() => rebase(b.name), t('rebasedOnto', { name: b.name }))}
               onDelete={() => confirmDeleteRemote(b.name)}
             />
           ))}

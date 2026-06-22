@@ -72,12 +72,14 @@ export const useRepoStore = create<RepoState>()(
   stashes: [],
 
   openRepo: async (path) => {
-    await gitApi.openRepo(path);
+    // Backend normalizes to the canonical repo root; store that, not the raw
+    // path the user picked (which may be a subfolder). Fall back to the input
+    // path if the backend returns nothing, so repoPath/recentRepos never go null.
+    const root = (await gitApi.openRepo(path)) || path;
     set(s => ({
-      repoPath: path,
-      recentRepos: s.recentRepos.includes(path)
-        ? s.recentRepos
-        : [path, ...s.recentRepos].slice(0, 10),
+      repoPath: root,
+      // Drop any falsy/duplicate entries while prepending the freshly opened root.
+      recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
   },
@@ -311,7 +313,10 @@ export const useRepoStore = create<RepoState>()(
       // Deferred to a macrotask so `useRepoStore` is assigned before we use it
       // (localStorage rehydrates synchronously, during store creation).
       onRehydrateStorage: () => (state) => {
-        if (!state?.repoPath) return;
+        if (!state) return;
+        // Sanitize any persisted bad entries (e.g. a null stored by an older build).
+        state.recentRepos = (state.recentRepos ?? []).filter(Boolean);
+        if (!state.repoPath) return;
         const path = state.repoPath;
         setTimeout(() => {
           useRepoStore.getState().openRepo(path).catch(() => {

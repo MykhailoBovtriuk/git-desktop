@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
@@ -56,6 +57,7 @@ function rebuild(segs: Segment[]): string {
 }
 
 export function MergeEditor() {
+  const { t } = useTranslation('merge');
   const { mergeState, abortMerge, refresh, clearMergeState, concludeMerge } = useRepoStore();
   const { activeMergeFile, setActiveMergeFile, setActiveView, addToast } = useUiStore();
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
@@ -74,7 +76,7 @@ export function MergeEditor() {
     if (!activeMergeFile || segsByFile[activeMergeFile]) return;
     gitApi.readFile(activeMergeFile)
       .then(content => setSegsByFile(m => ({ ...m, [activeMergeFile]: parseConflicts(content) })))
-      .catch(err => addToast({ variant: 'error', title: 'Load failed', message: String(err) }));
+      .catch(err => addToast({ variant: 'error', title: t('loadFailed'), message: String(err) }));
   }, [activeMergeFile, segsByFile, addToast]);
 
   if (!mergeState) return null;
@@ -116,15 +118,15 @@ export function MergeEditor() {
       if (autoCommit) {
         await concludeMerge();
         setActiveView('changes');
-        addToast({ variant: 'success', title: 'Merge complete', message: `Merged ${mergeState.sourceBranch} into ${mergeState.targetBranch}` });
+        addToast({ variant: 'success', title: t('mergeComplete'), message: t('mergedMessage', { source: mergeState.sourceBranch, target: mergeState.targetBranch }) });
       } else {
         clearMergeState();
         await refresh();
         setActiveView('changes');
-        addToast({ variant: 'info', title: 'Conflicts resolved', message: `Commit to finish merging ${mergeState.sourceBranch} → ${mergeState.targetBranch}` });
+        addToast({ variant: 'info', title: t('conflictsResolved'), message: t('commitToFinish', { source: mergeState.sourceBranch, target: mergeState.targetBranch }) });
       }
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: 'Error', message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('common:error'), message: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -132,9 +134,9 @@ export function MergeEditor() {
     try {
       await abortMerge();
       setActiveView('changes');
-      addToast({ variant: 'info', title: 'Merge aborted', message: 'Merge was aborted' });
+      addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: 'Abort failed', message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('abortFailed'), message: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -157,28 +159,28 @@ export function MergeEditor() {
           </button>
         ))}
         <div className="ml-auto px-3 text-subtext text-xs shrink-0">
-          {resolved.size} / {files.length} resolved
+          {t('resolved', { resolved: resolved.size, total: files.length })}
         </div>
       </div>
 
       {/* Column headers */}
       <div className="flex bg-mantle border-b border-surface0 text-xs shrink-0">
         <div className={`${colHead} text-blue`}>
-          <span>CURRENT ({mergeState.targetBranch})</span>
-          <button onClick={() => setAll('ours')} className="underline text-subtext hover:text-text">Use this</button>
+          <span>{t('currentBranch', { branch: mergeState.targetBranch })}</span>
+          <button onClick={() => setAll('ours')} className="underline text-subtext hover:text-text">{t('useThis')}</button>
         </div>
         <div className="w-9 shrink-0" />
         <div className={`${colHead} text-text`}>
-          <span>RESULT</span>
+          <span>{t('resultUpper')}</span>
           <div className="flex gap-3">
-            <button onClick={() => setAll('both')} className="underline text-subtext hover:text-text">both</button>
-            <button onClick={() => setAll(null)} className="underline text-subtext hover:text-text">reset</button>
+            <button onClick={() => setAll('both')} className="underline text-subtext hover:text-text">{t('both')}</button>
+            <button onClick={() => setAll(null)} className="underline text-subtext hover:text-text">{t('reset')}</button>
           </div>
         </div>
         <div className="w-9 shrink-0" />
         <div className={`${colHead} text-green`}>
-          <span>INCOMING ({mergeState.sourceBranch})</span>
-          <button onClick={() => setAll('theirs')} className="underline text-subtext hover:text-text">Use this</button>
+          <span>{t('incomingBranch', { branch: mergeState.sourceBranch })}</span>
+          <button onClick={() => setAll('theirs')} className="underline text-subtext hover:text-text">{t('useThis')}</button>
         </div>
       </div>
 
@@ -198,19 +200,19 @@ export function MergeEditor() {
               <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'ours' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.ours}</pre>
               <button
                 onClick={() => setChoice(idx, 'ours')}
-                title="Use current for this block"
+                title={t('useCurrentBlock')}
                 className={`${gutter} hover:bg-surface1 transition-colors ${s.choice === 'ours' ? 'text-blue bg-surface0' : 'text-subtext hover:text-text'}`}
               >»</button>
               <div className={`flex-1 px-3 py-1 whitespace-pre-wrap ${s.choice ? 'bg-green/10 text-text' : 'bg-red/15'}`}>
                 {s.choice ? (
                   <pre className="whitespace-pre-wrap">{s.choice === 'ours' ? s.ours : s.choice === 'theirs' ? s.theirs : `${s.ours}\n${s.theirs}`}</pre>
                 ) : (
-                  <span className="text-red">‹ unresolved — pick a side (» / «) ›</span>
+                  <span className="text-red">{t('unresolvedHint')}</span>
                 )}
               </div>
               <button
                 onClick={() => setChoice(idx, 'theirs')}
-                title="Use incoming for this block"
+                title={t('useIncomingBlock')}
                 className={`${gutter} hover:bg-surface1 transition-colors ${s.choice === 'theirs' ? 'text-green bg-surface0' : 'text-subtext hover:text-text'}`}
               >«</button>
               <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'theirs' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.theirs}</pre>
@@ -222,33 +224,33 @@ export function MergeEditor() {
       {/* Footer */}
       <div className="h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0">
         <span className="text-subtext text-xs">
-          Merging <span className="text-green">{mergeState.sourceBranch}</span> → <span className="text-blue">{mergeState.targetBranch}</span>
-          {remaining > 0 && <span className="text-red"> · {remaining} conflict{remaining !== 1 ? 's' : ''} remaining</span>}
+          {t('mergingArrow', { source: mergeState.sourceBranch, target: mergeState.targetBranch })}
+          {remaining > 0 && <span className="text-red"> {t('remainingConflicts', { count: remaining })}</span>}
         </span>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={toggleAutoCommit}
-            title="When all conflicts are resolved, create the merge commit automatically"
+            title={t('autoCommitHint')}
             className="flex items-center gap-1.5 text-xs text-subtext hover:text-text transition-colors"
           >
             <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${autoCommit ? 'bg-blue' : 'bg-surface2'}`}>
               <span className={`inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${autoCommit ? 'translate-x-3' : 'translate-x-0.5'}`} />
             </span>
-            Auto-commit
+            {t('autoCommit')}
           </button>
           <button
             onClick={handleAbort}
             className="px-3 py-1 text-xs text-red hover:bg-surface0 rounded transition-colors"
           >
-            Abort Merge
+            {t('abortMerge')}
           </button>
           <button
             onClick={handleMarkResolved}
             disabled={!activeMergeFile || remaining > 0}
             className="px-3 py-1 text-xs bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
-            Save &amp; Mark Resolved
+            {t('saveMarkResolved')}
           </button>
         </div>
       </div>

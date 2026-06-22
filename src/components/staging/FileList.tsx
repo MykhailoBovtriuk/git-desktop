@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { FileStatus } from '../../types';
 import { IconButton, ListItem } from '../../shared/ui';
 
@@ -17,6 +18,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelect, selectedFile }: FileListProps) {
+  const { t } = useTranslation('staging');
   if (files.length === 0) return null;
 
   return (
@@ -35,7 +37,7 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
             <div className="flex items-center gap-1.5 min-w-0">
               <span
                 className={`font-mono font-bold ${STATUS_COLOR[file.status] ?? 'text-text'}`}
-                title={file.status === 'N' ? 'Untracked (new file)' : undefined}
+                title={file.status === 'N' ? t('untrackedFile') : undefined}
               >
                 {file.status}
               </span>
@@ -46,21 +48,21 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
               {!staged && onStage && (
                 <IconButton
                   tint="green"
-                  title="Stage"
+                  title={t('stage')}
                   onClick={e => { e.stopPropagation(); onStage(file.path); }}
                 >+</IconButton>
               )}
               {!staged && onDiscard && (
                 <IconButton
                   tint="red"
-                  title={file.status === 'N' ? 'Delete untracked file' : 'Discard'}
+                  title={file.status === 'N' ? t('deleteUntrackedFile') : t('discard')}
                   onClick={e => { e.stopPropagation(); onDiscard(file.path); }}
                 >×</IconButton>
               )}
               {staged && onUnstage && (
                 <IconButton
                   tint="yellow"
-                  title="Unstage"
+                  title={t('unstage')}
                   onClick={e => { e.stopPropagation(); onUnstage(file.path); }}
                 >−</IconButton>
               )}

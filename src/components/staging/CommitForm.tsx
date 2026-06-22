@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
 import { Button, Textarea } from '../../shared/ui';
 
 export function CommitForm() {
+  const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const { commit, status, merging } = useRepoStore();
@@ -27,11 +29,12 @@ export function CommitForm() {
     if (!canCommit) return;
     setLoading(true);
     try {
+      const summary = message.trim().slice(0, 50);
       await commit(message.trim());
       setMessage('');
-      addToast({ variant: 'success', title: 'Committed', message: `Created commit: ${message.trim().slice(0, 50)}` });
+      addToast({ variant: 'success', title: t('committed'), message: t('commitCreated', { summary }) });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: 'Commit failed', message: err instanceof Error ? err.message : String(err) });
+      addToast({ variant: 'error', title: t('commitFailed'), message: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(false);
     }
@@ -44,7 +47,7 @@ export function CommitForm() {
           value={message}
           onChange={e => setMessage(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleCommit(); }}
-          placeholder="Commit message"
+          placeholder={t('commitMessage')}
           rows={3}
         />
         <span className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}>
@@ -59,7 +62,7 @@ export function CommitForm() {
         disabled={!canCommit}
         className="py-1.5 font-medium"
       >
-        {loading ? '...' : 'Commit'}
+        {loading ? '...' : t('commitButton')}
       </Button>
     </div>
   );
