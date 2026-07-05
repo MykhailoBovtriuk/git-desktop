@@ -2,13 +2,20 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { classifyGitError } from '../../lib/git-error-mapper';
 import { Button } from '../../shared/ui';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, commits, aheadBehind, fetch, pull, push } = useRepoStore();
+  const { currentBranch, commits, aheadBehind, fetch, pull, push, publishBranch } = useRepoStore();
   const { addToast } = useUiStore();
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
+
+  const handlePublish = () => {
+    void publishBranch()
+      .then(() => addToast({ variant: 'success', title: t('publishBranch'), message: t('success', { op: t('push') }) }))
+      .catch(e => addToast({ variant: 'error', title: t('publishBranch'), message: e instanceof Error ? e.message : String(e) }));
+  };
 
   const run = async (op: 'fetch' | 'pull' | 'push', action: () => Promise<unknown>) => {
     setLoading(op);
@@ -18,7 +25,20 @@ export function Footer() {
       const msg = op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
       addToast({ variant: 'success', title: label, message: msg });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('failed', { op: label }), message: err instanceof Error ? err.message : String(err) });
+      const raw = err instanceof Error ? err.message : String(err);
+      // Map raw git stderr to a friendly explanation; fall back to the raw text
+      // for unrecognized errors. A missing upstream offers a Publish action.
+      const { kind, action: errAction } = classifyGitError(err);
+      const friendly = t(`error.${kind}`);
+      addToast({
+        variant: 'error',
+        title: t('failed', { op: label }),
+        message: friendly || raw,
+        action:
+          errAction === 'publishBranch' && currentBranch
+            ? { label: t('publishBranch'), onClick: handlePublish }
+            : undefined,
+      });
     } finally {
       setLoading(null);
     }

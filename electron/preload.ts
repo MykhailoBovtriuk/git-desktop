@@ -16,6 +16,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:fetch',
   'git:pull',
   'git:push',
+  'git:push-set-upstream',
   'git:checkout',
   'git:checkout-force',
   'git:merge',

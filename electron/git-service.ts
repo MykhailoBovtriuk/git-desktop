@@ -75,8 +75,25 @@ export class GitService {
   async getBranches(): Promise<Branch[]> {
     const git = this.ensureRepo();
     const summary = await git.branch(['-a']);
-    const branches: Branch[] = [];
 
+    // Map each local branch to its upstream (tracking) ref, if any. simple-git's
+    // branch summary doesn't expose upstream, so read it via for-each-ref.
+    const tracking = new Map<string, string>();
+    try {
+      const raw = await git.raw([
+        'for-each-ref',
+        '--format=%(refname:short)%00%(upstream:short)',
+        'refs/heads',
+      ]);
+      for (const line of raw.split('\n').filter(Boolean)) {
+        const [name, upstream] = line.split('\x00');
+        if (upstream) tracking.set(name, upstream);
+      }
+    } catch {
+      // Older git or unusual state — leave tracking empty rather than fail.
+    }
+
+    const branches: Branch[] = [];
     for (const [name, info] of Object.entries(summary.branches)) {
       const isRemote = name.startsWith('remotes/');
       const cleanName = isRemote ? name.replace('remotes/', '') : name;
@@ -84,6 +101,7 @@ export class GitService {
         name: cleanName,
         current: info.current,
         remote: isRemote,
+        tracking: isRemote ? undefined : tracking.get(cleanName),
       });
     }
 
@@ -174,6 +192,12 @@ export class GitService {
 
   async push(): Promise<void> {
     await this.ensureRepo().push();
+  }
+
+  // Publish a branch: push and set its upstream (`git push -u <remote> <branch>`)
+  // so subsequent push/pull have a tracking ref.
+  async pushSetUpstream(remote: string, branch: string): Promise<void> {
+    await this.ensureRepo().push(['-u', remote, branch]);
   }
 
   async checkout(branch: string): Promise<void> {

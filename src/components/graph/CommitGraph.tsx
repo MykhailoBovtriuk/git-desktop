@@ -12,7 +12,7 @@ const GRAPH_PAD = 10;
 
 export function CommitGraph() {
   const { t } = useTranslation('graph');
-  const { commits } = useRepoStore();
+  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore();
   const { selectedCommit, setSelectedCommit } = useUiStore();
   const layout = useMemo(() => computeLayout(commits), [commits]);
 
@@ -93,6 +93,17 @@ export function CommitGraph() {
             </div>
           );
         })}
+
+        {hasMoreCommits && (
+          <button
+            onClick={loadMoreCommits}
+            disabled={loadingMoreCommits}
+            className="w-full h-7 px-2 text-xs text-blue hover:bg-surface0 disabled:opacity-50"
+            style={{ paddingLeft: graphW }}
+          >
+            {loadingMoreCommits ? t('common:loadingMore') : t('common:loadMore')}
+          </button>
+        )}
       </div>
     </div>
   );

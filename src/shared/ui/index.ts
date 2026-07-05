@@ -12,3 +12,4 @@ export { Badge, type BadgeProps } from './Badge';
 export { Accordion } from './Accordion';
 export { DragRegion } from './DragRegion';
 export { ToastCard, type ToastCardProps } from './ToastCard';
+export { ErrorBoundary } from './ErrorBoundary';
