@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Accordion } from '../../shared/ui';
@@ -17,8 +18,12 @@ function loadWidth(): number {
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { status, stashes } = useRepoStore();
-  const { activeView, setActiveView } = useUiStore();
+  const { status, stashes } = useRepoStore(
+    useShallow(s => ({ status: s.status, stashes: s.stashes })),
+  );
+  const { activeView, setActiveView } = useUiStore(
+    useShallow(s => ({ activeView: s.activeView, setActiveView: s.setActiveView })),
+  );
 
   const [width, setWidth] = useState(loadWidth);
 

@@ -4,5 +4,6 @@
   "recent": "Recent",
   "addRepository": "Add Repository...",
   "noBranch": "no branch",
-  "checkForChanges": "Check for changes"
+  "checkForChanges": "Check for changes",
+  "refreshError": "Last background refresh failed"
 }

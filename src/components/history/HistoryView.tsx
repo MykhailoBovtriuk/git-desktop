@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/ui-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
@@ -9,8 +10,16 @@ import { TextInput } from '../../shared/ui';
 
 export function HistoryView() {
   const { t } = useTranslation();
-  const { setActiveView, selectedCommit, setSelectedFile, selectedFile, addToast } = useUiStore();
-  const { commits } = useRepoStore();
+  const { setActiveView, selectedCommit, setSelectedFile, selectedFile, addToast } = useUiStore(
+    useShallow(s => ({
+      setActiveView: s.setActiveView,
+      selectedCommit: s.selectedCommit,
+      setSelectedFile: s.setSelectedFile,
+      selectedFile: s.selectedFile,
+      addToast: s.addToast,
+    })),
+  );
+  const { commits } = useRepoStore(useShallow(s => ({ commits: s.commits })));
   const [filter, setFilter] = useState('');
   const [changedFiles, setChangedFiles] = useState<{ path: string; status: string }[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);

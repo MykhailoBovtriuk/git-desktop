@@ -180,3 +180,95 @@ describe('GitService', () => {
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
 });
+
+describe('stageFiles/markResolved with dash-prefixed paths', () => {
+  // Without a `--` separator, a file named "-A" is parsed by git as the
+  // stage-everything flag and other files get staged too.
+  it('stageFiles stages only the named file, not everything', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '-A'), 'dash file');
+    fs.writeFileSync(path.join(tmpDir, 'other.txt'), 'other');
+
+    await git.stageFiles(['-A']);
+
+    const status = await git.getStatus();
+    expect(status.staged.map((f) => f.path)).toEqual(['-A']);
+    expect(status.unstaged.map((f) => f.path)).toEqual(['other.txt']);
+  });
+
+  it('markResolved stages only the named file', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '-A'), 'dash file');
+    fs.writeFileSync(path.join(tmpDir, 'other.txt'), 'other');
+
+    await git.markResolved('-A');
+
+    const status = await git.getStatus();
+    expect(status.staged.map((f) => f.path)).toEqual(['-A']);
+    expect(status.unstaged.map((f) => f.path)).toEqual(['other.txt']);
+  });
+});
+
+describe('readFile/writeFile path guards', () => {
+  beforeEach(async () => {
+    await git.openRepo(tmpDir);
+  });
+
+  it('allows normal reads and writes inside the repo', async () => {
+    await git.writeFile('sub/dir-file.txt', 'nested').catch(() => {
+      // parent dir does not exist — that's a plain write failure, not a guard
+    });
+    await git.writeFile('plain.txt', 'ok');
+    expect(await git.readFile('plain.txt')).toBe('ok');
+    // dotfiles that merely start with ".git" must not be blocked
+    await git.writeFile('.gitignore', 'node_modules\n');
+    expect(await git.readFile('.gitignore')).toBe('node_modules\n');
+  });
+
+  // Writing into .git/ (hooks, config) means arbitrary code execution on the
+  // next git command — the guard must reject it even though the path is
+  // lexically inside the repo.
+  it('rejects writes into .git', async () => {
+    await expect(git.writeFile('.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
+    expect(fs.existsSync(path.join(tmpDir, '.git', 'hooks', 'pre-commit'))).toBe(false);
+    await expect(git.writeFile('.git/config', '[core]')).rejects.toThrow();
+  });
+
+  it('rejects reads from .git', async () => {
+    await expect(git.readFile('.git/config')).rejects.toThrow();
+  });
+
+  it('rejects .git regardless of case', async () => {
+    await expect(git.writeFile('.GIT/config', 'x')).rejects.toThrow();
+  });
+
+  it('rejects reading through a symlink that points outside the repo', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
+    fs.writeFileSync(path.join(outside, 'secret.txt'), 'secret');
+    fs.symlinkSync(outside, path.join(tmpDir, 'link'));
+
+    await expect(git.readFile('link/secret.txt')).rejects.toThrow(/outside repository/);
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('rejects writing through a symlink that points outside the repo', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
+    fs.symlinkSync(outside, path.join(tmpDir, 'link'));
+
+    await expect(git.writeFile('link/evil.txt', 'x')).rejects.toThrow(/outside repository/);
+    expect(fs.existsSync(path.join(outside, 'evil.txt'))).toBe(false);
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('rejects a file symlink that points outside the repo', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
+    const target = path.join(outside, 'target.txt');
+    fs.writeFileSync(target, 'outside content');
+    fs.symlinkSync(target, path.join(tmpDir, 'file-link.txt'));
+
+    await expect(git.readFile('file-link.txt')).rejects.toThrow(/outside repository/);
+    await expect(git.writeFile('file-link.txt', 'overwrite')).rejects.toThrow(/outside repository/);
+    expect(fs.readFileSync(target, 'utf-8')).toBe('outside content');
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+});

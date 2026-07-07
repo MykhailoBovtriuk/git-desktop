@@ -1,65 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
-
-type Choice = 'ours' | 'theirs' | 'both' | null;
-type Segment =
-  | { type: 'common'; text: string }
-  | { type: 'conflict'; ours: string; theirs: string; choice: Choice };
-
-// Split a conflicted file into common text and conflict blocks.
-function parseConflicts(content: string): Segment[] {
-  const lines = content.split('\n');
-  const segs: Segment[] = [];
-  let common: string[] = [];
-  const flush = () => {
-    if (common.length) { segs.push({ type: 'common', text: common.join('\n') }); common = []; }
-  };
-
-  let i = 0;
-  while (i < lines.length) {
-    if (lines[i].startsWith('<<<<<<<')) {
-      flush();
-      i++;
-      const ours: string[] = [];
-      while (i < lines.length && !lines[i].startsWith('=======') && !lines[i].startsWith('|||||||')) {
-        ours.push(lines[i]); i++;
-      }
-      // Skip the diff3 base section if present (||||||| ... =======).
-      if (i < lines.length && lines[i].startsWith('|||||||')) {
-        i++;
-        while (i < lines.length && !lines[i].startsWith('=======')) i++;
-      }
-      i++; // skip =======
-      const theirs: string[] = [];
-      while (i < lines.length && !lines[i].startsWith('>>>>>>>')) { theirs.push(lines[i]); i++; }
-      i++; // skip >>>>>>>
-      segs.push({ type: 'conflict', ours: ours.join('\n'), theirs: theirs.join('\n'), choice: null });
-    } else {
-      common.push(lines[i]); i++;
-    }
-  }
-  flush();
-  return segs;
-}
-
-// Reconstruct file text from segments; unresolved blocks keep their markers.
-function rebuild(segs: Segment[]): string {
-  return segs.map(s => {
-    if (s.type === 'common') return s.text;
-    if (s.choice === 'ours') return s.ours;
-    if (s.choice === 'theirs') return s.theirs;
-    if (s.choice === 'both') return `${s.ours}\n${s.theirs}`;
-    return `<<<<<<< HEAD\n${s.ours}\n=======\n${s.theirs}\n>>>>>>>`;
-  }).join('\n');
-}
+import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 
 export function MergeEditor() {
   const { t } = useTranslation('merge');
-  const { mergeState, abortMerge, refresh, clearMergeState, concludeMerge } = useRepoStore();
-  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast } = useUiStore();
+  const { mergeState, abortMerge, refresh, clearMergeState, concludeMerge } = useRepoStore(
+    useShallow(s => ({
+      mergeState: s.mergeState,
+      abortMerge: s.abortMerge,
+      refresh: s.refresh,
+      clearMergeState: s.clearMergeState,
+      concludeMerge: s.concludeMerge,
+    })),
+  );
+  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast } = useUiStore(
+    useShallow(s => ({
+      activeMergeFile: s.activeMergeFile,
+      setActiveMergeFile: s.setActiveMergeFile,
+      setActiveView: s.setActiveView,
+      addToast: s.addToast,
+    })),
+  );
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
   const [resolved, setResolved] = useState<Set<string>>(new Set());
   // Default ON: when all conflicts are resolved, the merge commit is created
@@ -82,7 +47,10 @@ export function MergeEditor() {
   if (!mergeState) return null;
 
   const files = mergeState.conflictingFiles;
-  const segs = activeMergeFile ? segsByFile[activeMergeFile] ?? [] : [];
+  // undefined until readFile resolves — Save must stay disabled until then,
+  // otherwise rebuild([]) would overwrite the file with an empty string.
+  const loadedSegs = activeMergeFile ? segsByFile[activeMergeFile] : undefined;
+  const segs = loadedSegs ?? [];
   const remaining = segs.filter(s => s.type === 'conflict' && s.choice === null).length;
 
   const setChoice = (idx: number, choice: Choice) => {
@@ -103,7 +71,7 @@ export function MergeEditor() {
   };
 
   const handleMarkResolved = async () => {
-    if (!activeMergeFile || remaining > 0) return;
+    if (!activeMergeFile || loadedSegs === undefined || remaining > 0) return;
     try {
       await gitApi.writeFile(activeMergeFile, rebuild(segs));
       await gitApi.markResolved(activeMergeFile);
@@ -189,15 +157,15 @@ export function MergeEditor() {
         {segs.map((s, idx) =>
           s.type === 'common' ? (
             <div key={idx} className="flex">
-              <pre className="flex-1 px-3 py-0.5 text-subtext whitespace-pre-wrap">{s.text}</pre>
+              <pre className="flex-1 px-3 py-0.5 text-subtext whitespace-pre-wrap">{s.lines.join('\n')}</pre>
               <div className="w-9 shrink-0" />
-              <pre className="flex-1 px-3 py-0.5 text-text whitespace-pre-wrap border-x border-surface0">{s.text}</pre>
+              <pre className="flex-1 px-3 py-0.5 text-text whitespace-pre-wrap border-x border-surface0">{s.lines.join('\n')}</pre>
               <div className="w-9 shrink-0" />
-              <pre className="flex-1 px-3 py-0.5 text-subtext whitespace-pre-wrap">{s.text}</pre>
+              <pre className="flex-1 px-3 py-0.5 text-subtext whitespace-pre-wrap">{s.lines.join('\n')}</pre>
             </div>
           ) : (
             <div key={idx} className="flex items-stretch border-y border-surface0">
-              <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'ours' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.ours}</pre>
+              <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'ours' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.ours.join('\n')}</pre>
               <button
                 onClick={() => setChoice(idx, 'ours')}
                 title={t('useCurrentBlock')}
@@ -205,7 +173,7 @@ export function MergeEditor() {
               >»</button>
               <div className={`flex-1 px-3 py-1 whitespace-pre-wrap ${s.choice ? 'bg-green/10 text-text' : 'bg-red/15'}`}>
                 {s.choice ? (
-                  <pre className="whitespace-pre-wrap">{s.choice === 'ours' ? s.ours : s.choice === 'theirs' ? s.theirs : `${s.ours}\n${s.theirs}`}</pre>
+                  <pre className="whitespace-pre-wrap">{(s.choice === 'ours' ? s.ours : s.choice === 'theirs' ? s.theirs : [...s.ours, ...s.theirs]).join('\n')}</pre>
                 ) : (
                   <span className="text-red">{t('unresolvedHint')}</span>
                 )}
@@ -215,7 +183,7 @@ export function MergeEditor() {
                 title={t('useIncomingBlock')}
                 className={`${gutter} hover:bg-surface1 transition-colors ${s.choice === 'theirs' ? 'text-green bg-surface0' : 'text-subtext hover:text-text'}`}
               >«</button>
-              <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'theirs' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.theirs}</pre>
+              <pre className={`flex-1 px-3 py-1 whitespace-pre-wrap text-text ${s.choice === 'theirs' || s.choice === 'both' ? 'bg-green/10' : 'bg-red/10'}`}>{s.theirs.join('\n')}</pre>
             </div>
           )
         )}
@@ -247,7 +215,7 @@ export function MergeEditor() {
           </button>
           <button
             onClick={handleMarkResolved}
-            disabled={!activeMergeFile || remaining > 0}
+            disabled={!activeMergeFile || loadedSegs === undefined || remaining > 0}
             className="px-3 py-1 text-xs bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {t('saveMarkResolved')}

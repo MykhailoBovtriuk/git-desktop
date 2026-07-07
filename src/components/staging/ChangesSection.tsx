@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { FileList } from './FileList';
@@ -6,8 +7,17 @@ import { CommitForm } from './CommitForm';
 
 export function ChangesSection() {
   const { t } = useTranslation('staging');
-  const { status, stageFiles, unstageFiles, discardChanges } = useRepoStore();
-  const { selectedFile, setSelectedFile } = useUiStore();
+  const { status, stageFiles, unstageFiles, discardChanges } = useRepoStore(
+    useShallow(s => ({
+      status: s.status,
+      stageFiles: s.stageFiles,
+      unstageFiles: s.unstageFiles,
+      discardChanges: s.discardChanges,
+    })),
+  );
+  const { selectedFile, setSelectedFile } = useUiStore(
+    useShallow(s => ({ selectedFile: s.selectedFile, setSelectedFile: s.setSelectedFile })),
+  );
 
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);

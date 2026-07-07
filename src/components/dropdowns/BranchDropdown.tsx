@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore, CheckoutConflictError } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
@@ -90,8 +91,18 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   const { t } = useTranslation('branches');
   const [search, setSearch] = useState('');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const { branches, checkout, merge, rebase, deleteBranch, deleteRemoteBranch, mergeState } = useRepoStore();
-  const { addToast } = useUiStore();
+  const { branches, checkout, merge, rebase, deleteBranch, deleteRemoteBranch, mergeState } = useRepoStore(
+    useShallow(s => ({
+      branches: s.branches,
+      checkout: s.checkout,
+      merge: s.merge,
+      rebase: s.rebase,
+      deleteBranch: s.deleteBranch,
+      deleteRemoteBranch: s.deleteRemoteBranch,
+      mergeState: s.mergeState,
+    })),
+  );
+  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
 
   const filtered = branches.filter(b =>
     b.name.toLowerCase().includes(search.toLowerCase())

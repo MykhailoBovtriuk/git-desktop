@@ -1,12 +1,22 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
 
 export function MergeConflictModal() {
   const { t } = useTranslation('merge');
-  const { mergeState, abortMerge } = useRepoStore();
-  const { activeView, setActiveView, setActiveMergeFile, addToast } = useUiStore();
+  const { mergeState, abortMerge } = useRepoStore(
+    useShallow(s => ({ mergeState: s.mergeState, abortMerge: s.abortMerge })),
+  );
+  const { activeView, setActiveView, setActiveMergeFile, addToast } = useUiStore(
+    useShallow(s => ({
+      activeView: s.activeView,
+      setActiveView: s.setActiveView,
+      setActiveMergeFile: s.setActiveMergeFile,
+      addToast: s.addToast,
+    })),
+  );
 
   if (!mergeState || activeView === 'merge-editor') return null;
 

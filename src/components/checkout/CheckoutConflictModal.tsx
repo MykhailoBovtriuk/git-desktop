@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
@@ -11,8 +12,16 @@ export function CheckoutConflictModal() {
     migrateCheckout,
     forceCheckout,
     cancelCheckout,
-  } = useRepoStore();
-  const { addToast } = useUiStore();
+  } = useRepoStore(
+    useShallow(s => ({
+      checkoutConflict: s.checkoutConflict,
+      stashAndCheckout: s.stashAndCheckout,
+      migrateCheckout: s.migrateCheckout,
+      forceCheckout: s.forceCheckout,
+      cancelCheckout: s.cancelCheckout,
+    })),
+  );
+  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
 
   if (!checkoutConflict) return null;
   const { branch } = checkoutConflict;

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { relativeTime } from '../../lib/relative-time';
@@ -11,8 +12,17 @@ interface CommitListProps {
 
 export function CommitList({ filter }: CommitListProps) {
   const { t } = useTranslation('common');
-  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore();
-  const { selectedCommit, setSelectedCommit } = useUiStore();
+  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
+    useShallow(s => ({
+      commits: s.commits,
+      hasMoreCommits: s.hasMoreCommits,
+      loadingMoreCommits: s.loadingMoreCommits,
+      loadMoreCommits: s.loadMoreCommits,
+    })),
+  );
+  const { selectedCommit, setSelectedCommit } = useUiStore(
+    useShallow(s => ({ selectedCommit: s.selectedCommit, setSelectedCommit: s.setSelectedCommit })),
+  );
 
   const filtered = filter
     ? commits.filter(c =>

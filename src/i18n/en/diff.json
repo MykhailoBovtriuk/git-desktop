@@ -1,1 +1,1 @@
-{ "noDiff": "Select a file to view diff", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "No diff to display" }
+{ "noDiff": "Select a file to view diff", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "No diff to display", "loadFailed": "Failed to load diff" }

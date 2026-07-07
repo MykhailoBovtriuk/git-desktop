@@ -92,11 +92,14 @@ export function parseDiff(raw: string): FileDiff[] {
 
       if (!currentHunk) continue;
 
-      if (line.startsWith('+') && !line.startsWith('+++')) {
+      // ---/+++ headers only appear before the first hunk (currentHunk is
+      // null there), so inside a hunk the first char alone decides: a removed
+      // line with content "--x" legitimately renders as "---x".
+      if (line.startsWith('+')) {
         const dl: DiffLine = { type: 'add', content: line.slice(1), newLineNumber: newLine++ };
         currentHunk.lines.push(dl);
         additions++;
-      } else if (line.startsWith('-') && !line.startsWith('---')) {
+      } else if (line.startsWith('-')) {
         const dl: DiffLine = { type: 'remove', content: line.slice(1), oldLineNumber: oldLine++ };
         currentHunk.lines.push(dl);
         deletions++;

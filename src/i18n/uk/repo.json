@@ -4,5 +4,6 @@
   "recent": "Нещодавні",
   "addRepository": "Додати репозиторій...",
   "noBranch": "немає гілки",
-  "checkForChanges": "Перевірити зміни"
+  "checkForChanges": "Перевірити зміни",
+  "refreshError": "Останнє фонове оновлення не вдалося"
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/ui-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
@@ -9,7 +10,13 @@ import type { FileDiff } from '../../types';
 
 export function DiffViewer() {
   const { t } = useTranslation('diff');
-  const { selectedFile, selectedCommit, activeView } = useUiStore();
+  const { selectedFile, selectedCommit, activeView } = useUiStore(
+    useShallow(s => ({
+      selectedFile: s.selectedFile,
+      selectedCommit: s.selectedCommit,
+      activeView: s.activeView,
+    })),
+  );
   const isStaged = useRepoStore(
     s => !!selectedFile && s.status.staged.some(f => f.path === selectedFile),
   );
@@ -26,12 +33,14 @@ export function DiffViewer() {
   const hasSelection = !!selectedFile && (useCommitContext || inChanges);
   const [diffs, setDiffs] = useState<FileDiff[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasSelection) { setDiffs([]); return; }
+    if (!hasSelection) { setDiffs([]); setError(null); return; }
 
     let cancelled = false;
     setLoading(true);
+    setError(null);
     (async () => {
       try {
         let raw = '';
@@ -46,7 +55,7 @@ export function DiffViewer() {
       } catch (err) {
         if (!cancelled) {
           setDiffs([]);
-          console.error('diff load failed:', err);
+          setError(err instanceof Error ? err.message : String(err));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -65,6 +74,15 @@ export function DiffViewer() {
 
   if (loading) {
     return <div className="h-full flex items-center justify-center text-subtext text-sm">{t('common:loading')}</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-1 text-red text-sm px-4 text-center">
+        <span>{t('loadFailed')}</span>
+        <span className="text-subtext text-xs break-all">{error}</span>
+      </div>
+    );
   }
 
   if (diffs.length === 0) {

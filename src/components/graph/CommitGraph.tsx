@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
@@ -12,8 +13,17 @@ const GRAPH_PAD = 10;
 
 export function CommitGraph() {
   const { t } = useTranslation('graph');
-  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore();
-  const { selectedCommit, setSelectedCommit } = useUiStore();
+  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
+    useShallow(s => ({
+      commits: s.commits,
+      hasMoreCommits: s.hasMoreCommits,
+      loadingMoreCommits: s.loadingMoreCommits,
+      loadMoreCommits: s.loadMoreCommits,
+    })),
+  );
+  const { selectedCommit, setSelectedCommit } = useUiStore(
+    useShallow(s => ({ selectedCommit: s.selectedCommit, setSelectedCommit: s.setSelectedCommit })),
+  );
   const layout = useMemo(() => computeLayout(commits), [commits]);
 
   if (commits.length === 0) {

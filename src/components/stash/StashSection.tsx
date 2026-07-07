@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { FileList } from '../staging/FileList';
@@ -7,8 +8,25 @@ import { StashForm } from './StashForm';
 
 export function StashSection() {
   const { t } = useTranslation('stash');
-  const { status, stageFiles, unstageFiles, discardChanges, stashSave } = useRepoStore();
-  const { activeView, setActiveView, setSelectedStash, selectedFile, setSelectedFile, addToast } = useUiStore();
+  const { status, stageFiles, unstageFiles, discardChanges, stashSave } = useRepoStore(
+    useShallow(s => ({
+      status: s.status,
+      stageFiles: s.stageFiles,
+      unstageFiles: s.unstageFiles,
+      discardChanges: s.discardChanges,
+      stashSave: s.stashSave,
+    })),
+  );
+  const { activeView, setActiveView, setSelectedStash, selectedFile, setSelectedFile, addToast } = useUiStore(
+    useShallow(s => ({
+      activeView: s.activeView,
+      setActiveView: s.setActiveView,
+      setSelectedStash: s.setSelectedStash,
+      selectedFile: s.selectedFile,
+      setSelectedFile: s.setSelectedFile,
+      addToast: s.addToast,
+    })),
+  );
   const [loading, setLoading] = useState(false);
 
   const listMode = activeView === 'stash';

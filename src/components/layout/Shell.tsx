@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Titlebar } from './Titlebar';
@@ -14,7 +15,7 @@ import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { StashView } from '../stash/StashView';
 
 function MainContent() {
-  const { activeView } = useUiStore();
+  const activeView = useUiStore(s => s.activeView);
 
   switch (activeView) {
     case 'history':
@@ -31,7 +32,7 @@ function MainContent() {
 }
 
 export function Shell() {
-  const { repoPath } = useRepoStore();
+  const repoPath = useRepoStore(s => s.repoPath);
 
   if (!repoPath) {
     return (

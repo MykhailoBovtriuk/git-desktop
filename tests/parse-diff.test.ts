@@ -30,6 +30,45 @@ index abc..def 100644
     expect(diffs[0].hunks[0].lines.some(l => l.type === 'remove')).toBe(true);
   });
 
+  // Regression: inside a hunk, a removed line whose content starts with "--"
+  // renders in the diff as "---…" and was dropped by the header guards,
+  // shifting all following line numbers by one. Same for added "++…" lines.
+  it('keeps removed lines whose content starts with --', () => {
+    const raw = `diff --git a/counter.c b/counter.c
+index abc..def 100644
+--- a/counter.c
++++ b/counter.c
+@@ -1,3 +1,2 @@
+ int i = 10;
+---i;
+ return i;`;
+
+    const diffs = parseDiff(raw);
+    const lines = diffs[0].hunks[0].lines;
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toEqual({ type: 'remove', content: '--i;', oldLineNumber: 2 });
+    expect(lines[2]).toEqual({ type: 'context', content: 'return i;', oldLineNumber: 3, newLineNumber: 2 });
+    expect(diffs[0].deletions).toBe(1);
+  });
+
+  it('keeps added lines whose content starts with ++', () => {
+    const raw = `diff --git a/counter.c b/counter.c
+index abc..def 100644
+--- a/counter.c
++++ b/counter.c
+@@ -1,2 +1,3 @@
+ int i = 10;
++++counter;
+ return i;`;
+
+    const diffs = parseDiff(raw);
+    const lines = diffs[0].hunks[0].lines;
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toEqual({ type: 'add', content: '++counter;', newLineNumber: 2 });
+    expect(lines[2]).toEqual({ type: 'context', content: 'return i;', oldLineNumber: 2, newLineNumber: 3 });
+    expect(diffs[0].additions).toBe(1);
+  });
+
   it('parses a new file (--- /dev/null)', () => {
     const raw = `diff --git a/newfile.ts b/newfile.ts
 new file mode 100644

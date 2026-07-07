@@ -27,7 +27,7 @@ export class GitService {
     return this.git;
   }
 
-  private resolveRepoPath(filePath: string): string {
+  private async resolveRepoPath(filePath: string): Promise<string> {
     if (!this.repoPath) throw new Error('No repository opened');
     if (typeof filePath !== 'string' || filePath.length === 0) {
       throw new Error('Invalid file path');
@@ -35,12 +35,31 @@ export class GitService {
     if (path.isAbsolute(filePath)) {
       throw new Error('Path is outside repository');
     }
-    const repoRoot = path.resolve(this.repoPath);
+    // realpath the root too: on macOS os.tmpdir() itself sits behind a symlink.
+    const repoRoot = await fs.realpath(path.resolve(this.repoPath));
     const abs = path.resolve(repoRoot, filePath);
+    this.assertInsideWorkTree(abs, repoRoot);
+    // Lexical checks pass for a symlink that points outside the repo; resolve
+    // the target (or, for a not-yet-existing file, its parent directory) and
+    // re-check the real location.
+    const real = await fs.realpath(abs).catch(async () => {
+      const parent = await fs.realpath(path.dirname(abs)).catch(() => null);
+      return parent === null ? null : path.join(parent, path.basename(abs));
+    });
+    if (real !== null) this.assertInsideWorkTree(real, repoRoot);
+    return abs;
+  }
+
+  private assertInsideWorkTree(abs: string, repoRoot: string): void {
     if (abs !== repoRoot && !abs.startsWith(repoRoot + path.sep)) {
       throw new Error('Path is outside repository');
     }
-    return abs;
+    // Writes into .git (hooks, config) are code execution on the next git
+    // command; reads may leak credentials from .git/config.
+    const firstSegment = path.relative(repoRoot, abs).split(path.sep)[0];
+    if (firstSegment.toLowerCase() === '.git') {
+      throw new Error('Path is outside repository');
+    }
   }
 
   async getLog(limit: number, offset: number): Promise<Commit[]> {
@@ -149,7 +168,8 @@ export class GitService {
   }
 
   async stageFiles(paths: string[]): Promise<void> {
-    await this.ensureRepo().add(paths);
+    // `--` so a path like "-A" is never parsed as a flag.
+    await this.ensureRepo().raw(['add', '--', ...paths]);
   }
 
   async unstageFiles(paths: string[]): Promise<void> {
@@ -356,7 +376,7 @@ export class GitService {
   }
 
   async markResolved(filePath: string): Promise<void> {
-    await this.ensureRepo().add([filePath]);
+    await this.ensureRepo().raw(['add', '--', filePath]);
   }
 
   async getStashList(): Promise<StashEntry[]> {
@@ -414,12 +434,12 @@ export class GitService {
   }
 
   async readFile(filePath: string): Promise<string> {
-    const abs = this.resolveRepoPath(filePath);
+    const abs = await this.resolveRepoPath(filePath);
     return fs.readFile(abs, 'utf-8');
   }
 
   async writeFile(filePath: string, content: string): Promise<void> {
-    const abs = this.resolveRepoPath(filePath);
+    const abs = await this.resolveRepoPath(filePath);
     await fs.writeFile(abs, content, 'utf-8');
   }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
@@ -9,8 +10,10 @@ export function CommitForm() {
   const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { commit, status, merging } = useRepoStore();
-  const { addToast } = useUiStore();
+  const { commit, status, merging } = useRepoStore(
+    useShallow(s => ({ commit: s.commit, status: s.status, merging: s.merging })),
+  );
+  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
 
   // While a merge is in progress, prefill git's default merge message once.
   useEffect(() => {

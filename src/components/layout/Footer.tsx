@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { classifyGitError } from '../../lib/git-error-mapper';
@@ -7,8 +8,18 @@ import { Button } from '../../shared/ui';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, commits, aheadBehind, fetch, pull, push, publishBranch } = useRepoStore();
-  const { addToast } = useUiStore();
+  const { currentBranch, commits, aheadBehind, fetch, pull, push, publishBranch } = useRepoStore(
+    useShallow(s => ({
+      currentBranch: s.currentBranch,
+      commits: s.commits,
+      aheadBehind: s.aheadBehind,
+      fetch: s.fetch,
+      pull: s.pull,
+      push: s.push,
+      publishBranch: s.publishBranch,
+    })),
+  );
+  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
 
   const handlePublish = () => {

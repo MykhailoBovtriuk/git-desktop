@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
@@ -15,8 +16,21 @@ function extractFileDiff(raw: string, filePath: string): string {
 
 export function StashView() {
   const { t } = useTranslation('stash');
-  const { stashes, stashApply, stashPop, stashDrop } = useRepoStore();
-  const { selectedStash, setSelectedStash, addToast } = useUiStore();
+  const { stashes, stashApply, stashPop, stashDrop } = useRepoStore(
+    useShallow(s => ({
+      stashes: s.stashes,
+      stashApply: s.stashApply,
+      stashPop: s.stashPop,
+      stashDrop: s.stashDrop,
+    })),
+  );
+  const { selectedStash, setSelectedStash, addToast } = useUiStore(
+    useShallow(s => ({
+      selectedStash: s.selectedStash,
+      setSelectedStash: s.setSelectedStash,
+      addToast: s.addToast,
+    })),
+  );
   const [rawDiff, setRawDiff] = useState('');
   const [files, setFiles] = useState<FileDiff[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);

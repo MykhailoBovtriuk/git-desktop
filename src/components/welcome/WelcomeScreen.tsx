@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { Button, Badge } from '../../shared/ui';
 
 export function WelcomeScreen() {
   const { t } = useTranslation('repo');
-  const { openDialog, openRepo, recentRepos } = useRepoStore();
+  const { openDialog, openRepo, recentRepos } = useRepoStore(
+    useShallow(s => ({ openDialog: s.openDialog, openRepo: s.openRepo, recentRepos: s.recentRepos })),
+  );
   const repos = recentRepos.filter(Boolean);
 
   return (
