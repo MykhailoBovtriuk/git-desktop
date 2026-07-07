@@ -15,6 +15,7 @@ vi.mock('../../src/api/git-api', () => ({
     fetch: vi.fn().mockResolvedValue(null),
     pull: vi.fn().mockResolvedValue('1 change'),
     push: vi.fn().mockResolvedValue(null),
+    pushSetUpstream: vi.fn().mockResolvedValue(null),
     checkout: vi.fn().mockResolvedValue(null),
     checkoutForce: vi.fn().mockResolvedValue(null),
     merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
@@ -31,7 +32,18 @@ vi.mock('../../src/api/git-api', () => ({
   },
 }));
 
-const { useRepoStore } = await import('../../src/stores/repo-store');
+const { useRepoStore, LOG_PAGE_SIZE } = await import('../../src/stores/repo-store');
+
+const makeCommits = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    hash: `h${i}`,
+    abbreviatedHash: `h${i}`,
+    message: `c${i}`,
+    author: 'a',
+    date: '2024-01-01T00:00:00Z',
+    parents: [],
+    refs: [],
+  }));
 
 describe('repo-store', () => {
   beforeEach(() => {
@@ -44,7 +56,11 @@ describe('repo-store', () => {
       status: { staged: [], unstaged: [] },
       aheadBehind: { ahead: 0, behind: 0 },
       mergeState: null,
-    });
+      hasMoreCommits: false,
+      loadingMoreCommits: false,
+      lastRefreshError: null,
+      busyOperation: null,
+    } as any);
     vi.clearAllMocks();
   });
 
@@ -226,5 +242,98 @@ describe('repo-store', () => {
     useRepoStore.setState({ checkoutConflict: { branch: 'feature' } } as any);
     useRepoStore.getState().cancelCheckout();
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
+  });
+
+  // P4.26 — partial refresh: one failing loader must not discard the segments
+  // that succeeded, and refresh itself must resolve (not reject).
+  it('refresh keeps successful segments when one loader fails', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    (gitApi.getLog as any).mockRejectedValueOnce(new Error('log boom'));
+    (gitApi.getBranches as any).mockResolvedValueOnce([{ name: 'dev', current: true, remote: false }]);
+
+    await expect(useRepoStore.getState().refresh()).resolves.toBeUndefined();
+
+    expect(useRepoStore.getState().currentBranch).toBe('dev');
+    expect(useRepoStore.getState().lastRefreshError).toContain('log boom');
+  });
+
+  it('refresh clears lastRefreshError when every loader succeeds', async () => {
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', lastRefreshError: 'stale' } as any);
+    await useRepoStore.getState().refresh();
+    expect(useRepoStore.getState().lastRefreshError).toBeNull();
+  });
+
+  // P4.25 — operation lock: a busyOperation marker is set for the duration of a
+  // tracked operation so auto-refresh can stand aside.
+  it('runOperation sets busyOperation while running and clears it after', async () => {
+    let observed: string | null = 'unset';
+    await useRepoStore.getState().runOperation('commit', async () => {
+      observed = useRepoStore.getState().busyOperation;
+    });
+    expect(observed).toBe('commit');
+    expect(useRepoStore.getState().busyOperation).toBeNull();
+  });
+
+  it('runOperation clears busyOperation even when the operation throws', async () => {
+    await expect(
+      useRepoStore.getState().runOperation('push', async () => {
+        throw new Error('nope');
+      }),
+    ).rejects.toThrow('nope');
+    expect(useRepoStore.getState().busyOperation).toBeNull();
+  });
+
+  it('runOperation returns the operation result', async () => {
+    const result = await useRepoStore.getState().runOperation('pull', async () => '42 files');
+    expect(result).toBe('42 files');
+  });
+
+  // P4.28 — pagination / load more
+  it('loadLog caps to a page and flags hasMoreCommits when a full page+1 is returned', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(LOG_PAGE_SIZE + 1));
+    await useRepoStore.getState().loadLog();
+    expect(useRepoStore.getState().commits).toHaveLength(LOG_PAGE_SIZE);
+    expect(useRepoStore.getState().hasMoreCommits).toBe(true);
+  });
+
+  it('loadLog clears hasMoreCommits when fewer than a page is returned', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(3));
+    await useRepoStore.getState().loadLog();
+    expect(useRepoStore.getState().commits).toHaveLength(3);
+    expect(useRepoStore.getState().hasMoreCommits).toBe(false);
+  });
+
+  it('loadMoreCommits appends the next page and requests it at the current offset', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
+    (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(2));
+    await useRepoStore.getState().loadMoreCommits();
+    expect(gitApi.getLog).toHaveBeenCalledWith(LOG_PAGE_SIZE + 1, LOG_PAGE_SIZE);
+    expect(useRepoStore.getState().commits).toHaveLength(LOG_PAGE_SIZE + 2);
+    expect(useRepoStore.getState().hasMoreCommits).toBe(false);
+  });
+
+  it('loadMoreCommits is a no-op when there are no more commits', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ commits: makeCommits(5), hasMoreCommits: false } as any);
+    await useRepoStore.getState().loadMoreCommits();
+    expect(gitApi.getLog).not.toHaveBeenCalled();
+    expect(useRepoStore.getState().commits).toHaveLength(5);
+  });
+
+  // P4.31 — publish branch (set upstream)
+  it('publishBranch pushes the current branch upstream to origin', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', currentBranch: 'feature' } as any);
+    await useRepoStore.getState().publishBranch();
+    expect(gitApi.pushSetUpstream).toHaveBeenCalledWith('origin', 'feature');
+  });
+
+  it('publishBranch throws when there is no current branch', async () => {
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', currentBranch: '' } as any);
+    await expect(useRepoStore.getState().publishBranch()).rejects.toThrow();
   });
 });

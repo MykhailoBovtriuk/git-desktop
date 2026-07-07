@@ -37,6 +37,7 @@ export function CheckoutConflictModal() {
       level="high"
       width="w-[75%] max-w-xl"
       subtitle={t('subtitle', { branch })}
+      onClose={cancelCheckout}
     >
       <div className="flex flex-col gap-3 mt-2">
         <div>

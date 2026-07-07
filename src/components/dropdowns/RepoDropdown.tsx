@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { DropdownPanel } from '../../shared/ui';
+import { basenameFromPath } from '../../lib/basename';
 
 interface RepoDropdownProps {
   onClose: () => void;
@@ -29,7 +30,7 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
           onClick={() => handleOpen(repo)}
           className="flex items-center justify-between w-full px-3 py-1.5 hover:bg-surface1 text-sm text-left"
         >
-          <span className="text-text truncate">{repo.split('/').pop()}</span>
+          <span className="text-text truncate">{basenameFromPath(repo)}</span>
           {repo === repoPath && <span className="text-blue text-xs ml-2">✓</span>}
         </button>
       ))}

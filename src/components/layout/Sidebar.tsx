@@ -43,7 +43,7 @@ export function Sidebar() {
 
   return (
     <div
-      className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0"
+      className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
       style={{ width }}
     >
 

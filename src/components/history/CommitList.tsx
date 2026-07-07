@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { relativeTime } from '../../lib/relative-time';
@@ -9,7 +10,8 @@ interface CommitListProps {
 }
 
 export function CommitList({ filter }: CommitListProps) {
-  const { commits } = useRepoStore();
+  const { t } = useTranslation('common');
+  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore();
   const { selectedCommit, setSelectedCommit } = useUiStore();
 
   const filtered = filter
@@ -48,6 +50,18 @@ export function CommitList({ filter }: CommitListProps) {
           </ListItem>
         );
       })}
+
+      {/* Load more only when not filtering — the filter is client-side over the
+          commits already loaded, so paging under a filter would be confusing. */}
+      {!filter && hasMoreCommits && (
+        <button
+          onClick={loadMoreCommits}
+          disabled={loadingMoreCommits}
+          className="w-full px-3 py-2 text-xs text-blue hover:bg-surface0 disabled:opacity-50"
+        >
+          {loadingMoreCommits ? t('loadingMore') : t('loadMore')}
+        </button>
+      )}
     </div>
   );
 }

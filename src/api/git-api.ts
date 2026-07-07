@@ -23,6 +23,8 @@ export const gitApi = {
   fetch: () => invoke<null>('git:fetch'),
   pull: () => invoke<string>('git:pull'),
   push: () => invoke<null>('git:push'),
+  pushSetUpstream: (remote: string, branch: string) =>
+    invoke<null>('git:push-set-upstream', remote, branch),
   checkout: (branch: string) => invoke<null>('git:checkout', branch),
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),

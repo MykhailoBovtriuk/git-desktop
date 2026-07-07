@@ -4,10 +4,11 @@ import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
 import { Badge, DragRegion, IconButton } from '../../shared/ui';
+import { basenameFromPath } from '../../lib/basename';
 
 export function Titlebar() {
   const { t } = useTranslation('repo');
-  const { currentBranch, repoPath, mergeState, loadStatus } = useRepoStore();
+  const { currentBranch, repoPath, mergeState, refresh } = useRepoStore();
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -17,7 +18,9 @@ export function Titlebar() {
   const handleRefresh = async () => {
     if (refreshing) return;
     setRefreshing(true);
-    try { await loadStatus(); } finally { setRefreshing(false); }
+    // Full refresh: status alone leaves commits/branches/stashes stale, which
+    // is not what users expect from a manual refresh.
+    try { await refresh(); } finally { setRefreshing(false); }
   };
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export function Titlebar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const repoName = repoPath?.split('/').pop() ?? '';
+  const repoName = repoPath ? basenameFromPath(repoPath) : '';
 
   const isMac = (window.electronAPI?.platform ?? 'darwin') === 'darwin';
 

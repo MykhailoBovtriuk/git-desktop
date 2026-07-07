@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Modal } from '../../../src/shared/ui/Modal';
 
 describe('Modal', () => {
@@ -48,5 +48,38 @@ describe('Modal', () => {
   it('does not render footer div when footer is undefined', () => {
     const { container } = render(<Modal title="T">y</Modal>);
     expect(container.querySelector('.justify-end')).toBeNull();
+  });
+
+  // P3.21 — accessibility
+  it('exposes the dialog role and aria-modal', () => {
+    render(<Modal title="T">y</Modal>);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('labels the dialog by its title via aria-labelledby', () => {
+    render(<Modal title="My Dialog">y</Modal>);
+    const dialog = screen.getByRole('dialog');
+    const labelId = dialog.getAttribute('aria-labelledby');
+    expect(labelId).toBeTruthy();
+    expect(document.getElementById(labelId!)).toHaveTextContent('My Dialog');
+  });
+
+  it('calls onClose when Escape is pressed', () => {
+    const onClose = vi.fn();
+    render(<Modal title="T" onClose={onClose}>y</Modal>);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not throw on Escape when onClose is absent', () => {
+    render(<Modal title="T">y</Modal>);
+    expect(() => fireEvent.keyDown(document, { key: 'Escape' })).not.toThrow();
+  });
+
+  it('moves focus into the dialog on mount', () => {
+    render(<Modal title="T">y</Modal>);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveFocus();
   });
 });

@@ -1,1 +1,11 @@
-{ "fetch": "Fetch", "pull": "Pull", "push": "Push", "ahead": "{{count}} ahead", "behind": "{{count}} behind", "success": "{{op}} successful", "failed": "{{op}} failed" }
+{ "fetch": "Fetch", "pull": "Pull", "push": "Push", "ahead": "{{count}} ahead", "behind": "{{count}} behind", "success": "{{op}} successful", "failed": "{{op}} failed", "publishBranch": "Publish branch",
+  "error": {
+    "auth": "Authentication failed. Set up a Git credential helper (e.g. Git Credential Manager) or an SSH key, then try again.",
+    "noUpstream": "This branch has no upstream yet. Publish it to push.",
+    "conflict": "There are conflicts to resolve first.",
+    "uncommitted": "You have uncommitted changes that would be overwritten. Commit or stash them first.",
+    "notRepo": "This folder is not a Git repository.",
+    "network": "Could not reach the remote. Check your network connection.",
+    "hook": "A Git hook blocked the operation. See the hook output for details.",
+    "unknown": "" }
+}

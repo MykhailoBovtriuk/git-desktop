@@ -22,7 +22,9 @@ body {
   color: #cdd6f4;
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
-  user-select: none;
+  /* No global `user-select: none`: a Git client must let users copy commit
+     hashes, file paths, diff lines and error text. Chrome (titlebar, sidebar,
+     footer) opts out locally with the `select-none` utility instead. */
 }
 
 ::-webkit-scrollbar {

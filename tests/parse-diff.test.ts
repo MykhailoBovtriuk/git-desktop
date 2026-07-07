@@ -64,6 +64,98 @@ index abc1234..0000000
     expect(diffs[0].additions).toBe(0);
   });
 
+  it('parses a pure rename (100% similarity, no hunks)', () => {
+    const raw = `diff --git a/old-name.ts b/new-name.ts
+similarity index 100%
+rename from old-name.ts
+rename to new-name.ts`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs).toHaveLength(1);
+    expect(diffs[0].status).toBe('R');
+    expect(diffs[0].path).toBe('new-name.ts');
+    expect(diffs[0].additions).toBe(0);
+    expect(diffs[0].deletions).toBe(0);
+  });
+
+  it('parses a rename with modifications, reporting the new path and R status', () => {
+    const raw = `diff --git a/old.ts b/new.ts
+similarity index 80%
+rename from old.ts
+rename to new.ts
+index abc..def 100644
+--- a/old.ts
++++ b/new.ts
+@@ -1,2 +1,2 @@
+ keep
+-was
++now`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs[0].status).toBe('R');
+    expect(diffs[0].path).toBe('new.ts');
+    expect(diffs[0].additions).toBe(1);
+    expect(diffs[0].deletions).toBe(1);
+  });
+
+  it('parses a copied file as status C', () => {
+    const raw = `diff --git a/src.ts b/copy.ts
+similarity index 100%
+copy from src.ts
+copy to copy.ts`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs[0].status).toBe('C');
+    expect(diffs[0].path).toBe('copy.ts');
+  });
+
+  it('unquotes a C-quoted path with a space', () => {
+    const raw = `diff --git "a/has space.ts" "b/has space.ts"
+--- "a/has space.ts"
++++ "b/has space.ts"
+@@ -1 +1 @@
+-a
++b`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs[0].path).toBe('has space.ts');
+  });
+
+  it('does not count "\\ No newline at end of file" as a content line', () => {
+    const raw = `diff --git a/a.txt b/a.txt
+--- a/a.txt
++++ b/a.txt
+@@ -1 +1 @@
+-old
+\\ No newline at end of file
++new
+\\ No newline at end of file`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs[0].additions).toBe(1);
+    expect(diffs[0].deletions).toBe(1);
+    expect(diffs[0].hunks[0].lines.every(l => !l.content.includes('No newline'))).toBe(true);
+  });
+
+  it('parses multiple files in one diff', () => {
+    const raw = `diff --git a/one.ts b/one.ts
+--- a/one.ts
++++ b/one.ts
+@@ -1 +1 @@
+-a
++b
+diff --git a/two.ts b/two.ts
+--- a/two.ts
++++ b/two.ts
+@@ -1 +1 @@
+-c
++d`;
+
+    const diffs = parseDiff(raw);
+    expect(diffs).toHaveLength(2);
+    expect(diffs.map(d => d.path)).toEqual(['one.ts', 'two.ts']);
+  });
+
   it('assigns correct line numbers', () => {
     const raw = `diff --git a/a.ts b/a.ts
 --- a/a.ts

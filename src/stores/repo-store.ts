@@ -4,6 +4,10 @@ import { gitApi } from '../api/git-api';
 import { getLocalStorage } from '../lib/storage';
 import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../types';
 
+// Commits are loaded a page at a time; the log view offers "load more" rather
+// than fetching an unbounded history for large repos.
+export const LOG_PAGE_SIZE = 200;
+
 export class CheckoutConflictError extends Error {
   constructor() {
     super('checkout blocked: local changes would be overwritten');
@@ -23,6 +27,20 @@ interface RepoState {
   merging: boolean;
   checkoutConflict: { branch: string } | null;
   stashes: StashEntry[];
+  // Pagination for the commit log. hasMoreCommits is true when the backend
+  // still has older commits beyond what's loaded; loadingMoreCommits guards the
+  // "load more" action against re-entrancy.
+  hasMoreCommits: boolean;
+  loadingMoreCommits: boolean;
+  loadMoreCommits: () => Promise<void>;
+  // Name of the in-flight tracked operation (commit/checkout/push/…), or null
+  // when idle. Auto-refresh stands aside while this is set (see useAutoRefresh).
+  busyOperation: string | null;
+  // Aggregated message of any loader that failed during the last refresh, or
+  // null if the last refresh fully succeeded. Lets refresh fail partially
+  // without tearing down the segments that did load.
+  lastRefreshError: string | null;
+  runOperation: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
   loadStashes: () => Promise<void>;
   stashSave: (message?: string, staged?: boolean) => Promise<void>;
   stashApply: (index: number) => Promise<void>;
@@ -42,6 +60,7 @@ interface RepoState {
   fetch: () => Promise<void>;
   pull: () => Promise<string>;
   push: () => Promise<void>;
+  publishBranch: () => Promise<void>;
   checkout: (branch: string) => Promise<void>;
   stashAndCheckout: () => Promise<void>;
   migrateCheckout: () => Promise<void>;
@@ -70,6 +89,21 @@ export const useRepoStore = create<RepoState>()(
   merging: false,
   checkoutConflict: null,
   stashes: [],
+  hasMoreCommits: false,
+  loadingMoreCommits: false,
+  busyOperation: null,
+  lastRefreshError: null,
+
+  // Mark the store busy for the duration of fn so auto-refresh skips while a
+  // mutating git operation runs. Clears the marker even if fn throws.
+  runOperation: async (name, fn) => {
+    set({ busyOperation: name });
+    try {
+      return await fn();
+    } finally {
+      set({ busyOperation: null });
+    }
+  },
 
   openRepo: async (path) => {
     // Backend normalizes to the canonical repo root; store that, not the raw
@@ -90,8 +124,28 @@ export const useRepoStore = create<RepoState>()(
   },
 
   loadLog: async () => {
-    const commits = await gitApi.getLog(200, 0);
-    set({ commits });
+    // Fetch one extra to detect whether older commits remain, then trim to the
+    // page size so `hasMoreCommits` reflects reality without a separate count.
+    const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, 0);
+    set({
+      commits: page.slice(0, LOG_PAGE_SIZE),
+      hasMoreCommits: page.length > LOG_PAGE_SIZE,
+    });
+  },
+
+  loadMoreCommits: async () => {
+    const { hasMoreCommits, loadingMoreCommits, commits } = get();
+    if (!hasMoreCommits || loadingMoreCommits) return;
+    set({ loadingMoreCommits: true });
+    try {
+      const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, commits.length);
+      set({
+        commits: [...commits, ...page.slice(0, LOG_PAGE_SIZE)],
+        hasMoreCommits: page.length > LOG_PAGE_SIZE,
+      });
+    } finally {
+      set({ loadingMoreCommits: false });
+    }
   },
 
   loadBranches: async () => {
@@ -119,12 +173,18 @@ export const useRepoStore = create<RepoState>()(
   },
 
   refresh: async () => {
-    await Promise.all([
+    // allSettled (not all): one failing segment must not discard the others.
+    // A failed log shouldn't blank out branches/status that loaded fine.
+    const results = await Promise.allSettled([
       get().loadLog(),
       get().loadBranches(),
       get().loadStatus(),
       get().loadStashes(),
     ]);
+    const errors = results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+    set({ lastRefreshError: errors.length ? errors.join('; ') : null });
   },
 
   stageFiles: async (paths) => {
@@ -152,50 +212,59 @@ export const useRepoStore = create<RepoState>()(
     }
   },
 
-  stashSave: async (message, staged) => {
+  stashSave: async (message, staged) => get().runOperation('stash', async () => {
     await gitApi.stashSave(message, staged);
     await get().loadStashes();
     await get().loadStatus();
-  },
+  }),
 
-  stashApply: async (index) => {
+  stashApply: async (index) => get().runOperation('stash', async () => {
     await gitApi.stashApply(index);
     await get().loadStatus();
-  },
+  }),
 
-  stashPop: async (index) => {
+  stashPop: async (index) => get().runOperation('stash', async () => {
     await gitApi.stashPop(index);
     await get().loadStashes();
     await get().loadStatus();
-  },
+  }),
 
-  stashDrop: async (index) => {
+  stashDrop: async (index) => get().runOperation('stash', async () => {
     await gitApi.stashDrop(index);
     await get().loadStashes();
-  },
+  }),
 
-  commit: async (message) => {
+  commit: async (message) => get().runOperation('commit', async () => {
     await gitApi.commit(message);
     await get().refresh();
-  },
+  }),
 
-  fetch: async () => {
+  fetch: async () => get().runOperation('fetch', async () => {
     await gitApi.fetch();
     await get().loadAheadBehind();
-  },
+  }),
 
-  pull: async () => {
+  pull: async () => get().runOperation('pull', async () => {
     const result = await gitApi.pull();
     await get().refresh();
     return result;
-  },
+  }),
 
-  push: async () => {
+  push: async () => get().runOperation('push', async () => {
     await gitApi.push();
     await get().loadAheadBehind();
-  },
+  }),
 
-  checkout: async (branch) => {
+  // Publish the current branch: `git push -u origin <branch>`. Offered as a
+  // follow-up action when a plain push fails for lack of an upstream.
+  publishBranch: async () => get().runOperation('push', async () => {
+    const branch = get().currentBranch;
+    if (!branch) throw new Error('No current branch to publish');
+    await gitApi.pushSetUpstream('origin', branch);
+    await get().refresh();
+  }),
+
+  checkout: async (branch) => get().runOperation('checkout', async () => {
     const known = get().branches.find(b => b.name === branch);
     const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
     try {
@@ -211,21 +280,21 @@ export const useRepoStore = create<RepoState>()(
       }
       throw err;
     }
-  },
+  }),
 
   // Set the blocked changes aside in a stash, then switch. Changes stay in the
   // stash (recoverable with stash pop later).
-  stashAndCheckout: async () => {
+  stashAndCheckout: async () => get().runOperation('checkout', async () => {
     const conflict = get().checkoutConflict;
     if (!conflict) return;
     set({ checkoutConflict: null });
     await gitApi.stashSave(`WIP before switching to ${conflict.branch}`);
     await gitApi.checkout(conflict.branch);
     await get().refresh();
-  },
+  }),
 
   // Carry the blocked changes over to the target branch (stash → switch → pop).
-  migrateCheckout: async () => {
+  migrateCheckout: async () => get().runOperation('checkout', async () => {
     const conflict = get().checkoutConflict;
     if (!conflict) return;
     set({ checkoutConflict: null });
@@ -242,20 +311,20 @@ export const useRepoStore = create<RepoState>()(
     await gitApi.checkout(conflict.branch);
     await gitApi.stashPop(0);
     await get().refresh();
-  },
+  }),
 
   // Discard the blocked changes and switch anyway.
-  forceCheckout: async () => {
+  forceCheckout: async () => get().runOperation('checkout', async () => {
     const conflict = get().checkoutConflict;
     if (!conflict) return;
     set({ checkoutConflict: null });
     await gitApi.checkoutForce(conflict.branch);
     await get().refresh();
-  },
+  }),
 
   cancelCheckout: () => set({ checkoutConflict: null }),
 
-  merge: async (branch) => {
+  merge: async (branch) => get().runOperation('merge', async () => {
     const result = await gitApi.merge(branch);
     if (result.conflicts.length > 0) {
       set({
@@ -269,39 +338,39 @@ export const useRepoStore = create<RepoState>()(
       set({ mergeState: null });
       await get().refresh();
     }
-  },
+  }),
 
-  rebase: async (branch) => {
+  rebase: async (branch) => get().runOperation('rebase', async () => {
     await gitApi.rebase(branch);
     await get().refresh();
-  },
+  }),
 
-  deleteBranch: async (branch, force) => {
+  deleteBranch: async (branch, force) => get().runOperation('deleteBranch', async () => {
     await gitApi.deleteBranch(branch, force);
     await get().loadBranches();
-  },
+  }),
 
-  deleteRemoteBranch: async (remote, branch) => {
+  deleteRemoteBranch: async (remote, branch) => get().runOperation('deleteBranch', async () => {
     await gitApi.deleteRemoteBranch(remote, branch);
     await get().loadBranches();
-  },
+  }),
 
-  abortMerge: async () => {
+  abortMerge: async () => get().runOperation('merge', async () => {
     await gitApi.abortMerge();
     set({ mergeState: null });
     await get().refresh();
-  },
+  }),
 
   // Clear the conflict UI without touching git — used once all files are
   // resolved & staged, so the merge can be committed from the Changes view.
   clearMergeState: () => set({ mergeState: null }),
 
   // Auto mode: create the merge commit (default message) to finish the merge.
-  concludeMerge: async () => {
+  concludeMerge: async () => get().runOperation('merge', async () => {
     await gitApi.concludeMerge();
     set({ mergeState: null });
     await get().refresh();
-  },
+  }),
     }),
     {
       name: 'git-desktop-repo',

@@ -146,4 +146,37 @@ describe('GitService', () => {
     const diff = await git.getWorkingDiff('file.txt');
     expect(diff).toBe('');
   });
+
+  // P4.31 — upstream tracking / publish flow
+  it('getBranches reports no tracking for a branch without an upstream', async () => {
+    await git.openRepo(tmpDir);
+    const current = (await git.getBranches()).find((b) => b.current)!;
+    expect(current.tracking).toBeUndefined();
+  });
+
+  it('getBranches reports upstream tracking for a published branch', async () => {
+    const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-remote-'));
+    execSync('git init --bare', { cwd: remoteDir });
+    execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
+    execSync('git push -u origin HEAD', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const current = (await git.getBranches()).find((b) => b.current)!;
+    expect(current.tracking).toMatch(/^origin\//);
+    fs.rmSync(remoteDir, { recursive: true, force: true });
+  });
+
+  it('pushSetUpstream publishes a branch and sets its upstream', async () => {
+    const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-remote-'));
+    execSync('git init --bare', { cwd: remoteDir });
+    execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const before = (await git.getBranches()).find((b) => b.current)!;
+    expect(before.tracking).toBeUndefined();
+
+    await git.pushSetUpstream('origin', before.name);
+
+    const after = (await git.getBranches()).find((b) => b.current)!;
+    expect(after.tracking).toMatch(/^origin\//);
+    fs.rmSync(remoteDir, { recursive: true, force: true });
+  });
 });

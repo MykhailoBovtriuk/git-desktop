@@ -1,5 +1,16 @@
 import type { FileDiff, DiffHunk, DiffLine } from '../../types';
 
+// Strip the surrounding C-quotes (git quotes paths containing special chars)
+// and the a// b/ prefix from a `---`/`+++`/`rename to` path token.
+function cleanPath(raw: string): string {
+  let p = raw.trim();
+  if (p.length >= 2 && p.startsWith('"') && p.endsWith('"')) {
+    p = p.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  if (p === '/dev/null') return p;
+  return p.replace(/^[ab]\//, '');
+}
+
 export function parseDiff(raw: string): FileDiff[] {
   if (!raw.trim()) return [];
 
@@ -12,22 +23,35 @@ export function parseDiff(raw: string): FileDiff[] {
     let path = '';
     let status: FileDiff['status'] = 'M';
 
-    // Extract path from --- / +++ lines
+    // Rename/copy metadata takes precedence for status; the "to" side is the
+    // path we display.
+    const renameTo = lines.find(l => l.startsWith('rename to '));
+    const copyTo = lines.find(l => l.startsWith('copy to '));
+    if (lines.some(l => l.startsWith('rename from '))) status = 'R';
+    if (lines.some(l => l.startsWith('copy from '))) status = 'C';
+
     const minusLine = lines.find(l => l.startsWith('--- '));
     const plusLine = lines.find(l => l.startsWith('+++ '));
 
     if (minusLine && plusLine) {
       if (minusLine === '--- /dev/null') {
         status = 'A';
-        path = plusLine.replace('+++ b/', '').replace('+++ ', '');
+        path = cleanPath(plusLine.slice(4));
       } else if (plusLine === '+++ /dev/null') {
         status = 'D';
-        path = minusLine.replace('--- a/', '').replace('--- ', '');
+        path = cleanPath(minusLine.slice(4));
       } else {
-        path = plusLine.replace('+++ b/', '').replace('+++ ', '');
+        // Modified (or rename/copy with edits — status already set above).
+        path = cleanPath(plusLine.slice(4));
       }
+    } else if (renameTo) {
+      // Pure rename (100% similarity): no ---/+++ hunk headers.
+      path = cleanPath(renameTo.slice('rename to '.length));
+    } else if (copyTo) {
+      path = cleanPath(copyTo.slice('copy to '.length));
     } else {
-      // Fallback: extract from "a/path b/path" header
+      // Fallback: "a/path b/path" header. Best-effort and ambiguous when paths
+      // contain spaces, but the ---/+++ lines above normally cover real diffs.
       const match = lines[0]?.match(/^a\/(.+?) b\/.+$/);
       if (match) path = match[1];
     }
@@ -48,6 +72,9 @@ export function parseDiff(raw: string): FileDiff[] {
     let newLine = 0;
 
     for (const line of lines) {
+      // "\ No newline at end of file" is a marker, not content.
+      if (line.startsWith('\\')) continue;
+
       const hunkMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
       if (hunkMatch) {
         currentHunk = {
