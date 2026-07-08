@@ -82,4 +82,52 @@ describe('Modal', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveFocus();
   });
+
+  // Focus trap: Tab must not escape to elements behind the overlay.
+  it('wraps Tab from the last focusable element back to the first', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const first = screen.getByText('first');
+    const last = screen.getByText('last');
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('wraps Shift+Tab from the first focusable element back to the last', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const first = screen.getByText('first');
+    const last = screen.getByText('last');
+    first.focus();
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('pulls focus back into the panel when Tab is pressed while focus is outside', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const outside = screen.getByText('outside');
+    outside.focus();
+    fireEvent.keyDown(outside, { key: 'Tab' });
+    expect(document.activeElement).toBe(screen.getByText('first'));
+  });
 });

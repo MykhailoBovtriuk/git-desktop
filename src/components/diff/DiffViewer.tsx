@@ -10,16 +10,21 @@ import type { FileDiff } from '../../types';
 
 export function DiffViewer() {
   const { t } = useTranslation('diff');
-  const { selectedFile, selectedCommit, activeView } = useUiStore(
+  const { selectedFile, selectedFileArea, selectedCommit, activeView } = useUiStore(
     useShallow(s => ({
       selectedFile: s.selectedFile,
+      selectedFileArea: s.selectedFileArea,
       selectedCommit: s.selectedCommit,
       activeView: s.activeView,
     })),
   );
-  const isStaged = useRepoStore(
+  const stagedInStatus = useRepoStore(
     s => !!selectedFile && s.status.staged.some(f => f.path === selectedFile),
   );
+  // The clicked list decides the diff source: a partially staged file is in
+  // both lists, so the path alone is ambiguous. Fall back to the status
+  // lookup only when a selection carries no area.
+  const isStaged = selectedFileArea ? selectedFileArea === 'staged' : stagedInStatus;
   const inChanges = useRepoStore(
     s => !!selectedFile && (
       s.status.staged.some(f => f.path === selectedFile) ||
@@ -123,7 +128,7 @@ export function DiffViewer() {
                     <span className="text-subtext w-8 shrink-0 text-right pr-2 select-none border-r border-surface0">
                       {line.newLineNumber ?? ''}
                     </span>
-                    <span className={`px-2 ${
+                    <span className={`px-2 whitespace-pre ${
                       line.type === 'add' ? 'text-green' :
                       line.type === 'remove' ? 'text-red' : 'text-text'
                     }`}>

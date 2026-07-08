@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { DropdownPanel } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
 
@@ -18,16 +19,19 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
       openDialog: s.openDialog,
     })),
   );
+  const runAction = useGitAction();
   const repos = recentRepos.filter(Boolean);
 
   const handleOpen = async (path: string) => {
     onClose();
-    await openRepo(path);
+    // A recent path may no longer exist — surface the failure instead of
+    // leaving the rejection unhandled with zero feedback.
+    await runAction(() => openRepo(path), { title: t('addRepository') });
   };
 
   const handleAdd = async () => {
     onClose();
-    await openDialog();
+    await runAction(() => openDialog(), { title: t('addRepository') });
   };
 
   return (

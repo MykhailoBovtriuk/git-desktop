@@ -3,10 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  // error.unknown is empty in the real footer namespace — unclassified errors
+  // must fall back to the raw git message.
+  useTranslation: () => ({ t: (k: string) => (k === 'error.unknown' ? '' : k) }),
 }));
 vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
+  CheckoutConflictError: class CheckoutConflictError extends Error {},
 }));
 vi.mock('../../../src/stores/ui-store', () => ({
   useUiStore: vi.fn(),
@@ -32,6 +35,11 @@ import { StashSection } from '../../../src/components/stash/StashSection';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 
+// Selector-aware store mock: StashSection and useGitAction select slices, so
+// the mock must apply the selector instead of returning the whole state.
+const mockState = (store: unknown) => (state: unknown) =>
+  vi.mocked(store as any).mockImplementation(((sel: any) => sel(state)) as any);
+
 const baseRepo = {
   status: { staged: [], unstaged: [] },
   stageFiles: vi.fn().mockResolvedValue(undefined),
@@ -50,42 +58,42 @@ const baseUi = {
 
 describe('StashSection', () => {
   it('shows unstaged and staged file lists in create mode', () => {
-    vi.mocked(useRepoStore).mockReturnValue({
+    mockState(useRepoStore)({
       ...baseRepo,
       status: {
         unstaged: [{ path: 'a.ts', status: 'M', staged: false }],
         staged: [{ path: 'b.ts', status: 'A', staged: true }],
       },
     } as any);
-    vi.mocked(useUiStore).mockReturnValue(baseUi as any);
+    mockState(useUiStore)(baseUi as any);
     render(<StashSection />);
     expect(screen.getByTestId('unstaged-list')).toBeInTheDocument();
     expect(screen.getByTestId('staged-list')).toBeInTheDocument();
   });
 
   it('hides file lists in list mode', () => {
-    vi.mocked(useRepoStore).mockReturnValue({
+    mockState(useRepoStore)({
       ...baseRepo,
       status: {
         unstaged: [{ path: 'a.ts', status: 'M', staged: false }],
         staged: [],
       },
     } as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, activeView: 'stash' } as any);
+    mockState(useUiStore)({ ...baseUi, activeView: 'stash' } as any);
     render(<StashSection />);
     expect(screen.queryByTestId('unstaged-list')).not.toBeInTheDocument();
   });
 
   it('passes listMode=false to StashForm when activeView=stash-create', () => {
-    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue(baseUi as any);
+    mockState(useRepoStore)(baseRepo as any);
+    mockState(useUiStore)(baseUi as any);
     render(<StashSection />);
     expect(screen.getByTestId('list-mode').textContent).toBe('false');
   });
 
   it('passes listMode=true to StashForm when activeView=stash', () => {
-    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, activeView: 'stash' } as any);
+    mockState(useRepoStore)(baseRepo as any);
+    mockState(useUiStore)({ ...baseUi, activeView: 'stash' } as any);
     render(<StashSection />);
     expect(screen.getByTestId('list-mode').textContent).toBe('true');
   });
@@ -93,8 +101,8 @@ describe('StashSection', () => {
   it('toggle from create mode calls setActiveView(stash) and setSelectedStash(null)', () => {
     const setActiveView = vi.fn();
     const setSelectedStash = vi.fn();
-    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, activeView: 'stash-create', setActiveView, setSelectedStash } as any);
+    mockState(useRepoStore)(baseRepo as any);
+    mockState(useUiStore)({ ...baseUi, activeView: 'stash-create', setActiveView, setSelectedStash } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
     expect(setActiveView).toHaveBeenCalledWith('stash');
@@ -103,8 +111,8 @@ describe('StashSection', () => {
 
   it('toggle from list mode calls setActiveView(stash-create)', () => {
     const setActiveView = vi.fn();
-    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, activeView: 'stash', setActiveView } as any);
+    mockState(useRepoStore)(baseRepo as any);
+    mockState(useUiStore)({ ...baseUi, activeView: 'stash', setActiveView } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
     expect(setActiveView).toHaveBeenCalledWith('stash-create');
@@ -112,11 +120,11 @@ describe('StashSection', () => {
 
   it('calls stashSave and addToast on successful stash', async () => {
     const addToast = vi.fn();
-    vi.mocked(useRepoStore).mockReturnValue({
+    mockState(useRepoStore)({
       ...baseRepo,
       status: { staged: [{ path: 'a.ts', status: 'A', staged: true }], unstaged: [] },
     } as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, addToast } as any);
+    mockState(useUiStore)({ ...baseUi, addToast } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'stash' }));
     await waitFor(() => expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' })));
@@ -124,12 +132,12 @@ describe('StashSection', () => {
 
   it('calls addToast with error on stashSave failure', async () => {
     const addToast = vi.fn();
-    vi.mocked(useRepoStore).mockReturnValue({
+    mockState(useRepoStore)({
       ...baseRepo,
       stashSave: vi.fn().mockRejectedValue(new Error('git error')),
       status: { staged: [{ path: 'a.ts', status: 'A', staged: true }], unstaged: [] },
     } as any);
-    vi.mocked(useUiStore).mockReturnValue({ ...baseUi, addToast } as any);
+    mockState(useUiStore)({ ...baseUi, addToast } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'stash' }));
     await waitFor(() => expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' })));

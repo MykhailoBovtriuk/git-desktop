@@ -45,6 +45,43 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
+  // Trap Tab / Shift+Tab inside the panel: the modal is the only interactive
+  // surface, so keyboard focus must wrap within it instead of escaping to
+  // the (visually inert but still tabbable) background.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      const inPanel = active instanceof Node && panel.contains(active);
+
+      if (e.shiftKey) {
+        if (!inPanel || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (!inPanel || active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <div className={cn(
       'fixed inset-0 bg-black/50 flex items-center justify-center',

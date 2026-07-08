@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { GitService } from '../electron/git-service';
+import { GitService, credentialSafeEnv } from '../electron/git-service';
 
 let tmpDir: string;
 let git: GitService;
@@ -206,6 +206,110 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
     const status = await git.getStatus();
     expect(status.staged.map((f) => f.path)).toEqual(['-A']);
     expect(status.unstaged.map((f) => f.path)).toEqual(['other.txt']);
+  });
+});
+
+describe('rebase lifecycle', () => {
+  // Creates a rebase conflict: two branches change the same line of file.txt.
+  function makeRebaseConflict(): { mainBranch: string } {
+    const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tmpDir })
+      .toString()
+      .trim();
+    execSync('git checkout -b feature', { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'feature change');
+    execSync('git commit -am "feature edit"', { cwd: tmpDir });
+    execSync(`git checkout ${mainBranch}`, { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'main change');
+    execSync('git commit -am "main edit"', { cwd: tmpDir });
+    execSync('git checkout feature', { cwd: tmpDir });
+    return { mainBranch };
+  }
+
+  it('isRebasing is false in a normal repo state', async () => {
+    await git.openRepo(tmpDir);
+    expect(await git.isRebasing()).toBe(false);
+  });
+
+  it('conflicted rebase rejects, isRebasing becomes true, abortRebase restores a clean tree', async () => {
+    await git.openRepo(tmpDir);
+    const { mainBranch } = makeRebaseConflict();
+
+    await expect(git.rebase(mainBranch)).rejects.toThrow();
+    expect(await git.isRebasing()).toBe(true);
+
+    await git.abortRebase();
+    expect(await git.isRebasing()).toBe(false);
+
+    const status = await git.getStatus();
+    expect(status.staged).toEqual([]);
+    expect(status.unstaged).toEqual([]);
+    expect(fs.readFileSync(path.join(tmpDir, 'file.txt'), 'utf-8')).toBe('feature change');
+  });
+
+  it('continueRebase rejects while conflicts remain, completes after resolution', async () => {
+    await git.openRepo(tmpDir);
+    const { mainBranch } = makeRebaseConflict();
+
+    await expect(git.rebase(mainBranch)).rejects.toThrow();
+    // Conflicts unresolved — continue must fail and the rebase stays active.
+    await expect(git.continueRebase()).rejects.toThrow();
+    expect(await git.isRebasing()).toBe(true);
+
+    // Resolve and continue.
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'resolved');
+    execSync('git add file.txt', { cwd: tmpDir });
+    await git.continueRebase();
+
+    expect(await git.isRebasing()).toBe(false);
+    const log = await git.getLog(10, 0);
+    expect(log.map((c) => c.message)).toContain('feature edit');
+    expect(log.map((c) => c.message)).toContain('main edit');
+  });
+});
+
+describe('credential prompt safety (Fix 2)', () => {
+  it('credentialSafeEnv disables terminal prompts and merges over process.env', () => {
+    const env = credentialSafeEnv();
+    expect(env.GIT_TERMINAL_PROMPT).toBe('0');
+    expect(env.GIT_ASKPASS).toBe('echo');
+    // The rest of process.env must survive the merge (PATH is always set).
+    expect(env.PATH).toBe(process.env.PATH);
+  });
+});
+
+describe('empty repository (unborn HEAD)', () => {
+  let emptyDir: string;
+
+  beforeEach(() => {
+    emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-empty-'));
+    execSync('git init', { cwd: emptyDir });
+    execSync('git config user.email "test@test.com"', { cwd: emptyDir });
+    execSync('git config user.name "Test"', { cwd: emptyDir });
+  });
+
+  afterEach(() => {
+    fs.rmSync(emptyDir, { recursive: true, force: true });
+  });
+
+  it('getLog returns [] instead of throwing', async () => {
+    await git.openRepo(emptyDir);
+    await expect(git.getLog(50, 0)).resolves.toEqual([]);
+  });
+
+  it('unstageFiles removes a staged file from the index without HEAD', async () => {
+    await git.openRepo(emptyDir);
+    fs.writeFileSync(path.join(emptyDir, 'new.txt'), 'content');
+
+    await git.stageFiles(['new.txt']);
+    let status = await git.getStatus();
+    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(true);
+
+    await git.unstageFiles(['new.txt']);
+    status = await git.getStatus();
+    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(false);
+    expect(status.unstaged.some((f) => f.path === 'new.txt' && !f.staged)).toBe(true);
+    // The file itself must survive unstaging.
+    expect(fs.readFileSync(path.join(emptyDir, 'new.txt'), 'utf-8')).toBe('content');
   });
 });
 

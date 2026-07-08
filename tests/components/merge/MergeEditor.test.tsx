@@ -81,4 +81,18 @@ describe('MergeEditor save guard', () => {
 
     await waitFor(() => expect(saveButton()).not.toBeDisabled());
   });
+
+  // Regression: a double click on the last file ran writeFile/markResolved and
+  // concludeMerge twice — the second merge commit failed or left junk state.
+  it('ignores a second click while saving is in flight', async () => {
+    vi.mocked(gitApi.readFile).mockResolvedValue('plain text');
+    vi.mocked(gitApi.writeFile).mockReturnValue(new Promise(() => {}));
+    render(<MergeEditor />);
+    await waitFor(() => expect(saveButton()).not.toBeDisabled());
+
+    fireEvent.click(saveButton());
+    fireEvent.click(saveButton());
+
+    expect(gitApi.writeFile).toHaveBeenCalledTimes(1);
+  });
 });

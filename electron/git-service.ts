@@ -3,12 +3,37 @@ import fs from 'fs/promises';
 import path from 'path';
 import type { Commit, Branch, GitStatus, FileStatus, AheadBehind, StashEntry } from '../src/types';
 
+// A GUI app has no TTY: without these, any fetch/pull/push that needs
+// credentials hangs forever on an invisible prompt. GIT_TERMINAL_PROMPT=0
+// forbids terminal prompts and GIT_ASKPASS=echo makes the askpass round-trip
+// return immediately (echo prints the prompt, not a password), so the
+// operation fails fast with an auth error instead of hanging.
+export function credentialSafeEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_ASKPASS: 'echo',
+  };
+}
+
 export class GitService {
   private git: SimpleGit | null = null;
   private repoPath: string | null = null;
 
+  private createGit(dir: string): SimpleGit {
+    // simple-git's .env(object) REPLACES the child env, so the merge over
+    // process.env in credentialSafeEnv() is what keeps PATH/HOME intact.
+    // The `unsafe` opt-ins exist to guard against attacker-controlled values;
+    // ours are hardcoded ('echo' for askpass, 'true' as rebase editor) and the
+    // inherited env may legitimately carry GIT_EDITOR from the user's shell.
+    return simpleGit({
+      baseDir: dir,
+      unsafe: { allowUnsafeAskPass: true, allowUnsafeEditor: true },
+    }).env(credentialSafeEnv());
+  }
+
   async openRepo(dirPath: string): Promise<string> {
-    const git = simpleGit(dirPath);
+    const git = this.createGit(dirPath);
     const isRepo = await git.checkIsRepo();
     if (!isRepo) {
       throw new Error('Selected folder is not a Git repository');
@@ -18,7 +43,7 @@ export class GitService {
     // picked a subfolder inside the repo.
     const root = (await git.revparse(['--show-toplevel'])).trim();
     this.repoPath = root;
-    this.git = simpleGit(root);
+    this.git = this.createGit(root);
     return root;
   }
 
@@ -64,14 +89,22 @@ export class GitService {
 
   async getLog(limit: number, offset: number): Promise<Commit[]> {
     const git = this.ensureRepo();
-    const result = await git.raw([
-      'log',
-      '--all',
-      '--topo-order',
-      `--max-count=${limit}`,
-      `--skip=${offset}`,
-      '--format=%H%x00%s%x00%an%x00%aI%x00%P%x00%D',
-    ]);
+    let result: string;
+    try {
+      result = await git.raw([
+        'log',
+        '--all',
+        '--topo-order',
+        `--max-count=${limit}`,
+        `--skip=${offset}`,
+        '--format=%H%x00%s%x00%an%x00%aI%x00%P%x00%D',
+      ]);
+    } catch (err) {
+      // Freshly initialized repo (unborn HEAD, no refs): some git versions
+      // fail `log --all` here. An empty history is a valid state, not an error.
+      if (!(await this.hasHead())) return [];
+      throw err;
+    }
 
     return result
       .trim()
@@ -173,7 +206,27 @@ export class GitService {
   }
 
   async unstageFiles(paths: string[]): Promise<void> {
-    await this.ensureRepo().raw(['restore', '--staged', '--', ...paths]);
+    const git = this.ensureRepo();
+    try {
+      await git.raw(['restore', '--staged', '--', ...paths]);
+    } catch (err) {
+      // `restore --staged` restores the index from HEAD, which does not exist
+      // in an empty repo (unborn HEAD). Dropping the entries from the index
+      // is the equivalent operation there; the working-tree files are kept.
+      if (await this.hasHead()) throw err;
+      await git.raw(['rm', '--cached', '--quiet', '--', ...paths]);
+    }
+  }
+
+  // Whether HEAD points at a real commit (false on the unborn HEAD of a
+  // freshly `git init`ed repository).
+  private async hasHead(): Promise<boolean> {
+    try {
+      const out = await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'HEAD']);
+      return out.trim().length > 0;
+    } catch {
+      return false;
+    }
   }
 
   async discardChanges(paths: string[]): Promise<void> {
@@ -272,6 +325,50 @@ export class GitService {
 
   async rebase(branch: string): Promise<void> {
     await this.ensureRepo().rebase([branch]);
+  }
+
+  async isRebasing(): Promise<boolean> {
+    // A rebase is in progress when .git/rebase-merge (interactive/merge
+    // backend) or .git/rebase-apply (am backend) exists. Resolve the dirs via
+    // `rev-parse --git-path` instead of hardcoding `.git/` so this also works
+    // in worktrees, where the git dir lives elsewhere.
+    const git = this.ensureRepo();
+    for (const dir of ['rebase-merge', 'rebase-apply']) {
+      try {
+        const rel = (await git.raw(['rev-parse', '--git-path', dir])).trim();
+        const abs = path.isAbsolute(rel) ? rel : path.resolve(this.repoPath!, rel);
+        await fs.access(abs);
+        return true;
+      } catch {
+        // Directory absent — not rebasing via this backend.
+      }
+    }
+    return false;
+  }
+
+  async abortRebase(): Promise<void> {
+    await this.ensureRepo().rebase(['--abort']);
+  }
+
+  async continueRebase(): Promise<void> {
+    if (!this.repoPath) throw new Error('No repository opened');
+    // May still fail if conflicts remain — the error propagates to the UI.
+    // Two quirks require a dedicated instance here:
+    // - core.editor=true: continuing after a conflicted commit wants to open
+    //   an editor for the message; a GUI app has none, so accept it unchanged.
+    // - strict `errors` detection: git prints "you must edit all merge
+    //   conflicts" on stdout and simple-git's default handler treats non-empty
+    //   stdout as success, silently swallowing the exit code 1.
+    const git = simpleGit({
+      baseDir: this.repoPath,
+      unsafe: { allowUnsafeAskPass: true, allowUnsafeEditor: true },
+      errors(error, result) {
+        if (error) return error;
+        if (result.exitCode === 0) return undefined;
+        return Buffer.concat([...result.stdOut, ...result.stdErr]);
+      },
+    }).env(credentialSafeEnv());
+    await git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
   }
 
   async deleteBranch(branch: string, force = false): Promise<void> {

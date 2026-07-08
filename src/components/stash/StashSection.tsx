@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { FileList } from '../staging/FileList';
 import { StashForm } from './StashForm';
 
@@ -17,17 +18,19 @@ export function StashSection() {
       stashSave: s.stashSave,
     })),
   );
-  const { activeView, setActiveView, setSelectedStash, selectedFile, setSelectedFile, addToast } = useUiStore(
+  const { activeView, setActiveView, setSelectedStash, selectedFile, selectedFileArea, setSelectedFile, addToast } = useUiStore(
     useShallow(s => ({
       activeView: s.activeView,
       setActiveView: s.setActiveView,
       setSelectedStash: s.setSelectedStash,
       selectedFile: s.selectedFile,
+      selectedFileArea: s.selectedFileArea,
       setSelectedFile: s.setSelectedFile,
       addToast: s.addToast,
     })),
   );
   const [loading, setLoading] = useState(false);
+  const runAction = useGitAction();
 
   const listMode = activeView === 'stash';
   const canStash = status.staged.length > 0 && !loading;
@@ -35,13 +38,18 @@ export function StashSection() {
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);
 
+  const stage = (paths: string[]) => runAction(() => stageFiles(paths), { title: t('staging:stage') });
+  const unstage = (paths: string[]) => runAction(() => unstageFiles(paths), { title: t('staging:unstage') });
+
   const handleDiscard = (path: string) => {
     const file = status.unstaged.find(f => f.path === path);
     const isUntracked = file?.status === 'N';
     const message = isUntracked
       ? t('staging:discardUntrackedConfirm', { name: path })
       : t('staging:discardConfirm', { name: path });
-    if (window.confirm(message)) discardChanges([path]);
+    if (window.confirm(message)) {
+      void runAction(() => discardChanges([path]), { title: t('staging:discard') });
+    }
   };
 
   const handleToggle = () => {
@@ -56,10 +64,8 @@ export function StashSection() {
   const handleStash = async (message: string) => {
     setLoading(true);
     try {
-      await stashSave(message, true);
-      addToast({ variant: 'success', title: t('stashed'), message: t('stashedMessage') });
-    } catch (err) {
-      addToast({ variant: 'error', title: t('stashFailed'), message: err instanceof Error ? err.message : t('stashFailed') });
+      const ok = await runAction(() => stashSave(message, true), { title: t('stashFailed') });
+      if (ok) addToast({ variant: 'success', title: t('stashed'), message: t('stashedMessage') });
     } finally {
       setLoading(false);
     }
@@ -73,17 +79,17 @@ export function StashSection() {
             <>
               <div className="flex items-center justify-between px-3 py-1">
                 <span className="text-subtext text-xs">Unstaged</span>
-                <button onClick={() => stageFiles(unstagedPaths)} className="text-green text-xs hover:text-text">
+                <button onClick={() => stage(unstagedPaths)} className="text-green text-xs hover:text-text">
                   Stage All
                 </button>
               </div>
               <FileList
                 files={status.unstaged}
                 staged={false}
-                onStage={path => stageFiles([path])}
+                onStage={path => stage([path])}
                 onDiscard={handleDiscard}
-                onSelect={setSelectedFile}
-                selectedFile={selectedFile}
+                onSelect={path => setSelectedFile(path, 'unstaged')}
+                selectedFile={selectedFileArea === 'unstaged' ? selectedFile : null}
               />
             </>
           )}
@@ -91,16 +97,16 @@ export function StashSection() {
             <>
               <div className="flex items-center justify-between px-3 py-1 mt-1">
                 <span className="text-subtext text-xs">Staged</span>
-                <button onClick={() => unstageFiles(stagedPaths)} className="text-yellow text-xs hover:text-text">
+                <button onClick={() => unstage(stagedPaths)} className="text-yellow text-xs hover:text-text">
                   Unstage All
                 </button>
               </div>
               <FileList
                 files={status.staged}
                 staged={true}
-                onUnstage={path => unstageFiles([path])}
-                onSelect={setSelectedFile}
-                selectedFile={selectedFile}
+                onUnstage={path => unstage([path])}
+                onSelect={path => setSelectedFile(path, 'staged')}
+                selectedFile={selectedFileArea === 'staged' ? selectedFile : null}
               />
             </>
           )}

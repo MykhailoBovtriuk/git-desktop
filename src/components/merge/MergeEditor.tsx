@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
+import { useGitAction } from '../../hooks/use-git-action';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 
 export function MergeEditor() {
@@ -27,6 +28,10 @@ export function MergeEditor() {
   );
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
   const [resolved, setResolved] = useState<Set<string>>(new Set());
+  // Guards Save/Abort against double clicks — a second concludeMerge() or a
+  // concurrent abort would corrupt the merge state.
+  const [saving, setSaving] = useState(false);
+  const runAction = useGitAction();
   // Default ON: when all conflicts are resolved, the merge commit is created
   // automatically. Off => land on Changes and commit it yourself.
   const [autoCommit, setAutoCommit] = useState(() => localStorage.getItem('merge-auto-commit') !== 'false');
@@ -71,11 +76,16 @@ export function MergeEditor() {
   };
 
   const handleMarkResolved = async () => {
-    if (!activeMergeFile || loadedSegs === undefined || remaining > 0) return;
+    if (!activeMergeFile || loadedSegs === undefined || remaining > 0 || saving) return;
+    const file = activeMergeFile;
+    setSaving(true);
     try {
-      await gitApi.writeFile(activeMergeFile, rebuild(segs));
-      await gitApi.markResolved(activeMergeFile);
-      const next = new Set(resolved); next.add(activeMergeFile);
+      const ok = await runAction(async () => {
+        await gitApi.writeFile(file, rebuild(segs));
+        await gitApi.markResolved(file);
+      }, { title: t('common:error') });
+      if (!ok) return;
+      const next = new Set(resolved); next.add(file);
       setResolved(next);
       const rem = files.filter(f => !next.has(f));
       if (rem.length > 0) {
@@ -84,7 +94,8 @@ export function MergeEditor() {
       }
       setActiveMergeFile(null);
       if (autoCommit) {
-        await concludeMerge();
+        const concluded = await runAction(() => concludeMerge(), { title: t('common:error') });
+        if (!concluded) return;
         setActiveView('changes');
         addToast({ variant: 'success', title: t('mergeComplete'), message: t('mergedMessage', { source: mergeState.sourceBranch, target: mergeState.targetBranch }) });
       } else {
@@ -93,18 +104,24 @@ export function MergeEditor() {
         setActiveView('changes');
         addToast({ variant: 'info', title: t('conflictsResolved'), message: t('commitToFinish', { source: mergeState.sourceBranch, target: mergeState.targetBranch }) });
       }
-    } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('common:error'), message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleAbort = async () => {
+    if (saving) return;
+    // Aborting throws away every resolution already staged — confirm once the
+    // user has invested work in this merge.
+    if (resolved.size > 0 && !window.confirm(t('abortConfirm'))) return;
+    setSaving(true);
     try {
-      await abortMerge();
+      const ok = await runAction(() => abortMerge(), { title: t('abortFailed') });
+      if (!ok) return;
       setActiveView('changes');
       addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
-    } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('abortFailed'), message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -209,13 +226,14 @@ export function MergeEditor() {
           </button>
           <button
             onClick={handleAbort}
-            className="px-3 py-1 text-xs text-red hover:bg-surface0 rounded transition-colors"
+            disabled={saving}
+            className="px-3 py-1 text-xs text-red hover:bg-surface0 rounded transition-colors disabled:opacity-40"
           >
             {t('abortMerge')}
           </button>
           <button
             onClick={handleMarkResolved}
-            disabled={!activeMergeFile || loadedSegs === undefined || remaining > 0}
+            disabled={!activeMergeFile || loadedSegs === undefined || remaining > 0 || saving}
             className="px-3 py-1 text-xs bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {t('saveMarkResolved')}

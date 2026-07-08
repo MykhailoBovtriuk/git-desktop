@@ -128,6 +128,15 @@ export function registerIpcHandlers() {
       return gitService.rebase(branch).then(() => null);
     }));
 
+  ipcMain.handle('git:is-rebasing', () =>
+    wrap(() => gitService.isRebasing()));
+
+  ipcMain.handle('git:abort-rebase', () =>
+    wrap(() => gitService.abortRebase().then(() => null)));
+
+  ipcMain.handle('git:continue-rebase', () =>
+    wrap(() => gitService.continueRebase().then(() => null)));
+
   ipcMain.handle('git:delete-branch', (_e, branch: string, force?: boolean) =>
     wrap(() => {
       assertBranchName(branch, 'branch');

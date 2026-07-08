@@ -2,6 +2,7 @@
   "conflicts": "{{count}} конфліктів",
   "conflictingFiles": "Конфліктні файли",
   "abortMerge": "Перервати злиття",
+  "abortConfirm": "Перервати злиття? Ваші розв'язання конфліктів буде втрачено.",
   "resolveConflicts": "Вирішити конфлікти",
   "markResolvedNext": "Відмітити як вирішено і далі",
   "current": "Поточна",

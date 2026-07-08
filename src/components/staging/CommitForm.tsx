@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { gitApi } from '../../api/git-api';
 import { Button, Textarea } from '../../shared/ui';
 
@@ -14,6 +15,7 @@ export function CommitForm() {
     useShallow(s => ({ commit: s.commit, status: s.status, merging: s.merging })),
   );
   const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
+  const runAction = useGitAction();
 
   // While a merge is in progress, prefill git's default merge message once.
   useEffect(() => {
@@ -33,11 +35,11 @@ export function CommitForm() {
     setLoading(true);
     try {
       const summary = message.trim().slice(0, 50);
-      await commit(message.trim());
-      setMessage('');
-      addToast({ variant: 'success', title: t('committed'), message: t('commitCreated', { summary }) });
-    } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('commitFailed'), message: err instanceof Error ? err.message : String(err) });
+      const ok = await runAction(() => commit(message.trim()), { title: t('commitFailed') });
+      if (ok) {
+        setMessage('');
+        addToast({ variant: 'success', title: t('committed'), message: t('commitCreated', { summary }) });
+      }
     } finally {
       setLoading(false);
     }

@@ -29,6 +29,9 @@ export const gitApi = {
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
   rebase: (branch: string) => invoke<null>('git:rebase', branch),
+  isRebasing: () => invoke<boolean>('git:is-rebasing'),
+  abortRebase: () => invoke<null>('git:abort-rebase'),
+  continueRebase: () => invoke<null>('git:continue-rebase'),
   deleteBranch: (branch: string, force?: boolean) => invoke<null>('git:delete-branch', branch, force),
   deleteRemoteBranch: (remote: string, branch: string) =>
     invoke<null>('git:delete-remote-branch', remote, branch),

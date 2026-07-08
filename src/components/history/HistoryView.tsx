@@ -27,6 +27,11 @@ export function HistoryView() {
   const commit = commits.find(c => c.hash === selectedCommit);
 
   useEffect(() => {
+    // A file selected under the previous commit is meaningless for the new
+    // one — clear it so DiffViewer doesn't request a stale (commit, file)
+    // pair and the file list doesn't highlight a path that may not exist.
+    setSelectedFile(null);
+
     if (!selectedCommit) { setChangedFiles([]); return; }
 
     // Guard against a stale response overwriting files for a newer selection,
@@ -52,7 +57,7 @@ export function HistoryView() {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedCommit, addToast]);
+  }, [selectedCommit, setSelectedFile, addToast]);
 
   return (
     <div className="flex h-full">
@@ -93,7 +98,7 @@ export function HistoryView() {
                 {changedFiles.map(f => (
                   <button
                     key={f.path}
-                    onClick={() => setSelectedFile(f.path)}
+                    onClick={() => setSelectedFile(f.path, 'commit')}
                     className={`w-full text-left px-3 py-1.5 text-xs border-l-2 transition-colors truncate ${
                       selectedFile === f.path
                         ? 'bg-surface1 border-blue text-text'

@@ -2,11 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { FileList } from './FileList';
 import { CommitForm } from './CommitForm';
 
 export function ChangesSection() {
   const { t } = useTranslation('staging');
+  const runAction = useGitAction();
   const { status, stageFiles, unstageFiles, discardChanges } = useRepoStore(
     useShallow(s => ({
       status: s.status,
@@ -15,12 +17,19 @@ export function ChangesSection() {
       discardChanges: s.discardChanges,
     })),
   );
-  const { selectedFile, setSelectedFile } = useUiStore(
-    useShallow(s => ({ selectedFile: s.selectedFile, setSelectedFile: s.setSelectedFile })),
+  const { selectedFile, selectedFileArea, setSelectedFile } = useUiStore(
+    useShallow(s => ({
+      selectedFile: s.selectedFile,
+      selectedFileArea: s.selectedFileArea,
+      setSelectedFile: s.setSelectedFile,
+    })),
   );
 
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);
+
+  const stage = (paths: string[]) => runAction(() => stageFiles(paths), { title: t('stage') });
+  const unstage = (paths: string[]) => runAction(() => unstageFiles(paths), { title: t('unstage') });
 
   const handleDiscard = (path: string) => {
     const file = status.unstaged.find(f => f.path === path);
@@ -28,7 +37,9 @@ export function ChangesSection() {
     const message = isUntracked
       ? t('discardUntrackedConfirm', { name: path })
       : t('discardConfirm', { name: path });
-    if (window.confirm(message)) discardChanges([path]);
+    if (window.confirm(message)) {
+      void runAction(() => discardChanges([path]), { title: t('discard') });
+    }
   };
 
   return (
@@ -40,7 +51,7 @@ export function ChangesSection() {
             <div className="flex items-center justify-between px-3 py-1">
               <span className="text-subtext text-xs">{t('unstaged')}</span>
               <button
-                onClick={() => stageFiles(unstagedPaths)}
+                onClick={() => stage(unstagedPaths)}
                 className="text-green text-xs hover:text-text"
               >
                 {t('stageAll')}
@@ -49,10 +60,10 @@ export function ChangesSection() {
             <FileList
               files={status.unstaged}
               staged={false}
-              onStage={path => stageFiles([path])}
+              onStage={path => stage([path])}
               onDiscard={handleDiscard}
-              onSelect={setSelectedFile}
-              selectedFile={selectedFile}
+              onSelect={path => setSelectedFile(path, 'unstaged')}
+              selectedFile={selectedFileArea === 'unstaged' ? selectedFile : null}
             />
           </>
         )}
@@ -62,7 +73,7 @@ export function ChangesSection() {
             <div className="flex items-center justify-between px-3 py-1 mt-1">
               <span className="text-subtext text-xs">{t('staged')}</span>
               <button
-                onClick={() => unstageFiles(stagedPaths)}
+                onClick={() => unstage(stagedPaths)}
                 className="text-yellow text-xs hover:text-text"
               >
                 {t('unstageAll')}
@@ -71,9 +82,9 @@ export function ChangesSection() {
             <FileList
               files={status.staged}
               staged={true}
-              onUnstage={path => unstageFiles([path])}
-              onSelect={setSelectedFile}
-              selectedFile={selectedFile}
+              onUnstage={path => unstage([path])}
+              onSelect={path => setSelectedFile(path, 'staged')}
+              selectedFile={selectedFileArea === 'staged' ? selectedFile : null}
             />
           </>
         )}

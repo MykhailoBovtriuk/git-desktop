@@ -2,8 +2,9 @@ import { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { useRepoStore, CheckoutConflictError } from '../../stores/repo-store';
+import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { DropdownPanel, MenuItem, SectionLabel, TextInput, cn } from '../../shared/ui';
 
 interface BranchDropdownProps {
@@ -103,6 +104,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
     })),
   );
   const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
+  const runAction = useGitAction();
 
   const filtered = branches.filter(b =>
     b.name.toLowerCase().includes(search.toLowerCase())
@@ -112,14 +114,9 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
 
   const handle = async (action: () => Promise<void>, successMsg: string) => {
     onClose();
-    try {
-      await action();
-      addToast({ variant: 'success', title: t('common:done'), message: successMsg });
-    } catch (err: unknown) {
-      // Checkout blocked by local changes — a modal handles it, no error toast.
-      if (err instanceof CheckoutConflictError) return;
-      addToast({ variant: 'error', title: t('common:error'), message: err instanceof Error ? err.message : String(err) });
-    }
+    // CheckoutConflictError is swallowed by the hook — a modal handles it.
+    const ok = await runAction(action, { title: t('common:error') });
+    if (ok) addToast({ variant: 'success', title: t('common:done'), message: successMsg });
   };
 
   // Local delete: try the safe (non-force) delete first; only if Git reports
@@ -135,16 +132,13 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/not fully merged/i.test(msg)) {
         if (window.confirm(t('forceDeleteConfirm', { name }))) {
-          try {
-            await deleteBranch(name, true);
-            addToast({ variant: 'success', title: t('common:done'), message: t('forceDeleted', { name }) });
-          } catch (e: unknown) {
-            addToast({ variant: 'error', title: t('common:error'), message: e instanceof Error ? e.message : String(e) });
-          }
+          const ok = await runAction(() => deleteBranch(name, true), { title: t('common:error') });
+          if (ok) addToast({ variant: 'success', title: t('common:done'), message: t('forceDeleted', { name }) });
         }
         return;
       }
-      addToast({ variant: 'error', title: t('common:error'), message: msg });
+      // Re-route through the shared classifier so this toast matches the rest.
+      void runAction(() => Promise.reject(err), { title: t('common:error') });
     }
   };
 
