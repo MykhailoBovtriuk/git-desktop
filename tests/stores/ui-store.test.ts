@@ -77,4 +77,38 @@ describe('ui-store', () => {
     useUiStore.getState().setSelectedStash(null);
     expect(useUiStore.getState().selectedStash).toBeNull();
   });
+
+  // Promise-based confirm flow replacing window.confirm: a component awaits
+  // requestConfirm(), the ConfirmDialog host resolves it via resolveConfirm().
+  describe('confirm flow', () => {
+    it('requestConfirm exposes the request and resolves true on confirm', async () => {
+      const promise = useUiStore.getState().requestConfirm({
+        title: 'Delete branch',
+        message: 'Really?',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      expect(useUiStore.getState().confirmRequest).toMatchObject({ title: 'Delete branch' });
+
+      useUiStore.getState().resolveConfirm(true);
+      await expect(promise).resolves.toBe(true);
+      expect(useUiStore.getState().confirmRequest).toBeNull();
+    });
+
+    it('resolves false on cancel', async () => {
+      const promise = useUiStore.getState().requestConfirm({
+        title: 'T', message: 'M', confirmLabel: 'OK',
+      });
+      useUiStore.getState().resolveConfirm(false);
+      await expect(promise).resolves.toBe(false);
+    });
+
+    it('a second request cancels the pending one', async () => {
+      const first = useUiStore.getState().requestConfirm({ title: '1', message: 'M', confirmLabel: 'OK' });
+      const second = useUiStore.getState().requestConfirm({ title: '2', message: 'M', confirmLabel: 'OK' });
+      await expect(first).resolves.toBe(false);
+      useUiStore.getState().resolveConfirm(true);
+      await expect(second).resolves.toBe(true);
+    });
+  });
 });

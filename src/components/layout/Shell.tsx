@@ -12,6 +12,7 @@ import { HistoryView } from '../history/HistoryView';
 import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 
 function MainContent() {
@@ -39,6 +40,7 @@ export function Shell() {
       <>
         <WelcomeScreen />
         <Toast />
+        <ConfirmDialog />
       </>
     );
   }
@@ -56,6 +58,7 @@ export function Shell() {
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
+      <ConfirmDialog />
     </div>
   );
 }

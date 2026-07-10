@@ -12,7 +12,7 @@ describe('StashForm', () => {
     render(<StashForm canStash listMode={false} onStash={vi.fn()} onToggle={vi.fn()} />);
     expect(screen.getByPlaceholderText('messagePlaceholder')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'stashStaged' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'list' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'list' })).toBeInTheDocument();
   });
 
   it('renders nothing in list mode', () => {
@@ -49,7 +49,7 @@ describe('StashForm', () => {
   it('calls onToggle when List button clicked', () => {
     const onToggle = vi.fn();
     render(<StashForm canStash listMode={false} onStash={vi.fn()} onToggle={onToggle} />);
-    fireEvent.click(screen.getByRole('button', { name: 'list' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'list' }));
     expect(onToggle).toHaveBeenCalled();
   });
 });

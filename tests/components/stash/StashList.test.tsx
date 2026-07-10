@@ -1,12 +1,20 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { StashList } from '../../../src/components/stash/StashList';
+import { useUiStore } from '../../../src/stores/ui-store';
 import type { StashEntry } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string, opts?: any) => opts ? `${key}(${JSON.stringify(opts)})` : key }),
+  useTranslation: () => ({
+    t: (key: string, opts?: any) => (opts ? `${key}(${JSON.stringify(opts)})` : key),
+    i18n: { language: 'en' },
+  }),
 }));
+
+beforeEach(() => {
+  useUiStore.setState({ confirmRequest: null });
+});
 
 const STASHES: StashEntry[] = [
   { index: 0, message: 'WIP on main: fix nav', branch: 'main', date: new Date(Date.now() - 60_000).toISOString() },
@@ -55,21 +63,27 @@ describe('StashList', () => {
     expect(onApply).toHaveBeenCalledWith(0);
   });
 
-  it('calls onDrop when drop button clicked and confirmed', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('calls onDrop when drop button clicked and confirmed', async () => {
     const onDrop = vi.fn();
     render(<StashList stashes={STASHES} selectedIndex={null} onSelect={NOOP} onApply={NOOP} onPop={NOOP} onDrop={onDrop} />);
-    const dropBtns = screen.getAllByTitle('actions.drop');
-    fireEvent.click(dropBtns[0]);
-    expect(onDrop).toHaveBeenCalledWith(0);
+    fireEvent.click(screen.getAllByTitle('actions.drop')[0]);
+
+    // The click opens the in-app confirm dialog — approve it via the store.
+    await waitFor(() => expect(useUiStore.getState().confirmRequest).not.toBeNull());
+    useUiStore.getState().resolveConfirm(true);
+
+    await waitFor(() => expect(onDrop).toHaveBeenCalledWith(0));
   });
 
-  it('does NOT call onDrop when drop is cancelled', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('does NOT call onDrop when drop is cancelled', async () => {
     const onDrop = vi.fn();
     render(<StashList stashes={STASHES} selectedIndex={null} onSelect={NOOP} onApply={NOOP} onPop={NOOP} onDrop={onDrop} />);
-    const dropBtns = screen.getAllByTitle('actions.drop');
-    fireEvent.click(dropBtns[0]);
+    fireEvent.click(screen.getAllByTitle('actions.drop')[0]);
+
+    await waitFor(() => expect(useUiStore.getState().confirmRequest).not.toBeNull());
+    useUiStore.getState().resolveConfirm(false);
+
+    await waitFor(() => expect(useUiStore.getState().confirmRequest).toBeNull());
     expect(onDrop).not.toHaveBeenCalled();
   });
 

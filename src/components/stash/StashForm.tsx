@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Textarea } from '../../shared/ui';
+import { Button, Switch, Textarea } from '../../shared/ui';
 
 interface StashFormProps {
   canStash: boolean;
@@ -41,18 +41,7 @@ export function StashForm({ canStash, onStash, listMode, onToggle }: StashFormPr
         >
           {t('stashStaged')}
         </Button>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-pressed={false}
-          aria-label={t('list')}
-          className="flex items-center gap-1.5 shrink-0 text-xs text-subtext hover:text-text transition-colors"
-        >
-          <span className="relative inline-flex h-3.5 w-6 items-center rounded-full bg-surface2 transition-colors duration-200">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm translate-x-0.5 transition-transform duration-200" />
-          </span>
-          {t('list')}
-        </button>
+        <Switch checked={false} onToggle={onToggle} label={t('list')} className="shrink-0" />
       </div>
     </div>
   );

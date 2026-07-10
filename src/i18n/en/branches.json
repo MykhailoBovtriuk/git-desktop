@@ -1,1 +1,19 @@
-{ "searchPlaceholder": "Search branches...", "local": "Local", "remote": "Remote", "pull": "Pull", "checkout": "Checkout", "mergeIntoCurrent": "Merge into current", "rebaseOntoCurrent": "Rebase onto current", "deleteBranch": "Delete branch", "deleteRemoteBranch": "Delete remote branch", "moreActions": "More actions", "deleteConfirm": "Delete branch \"{{name}}\"? This cannot be undone.", "forceDeleteConfirm": "Branch \"{{name}}\" is not fully merged. Force delete? Unmerged commits will be lost.", "deleteRemoteConfirm": "Delete remote branch \"{{branch}}\" on \"{{remote}}\"? This removes it on the remote for everyone.", "deleted": "Deleted {{name}}", "forceDeleted": "Force-deleted {{name}}", "switchedTo": "Switched to {{name}}", "merged": "Merged {{name}}", "rebasedOnto": "Rebased onto {{name}}" }
+{
+  "searchPlaceholder": "Search branches...",
+  "local": "Local",
+  "remote": "Remote",
+  "checkout": "Checkout",
+  "mergeIntoCurrent": "Merge into current",
+  "rebaseOntoCurrent": "Rebase onto current",
+  "deleteBranch": "Delete branch",
+  "deleteRemoteBranch": "Delete remote branch",
+  "moreActions": "More actions",
+  "deleteConfirm": "Delete branch \"{{name}}\"? This cannot be undone.",
+  "forceDeleteConfirm": "Branch \"{{name}}\" is not fully merged. Force delete? Unmerged commits will be lost.",
+  "deleteRemoteConfirm": "Delete remote branch \"{{branch}}\" on \"{{remote}}\"? This removes it on the remote for everyone.",
+  "deleted": "Deleted {{name}}",
+  "forceDeleted": "Force-deleted {{name}}",
+  "switchedTo": "Switched to {{name}}",
+  "merged": "Merged {{name}}",
+  "rebasedOnto": "Rebased onto {{name}}"
+}

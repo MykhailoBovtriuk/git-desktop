@@ -1,1 +1,19 @@
-{ "searchPlaceholder": "Пошук гілок...", "local": "Локальні", "remote": "Віддалені", "pull": "Стягнути", "checkout": "Переключитись", "mergeIntoCurrent": "Злити з поточною", "rebaseOntoCurrent": "Перебазувати на поточну", "deleteBranch": "Видалити гілку", "deleteRemoteBranch": "Видалити віддалену гілку", "moreActions": "Більше дій", "deleteConfirm": "Видалити гілку «{{name}}»? Цю дію неможливо скасувати.", "forceDeleteConfirm": "Гілку «{{name}}» не повністю злито. Видалити примусово? Незлиті коміти буде втрачено.", "deleteRemoteConfirm": "Видалити віддалену гілку «{{branch}}» на «{{remote}}»? Її буде видалено на віддаленому сервері для всіх.", "deleted": "Видалено {{name}}", "forceDeleted": "Примусово видалено {{name}}", "switchedTo": "Перемкнуто на {{name}}", "merged": "Злито {{name}}", "rebasedOnto": "Перебазовано на {{name}}" }
+{
+  "searchPlaceholder": "Пошук гілок...",
+  "local": "Локальні",
+  "remote": "Віддалені",
+  "checkout": "Переключитись",
+  "mergeIntoCurrent": "Злити з поточною",
+  "rebaseOntoCurrent": "Перебазувати на поточну",
+  "deleteBranch": "Видалити гілку",
+  "deleteRemoteBranch": "Видалити віддалену гілку",
+  "moreActions": "Більше дій",
+  "deleteConfirm": "Видалити гілку «{{name}}»? Цю дію неможливо скасувати.",
+  "forceDeleteConfirm": "Гілку «{{name}}» не повністю злито. Видалити примусово? Незлиті коміти буде втрачено.",
+  "deleteRemoteConfirm": "Видалити віддалену гілку «{{branch}}» на «{{remote}}»? Її буде видалено на віддаленому сервері для всіх.",
+  "deleted": "Видалено {{name}}",
+  "forceDeleted": "Примусово видалено {{name}}",
+  "switchedTo": "Перемкнуто на {{name}}",
+  "merged": "Злито {{name}}",
+  "rebasedOnto": "Перебазовано на {{name}}"
+}

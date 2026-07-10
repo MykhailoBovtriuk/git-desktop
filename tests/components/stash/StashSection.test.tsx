@@ -130,6 +130,31 @@ describe('StashSection', () => {
     await waitFor(() => expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' })));
   });
 
+  // Regression: section headers and bulk actions were hardcoded English
+  // ("Unstaged", "Stage All", "No changes") while ChangesSection used i18n.
+  it('uses translated labels for section headers and bulk actions', () => {
+    mockState(useRepoStore)({
+      ...baseRepo,
+      status: {
+        unstaged: [{ path: 'a.ts', status: 'M', staged: false }],
+        staged: [{ path: 'b.ts', status: 'A', staged: true }],
+      },
+    });
+    mockState(useUiStore)(baseUi);
+    render(<StashSection />);
+    expect(screen.getByText('staging:unstaged')).toBeInTheDocument();
+    expect(screen.getByText('staging:stageAll')).toBeInTheDocument();
+    expect(screen.getByText('staging:staged')).toBeInTheDocument();
+    expect(screen.getByText('staging:unstageAll')).toBeInTheDocument();
+  });
+
+  it('uses a translated empty-state message', () => {
+    mockState(useRepoStore)(baseRepo);
+    mockState(useUiStore)(baseUi);
+    render(<StashSection />);
+    expect(screen.getByText('staging:noChanges')).toBeInTheDocument();
+  });
+
   it('calls addToast with error on stashSave failure', async () => {
     const addToast = vi.fn();
     mockState(useRepoStore)({

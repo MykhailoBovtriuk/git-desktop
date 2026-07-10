@@ -17,11 +17,12 @@ export function ChangesSection() {
       discardChanges: s.discardChanges,
     })),
   );
-  const { selectedFile, selectedFileArea, setSelectedFile } = useUiStore(
+  const { selectedFile, selectedFileArea, setSelectedFile, requestConfirm } = useUiStore(
     useShallow(s => ({
       selectedFile: s.selectedFile,
       selectedFileArea: s.selectedFileArea,
       setSelectedFile: s.setSelectedFile,
+      requestConfirm: s.requestConfirm,
     })),
   );
 
@@ -31,13 +32,19 @@ export function ChangesSection() {
   const stage = (paths: string[]) => runAction(() => stageFiles(paths), { title: t('stage') });
   const unstage = (paths: string[]) => runAction(() => unstageFiles(paths), { title: t('unstage') });
 
-  const handleDiscard = (path: string) => {
+  const handleDiscard = async (path: string) => {
     const file = status.unstaged.find(f => f.path === path);
     const isUntracked = file?.status === 'N';
     const message = isUntracked
       ? t('discardUntrackedConfirm', { name: path })
       : t('discardConfirm', { name: path });
-    if (window.confirm(message)) {
+    const ok = await requestConfirm({
+      title: t('discard'),
+      message,
+      confirmLabel: t('discard'),
+      danger: true,
+    });
+    if (ok) {
       void runAction(() => discardChanges([path]), { title: t('discard') });
     }
   };

@@ -18,7 +18,7 @@ export function StashSection() {
       stashSave: s.stashSave,
     })),
   );
-  const { activeView, setActiveView, setSelectedStash, selectedFile, selectedFileArea, setSelectedFile, addToast } = useUiStore(
+  const { activeView, setActiveView, setSelectedStash, selectedFile, selectedFileArea, setSelectedFile, addToast, requestConfirm } = useUiStore(
     useShallow(s => ({
       activeView: s.activeView,
       setActiveView: s.setActiveView,
@@ -27,6 +27,7 @@ export function StashSection() {
       selectedFileArea: s.selectedFileArea,
       setSelectedFile: s.setSelectedFile,
       addToast: s.addToast,
+      requestConfirm: s.requestConfirm,
     })),
   );
   const [loading, setLoading] = useState(false);
@@ -41,13 +42,19 @@ export function StashSection() {
   const stage = (paths: string[]) => runAction(() => stageFiles(paths), { title: t('staging:stage') });
   const unstage = (paths: string[]) => runAction(() => unstageFiles(paths), { title: t('staging:unstage') });
 
-  const handleDiscard = (path: string) => {
+  const handleDiscard = async (path: string) => {
     const file = status.unstaged.find(f => f.path === path);
     const isUntracked = file?.status === 'N';
     const message = isUntracked
       ? t('staging:discardUntrackedConfirm', { name: path })
       : t('staging:discardConfirm', { name: path });
-    if (window.confirm(message)) {
+    const ok = await requestConfirm({
+      title: t('staging:discard'),
+      message,
+      confirmLabel: t('staging:discard'),
+      danger: true,
+    });
+    if (ok) {
       void runAction(() => discardChanges([path]), { title: t('staging:discard') });
     }
   };
@@ -78,9 +85,9 @@ export function StashSection() {
           {status.unstaged.length > 0 && (
             <>
               <div className="flex items-center justify-between px-3 py-1">
-                <span className="text-subtext text-xs">Unstaged</span>
+                <span className="text-subtext text-xs">{t('staging:unstaged')}</span>
                 <button onClick={() => stage(unstagedPaths)} className="text-green text-xs hover:text-text">
-                  Stage All
+                  {t('staging:stageAll')}
                 </button>
               </div>
               <FileList
@@ -96,9 +103,9 @@ export function StashSection() {
           {status.staged.length > 0 && (
             <>
               <div className="flex items-center justify-between px-3 py-1 mt-1">
-                <span className="text-subtext text-xs">Staged</span>
+                <span className="text-subtext text-xs">{t('staging:staged')}</span>
                 <button onClick={() => unstage(stagedPaths)} className="text-yellow text-xs hover:text-text">
-                  Unstage All
+                  {t('staging:unstageAll')}
                 </button>
               </div>
               <FileList
@@ -111,7 +118,7 @@ export function StashSection() {
             </>
           )}
           {status.unstaged.length === 0 && status.staged.length === 0 && (
-            <p className="text-subtext text-xs text-center py-4">No changes</p>
+            <p className="text-subtext text-xs text-center py-4">{t('staging:noChanges')}</p>
           )}
         </div>
       )}

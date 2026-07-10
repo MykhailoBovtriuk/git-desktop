@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
+
 import { RawDiff } from '../../../src/components/stash/RawDiff';
 
 const SAMPLE = `diff --git a/a.txt b/a.txt
@@ -10,9 +15,11 @@ const SAMPLE = `diff --git a/a.txt b/a.txt
  context`;
 
 describe('RawDiff', () => {
-  it('renders empty placeholder when raw is empty', () => {
+  // Regression: the placeholder was hardcoded English ("No diff") even in the
+  // uk locale — it must go through i18n like every other user-facing string.
+  it('renders a translated placeholder when raw is empty', () => {
     render(<RawDiff raw="" />);
-    expect(screen.getByText(/no diff/i)).toBeInTheDocument();
+    expect(screen.getByText('diff:noDiffToDisplay')).toBeInTheDocument();
   });
 
   it('renders each line of the diff', () => {

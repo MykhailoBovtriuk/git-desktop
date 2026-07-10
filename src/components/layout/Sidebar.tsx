@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { Accordion } from '../../shared/ui';
+import { Accordion, Switch } from '../../shared/ui';
 import { ChangesSection } from '../staging/ChangesSection';
 import { StashSection } from '../stash/StashSection';
 import { getLocalStorage } from '../../lib/storage';
@@ -73,18 +73,12 @@ export function Sidebar() {
           indicateOpen={stashOpen && !listMode}
           onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
           action={listMode ? (
-            <button
-              type="button"
-              aria-label={t('stash:list')}
-              aria-pressed
-              onClick={() => setActiveView('stash-create')}
-              className="flex items-center gap-1.5 px-1 py-0.5 hover:opacity-80 transition-colors"
-            >
-              <span className="relative inline-flex h-3.5 w-6 items-center rounded-full bg-blue transition-colors duration-200">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm translate-x-3 transition-transform duration-200" />
-              </span>
-              <span className="text-xs text-subtext">{t('stash:list')}</span>
-            </button>
+            <Switch
+              checked
+              onToggle={() => setActiveView('stash-create')}
+              label={t('stash:list')}
+              className="px-1 py-0.5"
+            />
           ) : undefined}
         >
           <StashSection />

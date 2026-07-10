@@ -66,8 +66,16 @@ export function Footer() {
       </div>
 
       <div className="flex items-center gap-3 text-xs text-subtext">
-        {aheadBehind.ahead > 0 && <span className="text-blue">↑{aheadBehind.ahead}</span>}
-        {aheadBehind.behind > 0 && <span>↓{aheadBehind.behind}</span>}
+        {aheadBehind.ahead > 0 && (
+          <span className="text-blue" title={t('ahead', { count: aheadBehind.ahead })} aria-label={t('ahead', { count: aheadBehind.ahead })}>
+            ↑{aheadBehind.ahead}
+          </span>
+        )}
+        {aheadBehind.behind > 0 && (
+          <span title={t('behind', { count: aheadBehind.behind })} aria-label={t('behind', { count: aheadBehind.behind })}>
+            ↓{aheadBehind.behind}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-1">

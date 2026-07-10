@@ -103,7 +103,9 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       mergeState: s.mergeState,
     })),
   );
-  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
+  const { addToast, requestConfirm } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, requestConfirm: s.requestConfirm })),
+  );
   const runAction = useGitAction();
 
   const filtered = branches.filter(b =>
@@ -123,7 +125,13 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   // the branch isn't fully merged do we offer a force delete behind a second,
   // explicit confirm that spells out the consequence.
   const confirmDeleteLocal = async (name: string) => {
-    if (!window.confirm(t('deleteConfirm', { name }))) return;
+    const confirmed = await requestConfirm({
+      title: t('deleteBranch'),
+      message: t('deleteConfirm', { name }),
+      confirmLabel: t('deleteBranch'),
+      danger: true,
+    });
+    if (!confirmed) return;
     onClose();
     try {
       await deleteBranch(name);
@@ -131,7 +139,13 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/not fully merged/i.test(msg)) {
-        if (window.confirm(t('forceDeleteConfirm', { name }))) {
+        const force = await requestConfirm({
+          title: t('deleteBranch'),
+          message: t('forceDeleteConfirm', { name }),
+          confirmLabel: t('deleteBranch'),
+          danger: true,
+        });
+        if (force) {
           const ok = await runAction(() => deleteBranch(name, true), { title: t('common:error') });
           if (ok) addToast({ variant: 'success', title: t('common:done'), message: t('forceDeleted', { name }) });
         }
@@ -143,13 +157,19 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   };
 
   // Remote delete: branch name arrives as "<remote>/<branch>" (e.g. origin/dev).
-  const confirmDeleteRemote = (name: string) => {
+  const confirmDeleteRemote = async (name: string) => {
     const slash = name.indexOf('/');
     if (slash === -1) return;
     const remote = name.slice(0, slash);
     const branch = name.slice(slash + 1);
-    if (window.confirm(t('deleteRemoteConfirm', { branch, remote }))) {
-      handle(() => deleteRemoteBranch(remote, branch), t('deleted', { name }));
+    const confirmed = await requestConfirm({
+      title: t('deleteRemoteBranch'),
+      message: t('deleteRemoteConfirm', { branch, remote }),
+      confirmLabel: t('deleteRemoteBranch'),
+      danger: true,
+    });
+    if (confirmed) {
+      void handle(() => deleteRemoteBranch(remote, branch), t('deleted', { name }));
     }
   };
 

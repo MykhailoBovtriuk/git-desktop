@@ -11,7 +11,7 @@ interface CommitListProps {
 }
 
 export function CommitList({ filter }: CommitListProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
     useShallow(s => ({
       commits: s.commits,
@@ -46,7 +46,7 @@ export function CommitList({ filter }: CommitListProps) {
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-subtext text-xs">{commit.author}</span>
               <span className="text-subtext text-xs">·</span>
-              <span className="text-subtext text-xs">{relativeTime(commit.date)}</span>
+              <span className="text-subtext text-xs">{relativeTime(commit.date, i18n.language)}</span>
             </div>
             {commit.refs.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">

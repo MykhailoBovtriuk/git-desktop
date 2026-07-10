@@ -5,6 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
 import { useGitAction } from '../../hooks/use-git-action';
+import { Switch } from '../../shared/ui';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 
 export function MergeEditor() {
@@ -18,12 +19,13 @@ export function MergeEditor() {
       concludeMerge: s.concludeMerge,
     })),
   );
-  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast } = useUiStore(
+  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast, requestConfirm } = useUiStore(
     useShallow(s => ({
       activeMergeFile: s.activeMergeFile,
       setActiveMergeFile: s.setActiveMergeFile,
       setActiveView: s.setActiveView,
       addToast: s.addToast,
+      requestConfirm: s.requestConfirm,
     })),
   );
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
@@ -113,7 +115,15 @@ export function MergeEditor() {
     if (saving) return;
     // Aborting throws away every resolution already staged — confirm once the
     // user has invested work in this merge.
-    if (resolved.size > 0 && !window.confirm(t('abortConfirm'))) return;
+    if (resolved.size > 0) {
+      const ok = await requestConfirm({
+        title: t('abortMerge'),
+        message: t('abortConfirm'),
+        confirmLabel: t('abortMerge'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       const ok = await runAction(() => abortMerge(), { title: t('abortFailed') });
@@ -213,17 +223,12 @@ export function MergeEditor() {
           {remaining > 0 && <span className="text-red"> {t('remainingConflicts', { count: remaining })}</span>}
         </span>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleAutoCommit}
+          <Switch
+            checked={autoCommit}
+            onToggle={toggleAutoCommit}
             title={t('autoCommitHint')}
-            className="flex items-center gap-1.5 text-xs text-subtext hover:text-text transition-colors"
-          >
-            <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${autoCommit ? 'bg-blue' : 'bg-surface2'}`}>
-              <span className={`inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${autoCommit ? 'translate-x-3' : 'translate-x-0.5'}`} />
-            </span>
-            {t('autoCommit')}
-          </button>
+            label={t('autoCommit')}
+          />
           <button
             onClick={handleAbort}
             disabled={saving}

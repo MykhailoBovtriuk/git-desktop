@@ -12,7 +12,7 @@ const LANE_W = 20;
 const GRAPH_PAD = 10;
 
 export function CommitGraph() {
-  const { t } = useTranslation('graph');
+  const { t, i18n } = useTranslation('graph');
   const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
     useShallow(s => ({
       commits: s.commits,
@@ -98,7 +98,7 @@ export function CommitGraph() {
                     </Badge>
                   ))}
                 </div>
-                <span className="text-subtext text-xs shrink-0">{relativeTime(commit.date)}</span>
+                <span className="text-subtext text-xs shrink-0">{relativeTime(commit.date, i18n.language)}</span>
               </div>
             </div>
           );
