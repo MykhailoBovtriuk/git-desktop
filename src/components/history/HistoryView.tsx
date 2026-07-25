@@ -57,7 +57,7 @@ export function HistoryView() {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedCommit, setSelectedFile, addToast]);
+  }, [selectedCommit, setSelectedFile, addToast, t]);
 
   return (
     <div className="flex h-full">

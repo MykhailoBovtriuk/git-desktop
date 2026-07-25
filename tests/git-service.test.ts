@@ -346,7 +346,11 @@ describe('readFile/writeFile path guards', () => {
     await expect(git.writeFile('.GIT/config', 'x')).rejects.toThrow();
   });
 
-  it('rejects reading through a symlink that points outside the repo', async () => {
+  // Creating symlinks on Windows requires elevation/developer mode, which CI
+  // runners don't have — the guard itself is platform-independent.
+  const itUnix = it.skipIf(process.platform === 'win32');
+
+  itUnix('rejects reading through a symlink that points outside the repo', async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
     fs.writeFileSync(path.join(outside, 'secret.txt'), 'secret');
     fs.symlinkSync(outside, path.join(tmpDir, 'link'));
@@ -355,7 +359,7 @@ describe('readFile/writeFile path guards', () => {
     fs.rmSync(outside, { recursive: true, force: true });
   });
 
-  it('rejects writing through a symlink that points outside the repo', async () => {
+  itUnix('rejects writing through a symlink that points outside the repo', async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
     fs.symlinkSync(outside, path.join(tmpDir, 'link'));
 
@@ -364,7 +368,7 @@ describe('readFile/writeFile path guards', () => {
     fs.rmSync(outside, { recursive: true, force: true });
   });
 
-  it('rejects a file symlink that points outside the repo', async () => {
+  itUnix('rejects a file symlink that points outside the repo', async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
     const target = path.join(outside, 'target.txt');
     fs.writeFileSync(target, 'outside content');

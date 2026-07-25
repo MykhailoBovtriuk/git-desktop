@@ -1,4 +1,3 @@
-import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Titlebar } from './Titlebar';

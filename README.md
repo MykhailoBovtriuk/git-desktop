@@ -1,5 +1,7 @@
 # Git Desktop
 
+[![CI](https://github.com/MykhailoBovtriuk/git-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/MykhailoBovtriuk/git-desktop/actions/workflows/ci.yml) [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
+
 A cross-platform Git desktop client with a visual commit graph, side-by-side conflict resolution, and a polished UI for everyday Git workflows.
 
 > Built with Electron · React 19 · TypeScript · Vite · Zustand · Tailwind v4 · simple-git

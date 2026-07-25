@@ -77,7 +77,7 @@ export function CommitGraph() {
         </svg>
 
         {/* Commit rows with text */}
-        {layout.map(({ commit, lane, row }) => {
+        {layout.map(({ commit }) => {
           const isSelected = selectedCommit === commit.hash;
           return (
             <div

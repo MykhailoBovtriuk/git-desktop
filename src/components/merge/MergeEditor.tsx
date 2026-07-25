@@ -49,7 +49,7 @@ export function MergeEditor() {
     gitApi.readFile(activeMergeFile)
       .then(content => setSegsByFile(m => ({ ...m, [activeMergeFile]: parseConflicts(content) })))
       .catch(err => addToast({ variant: 'error', title: t('loadFailed'), message: String(err) }));
-  }, [activeMergeFile, segsByFile, addToast]);
+  }, [activeMergeFile, segsByFile, addToast, t]);
 
   if (!mergeState) return null;
 
