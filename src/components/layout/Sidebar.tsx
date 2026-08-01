@@ -35,7 +35,10 @@ export function Sidebar() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
-      setWidth(w => { getLocalStorage().setItem('sidebar-width', String(w)); return w; });
+      setWidth(w => {
+        getLocalStorage().setItem('sidebar-width', String(w));
+        return w;
+      });
     };
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);
@@ -51,9 +54,10 @@ export function Sidebar() {
       className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
       style={{ width }}
     >
-
       {/* Changes accordion — flex-1 when stash is closed */}
-      <div className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}>
+      <div
+        className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}
+      >
         <Accordion
           title={t('staging:changes')}
           badge={totalChanges}
@@ -65,21 +69,27 @@ export function Sidebar() {
       </div>
 
       {/* Stash accordion — flex-1 when open */}
-      <div className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}>
+      <div
+        className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}
+      >
         <Accordion
           title={t('stash:title')}
-          badge={!stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined}
+          badge={
+            !stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined
+          }
           open={stashOpen}
           indicateOpen={stashOpen && !listMode}
           onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
-          action={listMode ? (
-            <Switch
-              checked
-              onToggle={() => setActiveView('stash-create')}
-              label={t('stash:list')}
-              className="px-1 py-0.5"
-            />
-          ) : undefined}
+          action={
+            listMode ? (
+              <Switch
+                checked
+                onToggle={() => setActiveView('stash-create')}
+                label={t('stash:list')}
+                className="px-1 py-0.5"
+              />
+            ) : undefined
+          }
         >
           <StashSection />
         </Accordion>

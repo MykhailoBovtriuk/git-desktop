@@ -7,7 +7,6 @@ import { gitApi } from '../../api/git-api';
 import { parseDiff } from './parse-diff';
 import type { FileDiff } from '../../types';
 
-
 export function DiffViewer() {
   const { t } = useTranslation('diff');
   const { selectedFile, selectedFileArea, selectedCommit, activeView } = useUiStore(
@@ -26,13 +25,12 @@ export function DiffViewer() {
   // lookup only when a selection carries no area.
   const isStaged = selectedFileArea ? selectedFileArea === 'staged' : stagedInStatus;
   const inChanges = useRepoStore(
-    s => !!selectedFile && (
-      s.status.staged.some(f => f.path === selectedFile) ||
-      s.status.unstaged.some(f => f.path === selectedFile)
-    ),
+    s =>
+      !!selectedFile &&
+      (s.status.staged.some(f => f.path === selectedFile) ||
+        s.status.unstaged.some(f => f.path === selectedFile)),
   );
-  const useCommitContext =
-    (activeView === 'history' || activeView === 'graph') && !!selectedCommit;
+  const useCommitContext = (activeView === 'history' || activeView === 'graph') && !!selectedCommit;
   // A selection is only valid while viewing a commit, or while the file is still
   // among the current changes. Otherwise (e.g. after commit/discard) show empty.
   const hasSelection = !!selectedFile && (useCommitContext || inChanges);
@@ -41,7 +39,11 @@ export function DiffViewer() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasSelection) { setDiffs([]); setError(null); return; }
+    if (!hasSelection) {
+      setDiffs([]);
+      setError(null);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);
@@ -66,7 +68,9 @@ export function DiffViewer() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedFile, selectedCommit, isStaged, useCommitContext, hasSelection]);
 
   if (!hasSelection) {
@@ -78,7 +82,11 @@ export function DiffViewer() {
   }
 
   if (loading) {
-    return <div className="h-full flex items-center justify-center text-subtext text-sm">{t('common:loading')}</div>;
+    return (
+      <div className="h-full flex items-center justify-center text-subtext text-sm">
+        {t('common:loading')}
+      </div>
+    );
   }
 
   if (error) {
@@ -118,8 +126,11 @@ export function DiffViewer() {
                   <div
                     key={li}
                     className={`flex ${
-                      line.type === 'add' ? 'bg-green/10' :
-                      line.type === 'remove' ? 'bg-red/10' : ''
+                      line.type === 'add'
+                        ? 'bg-green/10'
+                        : line.type === 'remove'
+                          ? 'bg-red/10'
+                          : ''
                     }`}
                   >
                     <span className="text-subtext w-8 shrink-0 text-right pr-2 select-none border-r border-surface0">
@@ -128,11 +139,17 @@ export function DiffViewer() {
                     <span className="text-subtext w-8 shrink-0 text-right pr-2 select-none border-r border-surface0">
                       {line.newLineNumber ?? ''}
                     </span>
-                    <span className={`px-2 whitespace-pre ${
-                      line.type === 'add' ? 'text-green' :
-                      line.type === 'remove' ? 'text-red' : 'text-text'
-                    }`}>
-                      {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '}{line.content}
+                    <span
+                      className={`px-2 whitespace-pre ${
+                        line.type === 'add'
+                          ? 'text-green'
+                          : line.type === 'remove'
+                            ? 'text-red'
+                            : 'text-text'
+                      }`}
+                    >
+                      {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '}
+                      {line.content}
                     </span>
                   </div>
                 ))}

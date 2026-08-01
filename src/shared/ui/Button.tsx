@@ -13,11 +13,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const BASE = 'rounded transition-opacity transition-colors disabled:opacity-40';
 
 const VARIANT: Record<Variant, string> = {
-  primary:   'bg-blue text-mantle hover:opacity-90',
+  primary: 'bg-blue text-mantle hover:opacity-90',
   secondary: 'text-subtext hover:text-text',
-  danger:    'bg-red/20 text-red hover:bg-red/30',
-  surface:   'bg-surface0 text-text hover:bg-surface1',
-  neutral:   'bg-surface1 text-text hover:bg-surface2',
+  danger: 'bg-red/20 text-red hover:bg-red/30',
+  surface: 'bg-surface0 text-text hover:bg-surface1',
+  neutral: 'bg-surface1 text-text hover:bg-surface2',
 };
 
 const SIZE: Record<Size, string> = {

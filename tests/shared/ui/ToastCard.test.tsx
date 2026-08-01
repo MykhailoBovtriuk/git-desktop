@@ -11,12 +11,16 @@ describe('ToastCard', () => {
   });
 
   it('applies success border', () => {
-    const { container } = render(<ToastCard variant="success" title="t" message="m" onDismiss={() => {}} />);
+    const { container } = render(
+      <ToastCard variant="success" title="t" message="m" onDismiss={() => {}} />,
+    );
     expect(container.firstChild).toHaveClass('border-green');
   });
 
   it('applies error border', () => {
-    const { container } = render(<ToastCard variant="error" title="t" message="m" onDismiss={() => {}} />);
+    const { container } = render(
+      <ToastCard variant="error" title="t" message="m" onDismiss={() => {}} />,
+    );
     expect(container.firstChild).toHaveClass('border-red');
   });
 
@@ -28,18 +32,36 @@ describe('ToastCard', () => {
   });
 
   it('applies info border color', () => {
-    const { container } = render(<ToastCard variant="info" title="t" message="m" onDismiss={() => {}} />);
+    const { container } = render(
+      <ToastCard variant="info" title="t" message="m" onDismiss={() => {}} />,
+    );
     expect(container.firstChild).toHaveClass('border-blue');
   });
 
   it('renders action button when action provided', () => {
-    render(<ToastCard variant="success" title="t" message="m" onDismiss={() => {}} action={{ label: 'Undo', onClick: () => {} }} />);
+    render(
+      <ToastCard
+        variant="success"
+        title="t"
+        message="m"
+        onDismiss={() => {}}
+        action={{ label: 'Undo', onClick: () => {} }}
+      />,
+    );
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
   });
 
   it('calls action.onClick when action button clicked', () => {
     const onClick = vi.fn();
-    render(<ToastCard variant="success" title="t" message="m" onDismiss={() => {}} action={{ label: 'Undo', onClick }} />);
+    render(
+      <ToastCard
+        variant="success"
+        title="t"
+        message="m"
+        onDismiss={() => {}}
+        action={{ label: 'Undo', onClick }}
+      />,
+    );
     screen.getByRole('button', { name: 'Undo' }).click();
     expect(onClick).toHaveBeenCalled();
   });

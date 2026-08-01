@@ -59,7 +59,6 @@ interface RepoState {
   loadLog: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;
-  loadAheadBehind: () => Promise<void>;
   refresh: () => Promise<void>;
   stageFiles: (paths: string[]) => Promise<void>;
   unstageFiles: (paths: string[]) => Promise<void>;
@@ -91,389 +90,411 @@ export const useRepoStore = create<RepoState>()(
       let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
 
       return {
-  epoch: 0,
-  busyCount: 0,
-  repoPath: null,
-  recentRepos: [],
-  commits: [],
-  branches: [],
-  currentBranch: '',
-  status: { staged: [], unstaged: [] },
-  aheadBehind: { ahead: 0, behind: 0 },
-  mergeState: null,
-  merging: false,
-  checkoutConflict: null,
-  stashes: [],
-  hasMoreCommits: false,
-  loadingMoreCommits: false,
-  busyOperation: null,
-  lastRefreshError: null,
+        epoch: 0,
+        busyCount: 0,
+        repoPath: null,
+        recentRepos: [],
+        commits: [],
+        branches: [],
+        currentBranch: '',
+        status: { staged: [], unstaged: [] },
+        aheadBehind: { ahead: 0, behind: 0 },
+        mergeState: null,
+        merging: false,
+        checkoutConflict: null,
+        stashes: [],
+        hasMoreCommits: false,
+        loadingMoreCommits: false,
+        busyOperation: null,
+        lastRefreshError: null,
 
-  // Mark the store busy for the duration of fn so auto-refresh skips while a
-  // mutating git operation runs. Clears the marker even if fn throws. Bumping
-  // the epoch on both edges discards loader responses that were in flight
-  // before the mutation and any that read half-applied state during it.
-  runOperation: async (name, fn) => {
-    set(s => ({ busyCount: s.busyCount + 1, busyOperation: name, epoch: s.epoch + 1 }));
-    try {
-      return await fn();
-    } finally {
-      set(s => {
-        const busyCount = s.busyCount - 1;
-        return {
-          busyCount,
-          busyOperation: busyCount === 0 ? null : s.busyOperation,
-          epoch: s.epoch + 1,
-        };
-      });
-    }
-  },
-
-  openRepo: async (path) => {
-    // Backend normalizes to the canonical repo root; store that, not the raw
-    // path the user picked (which may be a subfolder). Fall back to the input
-    // path if the backend returns nothing, so repoPath/recentRepos never go null.
-    const root = (await gitApi.openRepo(path)) || path;
-    set(s => ({
-      epoch: s.epoch + 1,
-      repoPath: root,
-      mergeState: null,
-      // Drop any falsy/duplicate entries while prepending the freshly opened root.
-      recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
-    }));
-    await get().refresh();
-    // Restore the merge context after a restart/reload mid-merge: without it
-    // the conflict UI is unreachable even though git still has MERGE_HEAD.
-    if (get().merging && !get().mergeState) {
-      try {
-        const conflicts = await gitApi.getMergeConflicts();
-        if (conflicts.length > 0) {
-          const msg = await gitApi.getMergeMessage().catch(() => '');
-          const source = /Merge branch '([^']+)'/.exec(msg)?.[1] ?? '';
-          set({
-            mergeState: {
-              sourceBranch: source,
-              targetBranch: get().currentBranch,
-              conflictingFiles: conflicts,
-            },
-          });
-        }
-      } catch {
-        // Best-effort: the Changes view still works via the `merging` flag.
-      }
-    }
-  },
-
-  openDialog: async () => {
-    const path = await gitApi.openDialog();
-    if (path) await get().openRepo(path);
-  },
-
-  loadLog: async () => {
-    const startedEpoch = get().epoch;
-    // Fetch one extra to detect whether older commits remain, then trim to the
-    // page size so `hasMoreCommits` reflects reality without a separate count.
-    const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, 0);
-    if (get().epoch !== startedEpoch) return;
-    set({
-      commits: page.slice(0, LOG_PAGE_SIZE),
-      hasMoreCommits: page.length > LOG_PAGE_SIZE,
-    });
-  },
-
-  loadMoreCommits: async () => {
-    const { hasMoreCommits, loadingMoreCommits, commits, epoch: startedEpoch } = get();
-    if (!hasMoreCommits || loadingMoreCommits) return;
-    set({ loadingMoreCommits: true });
-    try {
-      const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, commits.length);
-      // Discard when the log was reloaded meanwhile (refresh or repo switch):
-      // the offset no longer matches and the base array is gone.
-      if (get().epoch !== startedEpoch || get().commits !== commits) return;
-      set({
-        commits: [...commits, ...page.slice(0, LOG_PAGE_SIZE)],
-        hasMoreCommits: page.length > LOG_PAGE_SIZE,
-      });
-    } finally {
-      set({ loadingMoreCommits: false });
-    }
-  },
-
-  loadBranches: async () => {
-    const startedEpoch = get().epoch;
-    const branches = await gitApi.getBranches();
-    if (get().epoch !== startedEpoch) return;
-    const current = branches.find(b => b.current);
-    set({ branches, currentBranch: current?.name ?? '' });
-  },
-
-  loadStatus: async () => {
-    const startedEpoch = get().epoch;
-    const result = await gitApi.getStatus();
-    // isMerging must never block the status update: if it fails (e.g. an older
-    // main process without the handler), default to false instead of throwing
-    // — otherwise status/merging freeze on stale values.
-    let merging = false;
-    try { merging = await gitApi.isMerging(); } catch { merging = false; }
-    if (get().epoch !== startedEpoch) return;
-    set({
-      status: { staged: result.staged, unstaged: result.unstaged },
-      aheadBehind: { ahead: result.ahead, behind: result.behind },
-      merging,
-    });
-  },
-
-  loadAheadBehind: async () => {
-    await get().loadStatus();
-  },
-
-  refresh: async () => {
-    const epoch = get().epoch;
-    // Same generation → join the round already in flight instead of firing a
-    // duplicate set of loaders.
-    if (refreshInFlight && refreshInFlight.epoch === epoch) {
-      return refreshInFlight.promise;
-    }
-    const promise = (async () => {
-      // allSettled (not all): one failing segment must not discard the others.
-      // A failed log shouldn't blank out branches/status that loaded fine.
-      const results = await Promise.allSettled([
-        get().loadLog(),
-        get().loadBranches(),
-        get().loadStatus(),
-        get().loadStashes(),
-      ]);
-      if (get().epoch !== epoch) return;
-      const errors = results
-        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
-      set({ lastRefreshError: errors.length ? errors.join('; ') : null });
-    })();
-    refreshInFlight = { epoch, promise };
-    try {
-      await promise;
-    } finally {
-      if (refreshInFlight?.promise === promise) refreshInFlight = null;
-    }
-  },
-
-  stageFiles: async (paths) => {
-    await gitApi.stageFiles(paths);
-    await get().loadStatus();
-  },
-
-  unstageFiles: async (paths) => {
-    await gitApi.unstageFiles(paths);
-    await get().loadStatus();
-  },
-
-  discardChanges: async (paths) => {
-    await gitApi.discardChanges(paths);
-    await get().loadStatus();
-  },
-
-  loadStashes: async () => {
-    if (!get().repoPath) return;
-    try {
-      const list = await gitApi.getStashList();
-      set({ stashes: list });
-    } catch {
-      set({ stashes: [] });
-    }
-  },
-
-  stashSave: async (message, staged) => get().runOperation('stash', async () => {
-    await gitApi.stashSave(message, staged);
-    await get().loadStashes();
-    await get().loadStatus();
-  }),
-
-  stashApply: async (index) => get().runOperation('stash', async () => {
-    await gitApi.stashApply(index);
-    await get().loadStatus();
-  }),
-
-  stashPop: async (index) => get().runOperation('stash', async () => {
-    await gitApi.stashPop(index);
-    await get().loadStashes();
-    await get().loadStatus();
-  }),
-
-  stashDrop: async (index) => get().runOperation('stash', async () => {
-    await gitApi.stashDrop(index);
-    await get().loadStashes();
-  }),
-
-  commit: async (message) => get().runOperation('commit', async () => {
-    await gitApi.commit(message);
-    await get().refresh();
-  }),
-
-  // Full refresh, not just ahead/behind: fetch brings new remote branches and
-  // moves remote refs, which the branch list and log decorations must show.
-  fetch: async () => get().runOperation('fetch', async () => {
-    await gitApi.fetch();
-    await get().refresh();
-  }),
-
-  pull: async () => get().runOperation('pull', async () => {
-    const result = await gitApi.pull();
-    await get().refresh();
-    return result;
-  }),
-
-  // Full refresh: push moves the remote ref, so the origin/<branch> badge in
-  // the log must move too, not just the ahead/behind counters.
-  push: async () => get().runOperation('push', async () => {
-    await gitApi.push();
-    await get().refresh();
-  }),
-
-  // Publish the current branch: `git push -u origin <branch>`. Offered as a
-  // follow-up action when a plain push fails for lack of an upstream.
-  publishBranch: async () => get().runOperation('push', async () => {
-    const branch = get().currentBranch;
-    if (!branch) throw new Error('No current branch to publish');
-    await gitApi.pushSetUpstream('origin', branch);
-    await get().refresh();
-  }),
-
-  checkout: async (branch) => get().runOperation('checkout', async () => {
-    const known = get().branches.find(b => b.name === branch);
-    const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
-    try {
-      await gitApi.checkout(target);
-      await get().refresh();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // git aborts the checkout when uncommitted changes would be clobbered.
-      // Surface a modal (via checkoutConflict) instead of a raw error toast.
-      if (/overwritten by checkout|commit your changes or stash/i.test(msg)) {
-        set({ checkoutConflict: { branch: target } });
-        throw new CheckoutConflictError();
-      }
-      throw err;
-    }
-  }),
-
-  // Set the blocked changes aside in a stash, then switch. Changes stay in the
-  // stash (recoverable with stash pop later). refresh() in finally: a failure
-  // after the stash was created still changed the repo, and the UI must show it.
-  stashAndCheckout: async () => get().runOperation('checkout', async () => {
-    const conflict = get().checkoutConflict;
-    if (!conflict) return;
-    set({ checkoutConflict: null });
-    try {
-      await gitApi.stashSave(`WIP before switching to ${conflict.branch}`);
-      await gitApi.checkout(conflict.branch);
-    } finally {
-      await get().refresh();
-    }
-  }),
-
-  // Carry the blocked changes over to the target branch (stash → switch → pop).
-  migrateCheckout: async () => get().runOperation('checkout', async () => {
-    const conflict = get().checkoutConflict;
-    if (!conflict) return;
-    set({ checkoutConflict: null });
-    try {
-      // Confirm a *new* stash was actually created before popping by index, so we
-      // never pop a pre-existing/foreign stash if stashSave saved nothing.
-      const before = await gitApi.getStashTop();
-      await gitApi.stashSave(`Migrating changes to ${conflict.branch}`);
-      const after = await gitApi.getStashTop();
-      if (!after || after === before) {
-        // Nothing was stashed — don't switch on a false premise.
-        throw new Error('No changes to migrate');
-      }
-      await gitApi.checkout(conflict.branch);
-      await gitApi.stashPop(0);
-    } finally {
-      // The failure can land anywhere along the way (branch already switched,
-      // pop conflicted) — always resync so the UI shows the actual repo state.
-      await get().refresh();
-    }
-  }),
-
-  // Discard the blocked changes and switch anyway.
-  forceCheckout: async () => get().runOperation('checkout', async () => {
-    const conflict = get().checkoutConflict;
-    if (!conflict) return;
-    set({ checkoutConflict: null });
-    await gitApi.checkoutForce(conflict.branch);
-    await get().refresh();
-  }),
-
-  cancelCheckout: () => set({ checkoutConflict: null }),
-
-  merge: async (branch) => get().runOperation('merge', async () => {
-    const result = await gitApi.merge(branch);
-    if (result.conflicts.length > 0) {
-      set({
-        mergeState: {
-          sourceBranch: branch,
-          targetBranch: get().currentBranch,
-          conflictingFiles: result.conflicts,
+        // Mark the store busy for the duration of fn so auto-refresh skips while a
+        // mutating git operation runs. Clears the marker even if fn throws. Bumping
+        // the epoch on both edges discards loader responses that were in flight
+        // before the mutation and any that read half-applied state during it.
+        runOperation: async (name, fn) => {
+          set(s => ({ busyCount: s.busyCount + 1, busyOperation: name, epoch: s.epoch + 1 }));
+          try {
+            return await fn();
+          } finally {
+            set(s => {
+              const busyCount = s.busyCount - 1;
+              return {
+                busyCount,
+                busyOperation: busyCount === 0 ? null : s.busyOperation,
+                epoch: s.epoch + 1,
+              };
+            });
+          }
         },
-      });
-    } else {
-      set({ mergeState: null });
-      await get().refresh();
-    }
-  }),
 
-  rebase: async (branch) => get().runOperation('rebase', async () => {
-    await gitApi.rebase(branch);
-    await get().refresh();
-  }),
+        openRepo: async path => {
+          // Backend normalizes to the canonical repo root; store that, not the raw
+          // path the user picked (which may be a subfolder). Fall back to the input
+          // path if the backend returns nothing, so repoPath/recentRepos never go null.
+          const root = (await gitApi.openRepo(path)) || path;
+          set(s => ({
+            epoch: s.epoch + 1,
+            repoPath: root,
+            mergeState: null,
+            // Drop any falsy/duplicate entries while prepending the freshly opened root.
+            recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
+          }));
+          await get().refresh();
+          // Restore the merge context after a restart/reload mid-merge: without it
+          // the conflict UI is unreachable even though git still has MERGE_HEAD.
+          if (get().merging && !get().mergeState) {
+            try {
+              const conflicts = await gitApi.getMergeConflicts();
+              if (conflicts.length > 0) {
+                const msg = await gitApi.getMergeMessage().catch(() => '');
+                const source = /Merge branch '([^']+)'/.exec(msg)?.[1] ?? '';
+                set({
+                  mergeState: {
+                    sourceBranch: source,
+                    targetBranch: get().currentBranch,
+                    conflictingFiles: conflicts,
+                  },
+                });
+              }
+            } catch {
+              // Best-effort: the Changes view still works via the `merging` flag.
+            }
+          }
+        },
 
-  deleteBranch: async (branch, force) => get().runOperation('deleteBranch', async () => {
-    await gitApi.deleteBranch(branch, force);
-    await get().loadBranches();
-  }),
+        openDialog: async () => {
+          const path = await gitApi.openDialog();
+          if (path) await get().openRepo(path);
+        },
 
-  deleteRemoteBranch: async (remote, branch) => get().runOperation('deleteBranch', async () => {
-    await gitApi.deleteRemoteBranch(remote, branch);
-    await get().loadBranches();
-  }),
+        loadLog: async () => {
+          const startedEpoch = get().epoch;
+          // Fetch one extra to detect whether older commits remain, then trim to the
+          // page size so `hasMoreCommits` reflects reality without a separate count.
+          const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, 0);
+          if (get().epoch !== startedEpoch) return;
+          set({
+            commits: page.slice(0, LOG_PAGE_SIZE),
+            hasMoreCommits: page.length > LOG_PAGE_SIZE,
+          });
+        },
 
-  abortMerge: async () => get().runOperation('merge', async () => {
-    await gitApi.abortMerge();
-    set({ mergeState: null });
-    await get().refresh();
-  }),
+        loadMoreCommits: async () => {
+          const { hasMoreCommits, loadingMoreCommits, commits, epoch: startedEpoch } = get();
+          if (!hasMoreCommits || loadingMoreCommits) return;
+          set({ loadingMoreCommits: true });
+          try {
+            const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, commits.length);
+            // Discard when the log was reloaded meanwhile (refresh or repo switch):
+            // the offset no longer matches and the base array is gone.
+            if (get().epoch !== startedEpoch || get().commits !== commits) return;
+            set({
+              commits: [...commits, ...page.slice(0, LOG_PAGE_SIZE)],
+              hasMoreCommits: page.length > LOG_PAGE_SIZE,
+            });
+          } finally {
+            set({ loadingMoreCommits: false });
+          }
+        },
 
-  // Clear the conflict UI without touching git — used once all files are
-  // resolved & staged, so the merge can be committed from the Changes view.
-  clearMergeState: () => set({ mergeState: null }),
+        loadBranches: async () => {
+          const startedEpoch = get().epoch;
+          const branches = await gitApi.getBranches();
+          if (get().epoch !== startedEpoch) return;
+          const current = branches.find(b => b.current);
+          set({ branches, currentBranch: current?.name ?? '' });
+        },
 
-  // Auto mode: create the merge commit (default message) to finish the merge.
-  concludeMerge: async () => get().runOperation('merge', async () => {
-    await gitApi.concludeMerge();
-    set({ mergeState: null });
-    await get().refresh();
-  }),
+        loadStatus: async () => {
+          const startedEpoch = get().epoch;
+          const result = await gitApi.getStatus();
+          // isMerging must never block the status update: if it fails (e.g. an older
+          // main process without the handler), default to false instead of throwing
+          // — otherwise status/merging freeze on stale values.
+          let merging = false;
+          try {
+            merging = await gitApi.isMerging();
+          } catch {
+            merging = false;
+          }
+          if (get().epoch !== startedEpoch) return;
+          set({
+            status: { staged: result.staged, unstaged: result.unstaged },
+            aheadBehind: { ahead: result.ahead, behind: result.behind },
+            merging,
+          });
+        },
+
+        refresh: async () => {
+          const epoch = get().epoch;
+          // Same generation → join the round already in flight instead of firing a
+          // duplicate set of loaders.
+          if (refreshInFlight && refreshInFlight.epoch === epoch) {
+            return refreshInFlight.promise;
+          }
+          const promise = (async () => {
+            // allSettled (not all): one failing segment must not discard the others.
+            // A failed log shouldn't blank out branches/status that loaded fine.
+            const results = await Promise.allSettled([
+              get().loadLog(),
+              get().loadBranches(),
+              get().loadStatus(),
+              get().loadStashes(),
+            ]);
+            if (get().epoch !== epoch) return;
+            const errors = results
+              .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+              .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+            set({ lastRefreshError: errors.length ? errors.join('; ') : null });
+          })();
+          refreshInFlight = { epoch, promise };
+          try {
+            await promise;
+          } finally {
+            if (refreshInFlight?.promise === promise) refreshInFlight = null;
+          }
+        },
+
+        stageFiles: async paths => {
+          await gitApi.stageFiles(paths);
+          await get().loadStatus();
+        },
+
+        unstageFiles: async paths => {
+          await gitApi.unstageFiles(paths);
+          await get().loadStatus();
+        },
+
+        discardChanges: async paths => {
+          await gitApi.discardChanges(paths);
+          await get().loadStatus();
+        },
+
+        loadStashes: async () => {
+          if (!get().repoPath) return;
+          try {
+            const list = await gitApi.getStashList();
+            set({ stashes: list });
+          } catch {
+            set({ stashes: [] });
+          }
+        },
+
+        stashSave: async (message, staged) =>
+          get().runOperation('stash', async () => {
+            await gitApi.stashSave(message, staged);
+            await get().loadStashes();
+            await get().loadStatus();
+          }),
+
+        stashApply: async index =>
+          get().runOperation('stash', async () => {
+            await gitApi.stashApply(index);
+            await get().loadStatus();
+          }),
+
+        stashPop: async index =>
+          get().runOperation('stash', async () => {
+            await gitApi.stashPop(index);
+            await get().loadStashes();
+            await get().loadStatus();
+          }),
+
+        stashDrop: async index =>
+          get().runOperation('stash', async () => {
+            await gitApi.stashDrop(index);
+            await get().loadStashes();
+          }),
+
+        commit: async message =>
+          get().runOperation('commit', async () => {
+            await gitApi.commit(message);
+            await get().refresh();
+          }),
+
+        // Full refresh, not just ahead/behind: fetch brings new remote branches and
+        // moves remote refs, which the branch list and log decorations must show.
+        fetch: async () =>
+          get().runOperation('fetch', async () => {
+            await gitApi.fetch();
+            await get().refresh();
+          }),
+
+        pull: async () =>
+          get().runOperation('pull', async () => {
+            const result = await gitApi.pull();
+            await get().refresh();
+            return result;
+          }),
+
+        // Full refresh: push moves the remote ref, so the origin/<branch> badge in
+        // the log must move too, not just the ahead/behind counters.
+        push: async () =>
+          get().runOperation('push', async () => {
+            await gitApi.push();
+            await get().refresh();
+          }),
+
+        // Publish the current branch: `git push -u origin <branch>`. Offered as a
+        // follow-up action when a plain push fails for lack of an upstream.
+        publishBranch: async () =>
+          get().runOperation('push', async () => {
+            const branch = get().currentBranch;
+            if (!branch) throw new Error('No current branch to publish');
+            await gitApi.pushSetUpstream('origin', branch);
+            await get().refresh();
+          }),
+
+        checkout: async branch =>
+          get().runOperation('checkout', async () => {
+            const known = get().branches.find(b => b.name === branch);
+            const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
+            try {
+              await gitApi.checkout(target);
+              await get().refresh();
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              // git aborts the checkout when uncommitted changes would be clobbered.
+              // Surface a modal (via checkoutConflict) instead of a raw error toast.
+              if (/overwritten by checkout|commit your changes or stash/i.test(msg)) {
+                set({ checkoutConflict: { branch: target } });
+                throw new CheckoutConflictError();
+              }
+              throw err;
+            }
+          }),
+
+        // Set the blocked changes aside in a stash, then switch. Changes stay in the
+        // stash (recoverable with stash pop later). refresh() in finally: a failure
+        // after the stash was created still changed the repo, and the UI must show it.
+        stashAndCheckout: async () =>
+          get().runOperation('checkout', async () => {
+            const conflict = get().checkoutConflict;
+            if (!conflict) return;
+            set({ checkoutConflict: null });
+            try {
+              await gitApi.stashSave(`WIP before switching to ${conflict.branch}`);
+              await gitApi.checkout(conflict.branch);
+            } finally {
+              await get().refresh();
+            }
+          }),
+
+        // Carry the blocked changes over to the target branch (stash → switch → pop).
+        migrateCheckout: async () =>
+          get().runOperation('checkout', async () => {
+            const conflict = get().checkoutConflict;
+            if (!conflict) return;
+            set({ checkoutConflict: null });
+            try {
+              // Confirm a *new* stash was actually created before popping by index, so we
+              // never pop a pre-existing/foreign stash if stashSave saved nothing.
+              const before = await gitApi.getStashTop();
+              await gitApi.stashSave(`Migrating changes to ${conflict.branch}`);
+              const after = await gitApi.getStashTop();
+              if (!after || after === before) {
+                // Nothing was stashed — don't switch on a false premise.
+                throw new Error('No changes to migrate');
+              }
+              await gitApi.checkout(conflict.branch);
+              await gitApi.stashPop(0);
+            } finally {
+              // The failure can land anywhere along the way (branch already switched,
+              // pop conflicted) — always resync so the UI shows the actual repo state.
+              await get().refresh();
+            }
+          }),
+
+        // Discard the blocked changes and switch anyway.
+        forceCheckout: async () =>
+          get().runOperation('checkout', async () => {
+            const conflict = get().checkoutConflict;
+            if (!conflict) return;
+            set({ checkoutConflict: null });
+            await gitApi.checkoutForce(conflict.branch);
+            await get().refresh();
+          }),
+
+        cancelCheckout: () => set({ checkoutConflict: null }),
+
+        merge: async branch =>
+          get().runOperation('merge', async () => {
+            const result = await gitApi.merge(branch);
+            if (result.conflicts.length > 0) {
+              set({
+                mergeState: {
+                  sourceBranch: branch,
+                  targetBranch: get().currentBranch,
+                  conflictingFiles: result.conflicts,
+                },
+              });
+            } else {
+              set({ mergeState: null });
+              await get().refresh();
+            }
+          }),
+
+        rebase: async branch =>
+          get().runOperation('rebase', async () => {
+            await gitApi.rebase(branch);
+            await get().refresh();
+          }),
+
+        deleteBranch: async (branch, force) =>
+          get().runOperation('deleteBranch', async () => {
+            await gitApi.deleteBranch(branch, force);
+            await get().loadBranches();
+          }),
+
+        deleteRemoteBranch: async (remote, branch) =>
+          get().runOperation('deleteBranch', async () => {
+            await gitApi.deleteRemoteBranch(remote, branch);
+            await get().loadBranches();
+          }),
+
+        abortMerge: async () =>
+          get().runOperation('merge', async () => {
+            await gitApi.abortMerge();
+            set({ mergeState: null });
+            await get().refresh();
+          }),
+
+        // Clear the conflict UI without touching git — used once all files are
+        // resolved & staged, so the merge can be committed from the Changes view.
+        clearMergeState: () => set({ mergeState: null }),
+
+        // Auto mode: create the merge commit (default message) to finish the merge.
+        concludeMerge: async () =>
+          get().runOperation('merge', async () => {
+            await gitApi.concludeMerge();
+            set({ mergeState: null });
+            await get().refresh();
+          }),
       };
     },
     {
       name: 'git-desktop-repo',
       storage: createJSONStorage(() => getLocalStorage()),
-      partialize: (s) => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
+      partialize: s => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
       // Once the persisted repoPath is restored — on a fresh launch and after a
       // dev hot-reload — re-open it so branches/status/stashes are repopulated.
       // Without this the UI shows an empty "no branch" until the next action.
       // Deferred to a macrotask so `useRepoStore` is assigned before we use it
       // (localStorage rehydrates synchronously, during store creation).
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => state => {
         if (!state) return;
         // Sanitize any persisted bad entries (e.g. a null stored by an older build).
         state.recentRepos = (state.recentRepos ?? []).filter(Boolean);
         if (!state.repoPath) return;
         const path = state.repoPath;
         setTimeout(() => {
-          useRepoStore.getState().openRepo(path).catch(() => {
-            useRepoStore.setState({ repoPath: null });
-          });
+          useRepoStore
+            .getState()
+            .openRepo(path)
+            .catch(() => {
+              useRepoStore.setState({ repoPath: null });
+            });
         }, 0);
       },
     },

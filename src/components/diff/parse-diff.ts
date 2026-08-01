@@ -104,7 +104,12 @@ export function parseDiff(raw: string): FileDiff[] {
         currentHunk.lines.push(dl);
         deletions++;
       } else if (line.startsWith(' ')) {
-        const dl: DiffLine = { type: 'context', content: line.slice(1), oldLineNumber: oldLine++, newLineNumber: newLine++ };
+        const dl: DiffLine = {
+          type: 'context',
+          content: line.slice(1),
+          oldLineNumber: oldLine++,
+          newLineNumber: newLine++,
+        };
         currentHunk.lines.push(dl);
       }
     }

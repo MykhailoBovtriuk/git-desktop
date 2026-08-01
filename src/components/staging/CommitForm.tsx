@@ -20,7 +20,12 @@ export function CommitForm() {
   // While a merge is in progress, prefill git's default merge message once.
   useEffect(() => {
     if (merging && !message) {
-      gitApi.getMergeMessage().then(m => { if (m) setMessage(m); }).catch(() => {});
+      gitApi
+        .getMergeMessage()
+        .then(m => {
+          if (m) setMessage(m);
+        })
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merging]);
@@ -38,7 +43,11 @@ export function CommitForm() {
       const ok = await runAction(() => commit(message.trim()), { title: t('commitFailed') });
       if (ok) {
         setMessage('');
-        addToast({ variant: 'success', title: t('committed'), message: t('commitCreated', { summary }) });
+        addToast({
+          variant: 'success',
+          title: t('committed'),
+          message: t('commitCreated', { summary }),
+        });
       }
     } finally {
       setLoading(false);
@@ -51,11 +60,15 @@ export function CommitForm() {
         <Textarea
           value={message}
           onChange={e => setMessage(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleCommit(); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleCommit();
+          }}
           placeholder={t('commitMessage')}
           rows={3}
         />
-        <span className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}>
+        <span
+          className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}
+        >
           {message.length}/100
         </span>
       </div>

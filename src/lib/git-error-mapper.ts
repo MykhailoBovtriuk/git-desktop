@@ -6,14 +6,7 @@
 // title/message lives in the UI layer (i18n `errors` namespace), keyed by kind.
 
 export type GitErrorKind =
-  | 'auth'
-  | 'noUpstream'
-  | 'conflict'
-  | 'uncommitted'
-  | 'notRepo'
-  | 'network'
-  | 'hook'
-  | 'unknown';
+  'auth' | 'noUpstream' | 'conflict' | 'uncommitted' | 'notRepo' | 'network' | 'hook' | 'unknown';
 
 export type GitErrorAction = 'publishBranch' | 'credentialHelp';
 
@@ -42,7 +35,10 @@ const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> 
     re: /would be overwritten by (checkout|merge|rebase)|commit your changes or stash|local changes to the following/i,
   },
   { kind: 'conflict', re: /conflict|automatic merge failed|needs merge|fix conflicts/i },
-  { kind: 'hook', re: /hook (declined|failed|returned)|pre-commit|pre-push|prepare-commit-msg|commit-msg hook/i },
+  {
+    kind: 'hook',
+    re: /hook (declined|failed|returned)|pre-commit|pre-push|prepare-commit-msg|commit-msg hook/i,
+  },
   {
     kind: 'network',
     re: /could not resolve host|failed to connect|connection timed out|unable to access|network is unreachable|ssl certificate|proxy/i,

@@ -24,8 +24,20 @@ export function Footer() {
 
   const handlePublish = () => {
     void publishBranch()
-      .then(() => addToast({ variant: 'success', title: t('publishBranch'), message: t('success', { op: t('push') }) }))
-      .catch(e => addToast({ variant: 'error', title: t('publishBranch'), message: e instanceof Error ? e.message : String(e) }));
+      .then(() =>
+        addToast({
+          variant: 'success',
+          title: t('publishBranch'),
+          message: t('success', { op: t('push') }),
+        }),
+      )
+      .catch(e =>
+        addToast({
+          variant: 'error',
+          title: t('publishBranch'),
+          message: e instanceof Error ? e.message : String(e),
+        }),
+      );
   };
 
   const run = async (op: 'fetch' | 'pull' | 'push', action: () => Promise<unknown>) => {
@@ -33,7 +45,8 @@ export function Footer() {
     const label = t(op);
     try {
       const result = await action();
-      const msg = op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
+      const msg =
+        op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
       addToast({ variant: 'success', title: label, message: msg });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
@@ -67,12 +80,19 @@ export function Footer() {
 
       <div className="flex items-center gap-3 text-xs text-subtext">
         {aheadBehind.ahead > 0 && (
-          <span className="text-blue" title={t('ahead', { count: aheadBehind.ahead })} aria-label={t('ahead', { count: aheadBehind.ahead })}>
+          <span
+            className="text-blue"
+            title={t('ahead', { count: aheadBehind.ahead })}
+            aria-label={t('ahead', { count: aheadBehind.ahead })}
+          >
             ↑{aheadBehind.ahead}
           </span>
         )}
         {aheadBehind.behind > 0 && (
-          <span title={t('behind', { count: aheadBehind.behind })} aria-label={t('behind', { count: aheadBehind.behind })}>
+          <span
+            title={t('behind', { count: aheadBehind.behind })}
+            aria-label={t('behind', { count: aheadBehind.behind })}
+          >
             ↓{aheadBehind.behind}
           </span>
         )}

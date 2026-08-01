@@ -44,17 +44,14 @@ describe('i18n parity', () => {
         .readdirSync(path.join(I18N_DIR, lang))
         .filter(f => f.endsWith('.json'))
         .sort();
-      expect(files, `namespaces for ${lang}`).toEqual(
-        namespaces.map(ns => `${ns}.json`).sort(),
-      );
+      expect(files, `namespaces for ${lang}`).toEqual(namespaces.map(ns => `${ns}.json`).sort());
     }
   });
 
   for (const ns of namespaces) {
     it(`${ns}: en and uk have identical key sets (modulo plural forms)`, () => {
       // Plural keys collapse to their base — uk legitimately has more forms.
-      const normalize = (keys: string[]) =>
-        [...new Set(keys.map(k => pluralBase(k) ?? k))].sort();
+      const normalize = (keys: string[]) => [...new Set(keys.map(k => pluralBase(k) ?? k))].sort();
       expect(normalize(flattenKeys(readNs('uk', ns)))).toEqual(
         normalize(flattenKeys(readNs('en', ns))),
       );
@@ -78,7 +75,10 @@ describe('i18n parity', () => {
             ).toBe(true);
           }
           for (const form of forms) {
-            expect(PLURAL_SUFFIXES, `${lang}/${ns}: unknown plural suffix on "${base}_${form}"`).toContain(form);
+            expect(
+              PLURAL_SUFFIXES,
+              `${lang}/${ns}: unknown plural suffix on "${base}_${form}"`,
+            ).toContain(form);
           }
         }
       });

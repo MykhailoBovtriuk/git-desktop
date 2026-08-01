@@ -6,7 +6,7 @@ export interface ModalProps {
   subtitle?: ReactNode;
   titleVariant?: 'default' | 'danger';
   level?: 'low' | 'high'; // z-40 (low) or z-50 (high)
-  width?: string;         // tailwind width class, default 'w-96'
+  width?: string; // tailwind width class, default 'w-96'
   footer?: ReactNode;
   children: ReactNode;
   // When provided, pressing Escape invokes it. Optional so display-only modals
@@ -54,9 +54,11 @@ export function Modal({
       const panel = panelRef.current;
       if (!panel) return;
 
-      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(
-        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
-      ));
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+        ),
+      );
       if (focusables.length === 0) {
         e.preventDefault();
         panel.focus();
@@ -83,10 +85,12 @@ export function Modal({
   }, []);
 
   return (
-    <div className={cn(
-      'fixed inset-0 bg-black/50 flex items-center justify-center',
-      level === 'high' ? 'z-50' : 'z-40',
-    )}>
+    <div
+      className={cn(
+        'fixed inset-0 bg-black/50 flex items-center justify-center',
+        level === 'high' ? 'z-50' : 'z-40',
+      )}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -104,9 +108,7 @@ export function Modal({
         >
           {title}
         </h2>
-        {subtitle && (
-          <p className="text-subtext text-sm mb-4">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-subtext text-sm mb-4">{subtitle}</p>}
         <div className="text-text text-sm">{children}</div>
         {footer && <div className="flex justify-end gap-2 mt-2">{footer}</div>}
       </div>

@@ -30,7 +30,6 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:get-file-diff',
   'git:get-working-diff',
   'git:get-staged-diff',
-  'git:get-ahead-behind',
   'git:get-merge-conflicts',
   'git:abort-merge',
   'git:is-merging',

@@ -5,10 +5,7 @@ import { useAutoRefresh } from '../../src/hooks/use-auto-refresh';
 import { useRepoStore } from '../../src/stores/repo-store';
 
 vi.mock('../../src/stores/repo-store', () => ({
-  useRepoStore: Object.assign(
-    vi.fn(),
-    { getState: vi.fn() }
-  ),
+  useRepoStore: Object.assign(vi.fn(), { getState: vi.fn() }),
 }));
 
 const mockRefresh = vi.fn();
@@ -28,7 +25,7 @@ describe('useAutoRefresh', () => {
 
   it('does not start interval when repoPath is null', () => {
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: null, refresh: mockRefresh } as any)
+      selector({ repoPath: null, refresh: mockRefresh } as any),
     );
 
     renderHook(() => useAutoRefresh());
@@ -39,7 +36,7 @@ describe('useAutoRefresh', () => {
 
   it('starts interval when repoPath is set', () => {
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
+      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any),
     );
 
     renderHook(() => useAutoRefresh());
@@ -50,7 +47,7 @@ describe('useAutoRefresh', () => {
 
   it('calls refresh again after 60s (two intervals)', () => {
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
+      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any),
     );
 
     renderHook(() => useAutoRefresh());
@@ -61,7 +58,7 @@ describe('useAutoRefresh', () => {
 
   it('clears interval on unmount', () => {
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
+      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any),
     );
 
     const { unmount } = renderHook(() => useAutoRefresh());
@@ -75,7 +72,7 @@ describe('useAutoRefresh', () => {
     let currentRepoPath: string | null = null;
 
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: currentRepoPath, refresh: mockRefresh } as any)
+      selector({ repoPath: currentRepoPath, refresh: mockRefresh } as any),
     );
 
     const { rerender } = renderHook(() => useAutoRefresh());
@@ -97,7 +94,7 @@ describe('useAutoRefresh', () => {
   // flight, so it never interleaves a stale snapshot mid-commit/checkout/merge.
   it('skips refresh while an operation is busy', () => {
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
+      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any),
     );
     mockGetState.mockReturnValue({ refresh: mockRefresh, busyOperation: 'commit' } as any);
 

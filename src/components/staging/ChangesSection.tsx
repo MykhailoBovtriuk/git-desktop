@@ -30,7 +30,8 @@ export function ChangesSection() {
   const stagedPaths = status.staged.map(f => f.path);
 
   const stage = (paths: string[]) => runAction(() => stageFiles(paths), { title: t('stage') });
-  const unstage = (paths: string[]) => runAction(() => unstageFiles(paths), { title: t('unstage') });
+  const unstage = (paths: string[]) =>
+    runAction(() => unstageFiles(paths), { title: t('unstage') });
 
   const handleDiscard = async (path: string) => {
     const file = status.unstaged.find(f => f.path === path);

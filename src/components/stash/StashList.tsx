@@ -14,8 +14,12 @@ interface StashListProps {
 }
 
 export function StashList({
-  stashes, selectedIndex,
-  onSelect, onApply, onPop, onDrop,
+  stashes,
+  selectedIndex,
+  onSelect,
+  onApply,
+  onPop,
+  onDrop,
 }: StashListProps) {
   const { t, i18n } = useTranslation('stash');
   const requestConfirm = useUiStore(s => s.requestConfirm);
@@ -51,9 +55,36 @@ export function StashList({
               </p>
             </div>
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <IconButton tint="blue" title={t('actions.apply')} onClick={e => { e.stopPropagation(); onApply(s.index); }}>📋</IconButton>
-              <IconButton tint="green" title={t('actions.pop')} onClick={e => { e.stopPropagation(); onPop(s.index); }}>↩</IconButton>
-              <IconButton tint="red" title={t('actions.drop')} onClick={e => { e.stopPropagation(); handleDrop(s.index); }}>✕</IconButton>
+              <IconButton
+                tint="blue"
+                title={t('actions.apply')}
+                onClick={e => {
+                  e.stopPropagation();
+                  onApply(s.index);
+                }}
+              >
+                📋
+              </IconButton>
+              <IconButton
+                tint="green"
+                title={t('actions.pop')}
+                onClick={e => {
+                  e.stopPropagation();
+                  onPop(s.index);
+                }}
+              >
+                ↩
+              </IconButton>
+              <IconButton
+                tint="red"
+                title={t('actions.drop')}
+                onClick={e => {
+                  e.stopPropagation();
+                  handleDrop(s.index);
+                }}
+              >
+                ✕
+              </IconButton>
             </div>
           </div>
         </ListItem>

@@ -29,7 +29,11 @@ export function Titlebar() {
     setRefreshing(true);
     // Full refresh: status alone leaves commits/branches/stashes stale, which
     // is not what users expect from a manual refresh.
-    try { await refresh(); } finally { setRefreshing(false); }
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {

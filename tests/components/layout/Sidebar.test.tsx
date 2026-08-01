@@ -33,7 +33,10 @@ describe('Sidebar', () => {
   });
 
   it('shows stash count badge when stashes.length > 0', () => {
-    vi.mocked(useRepoStore).mockReturnValue({ ...baseRepo, stashes: [{ index: 0 }, { index: 1 }] } as any);
+    vi.mocked(useRepoStore).mockReturnValue({
+      ...baseRepo,
+      stashes: [{ index: 0 }, { index: 1 }],
+    } as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
     render(<Sidebar />);
     expect(screen.getByText('stash:list · 2')).toBeInTheDocument();
@@ -41,7 +44,10 @@ describe('Sidebar', () => {
 
   it('stash accordion is open when activeView is stash-create', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash-create', setActiveView: vi.fn() } as any);
+    vi.mocked(useUiStore).mockReturnValue({
+      activeView: 'stash-create',
+      setActiveView: vi.fn(),
+    } as any);
     render(<Sidebar />);
     expect(screen.getByTestId('stash-section')).toBeInTheDocument();
   });
@@ -69,7 +75,10 @@ describe('Sidebar', () => {
 
   it('does not show list toggle action when activeView is stash-create', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
-    vi.mocked(useUiStore).mockReturnValue({ activeView: 'stash-create', setActiveView: vi.fn() } as any);
+    vi.mocked(useUiStore).mockReturnValue({
+      activeView: 'stash-create',
+      setActiveView: vi.fn(),
+    } as any);
     render(<Sidebar />);
     expect(screen.queryByRole('switch', { name: 'stash:list' })).not.toBeInTheDocument();
   });

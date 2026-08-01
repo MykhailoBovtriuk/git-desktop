@@ -17,7 +17,9 @@ vi.mock('../../../src/stores/ui-store', () => ({
 vi.mock('../../../src/components/staging/FileList', () => ({
   FileList: ({ files, staged }: { files: any[]; staged: boolean }) => (
     <div data-testid={staged ? 'staged-list' : 'unstaged-list'}>
-      {files.map(f => <div key={f.path}>{f.path}</div>)}
+      {files.map(f => (
+        <div key={f.path}>{f.path}</div>
+      ))}
     </div>
   ),
 }));
@@ -26,7 +28,9 @@ vi.mock('../../../src/components/stash/StashForm', () => ({
     <div data-testid="stash-form">
       <span data-testid="list-mode">{String(listMode)}</span>
       <button onClick={onToggle}>toggle</button>
-      <button onClick={() => onStash('test msg')} disabled={!canStash}>stash</button>
+      <button onClick={() => onStash('test msg')} disabled={!canStash}>
+        stash
+      </button>
     </div>
   ),
 }));
@@ -102,7 +106,12 @@ describe('StashSection', () => {
     const setActiveView = vi.fn();
     const setSelectedStash = vi.fn();
     mockState(useRepoStore)(baseRepo as any);
-    mockState(useUiStore)({ ...baseUi, activeView: 'stash-create', setActiveView, setSelectedStash } as any);
+    mockState(useUiStore)({
+      ...baseUi,
+      activeView: 'stash-create',
+      setActiveView,
+      setSelectedStash,
+    } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
     expect(setActiveView).toHaveBeenCalledWith('stash');
@@ -127,7 +136,9 @@ describe('StashSection', () => {
     mockState(useUiStore)({ ...baseUi, addToast } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'stash' }));
-    await waitFor(() => expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' })));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' })),
+    );
   });
 
   // Regression: section headers and bulk actions were hardcoded English
@@ -165,6 +176,8 @@ describe('StashSection', () => {
     mockState(useUiStore)({ ...baseUi, addToast } as any);
     render(<StashSection />);
     fireEvent.click(screen.getByRole('button', { name: 'stash' }));
-    await waitFor(() => expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' })));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' })),
+    );
   });
 });

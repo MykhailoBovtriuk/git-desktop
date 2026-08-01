@@ -12,7 +12,9 @@ const resolve = (segs: Segment[], choice: 'ours' | 'theirs' | 'both') =>
 
 describe('parseConflicts', () => {
   it('splits common text and a conflict block', () => {
-    const segs = parseConflicts('before\n<<<<<<< HEAD\nmine\n=======\ntheirs\n>>>>>>> feature\nafter');
+    const segs = parseConflicts(
+      'before\n<<<<<<< HEAD\nmine\n=======\ntheirs\n>>>>>>> feature\nafter',
+    );
     expect(segs).toHaveLength(3);
     expect(segs[0]).toMatchObject({ type: 'common', lines: ['before'] });
     expect(conflictOf(segs)).toMatchObject({ ours: ['mine'], theirs: ['theirs'], choice: null });
@@ -26,14 +28,17 @@ describe('parseConflicts', () => {
   });
 
   it('skips the diff3 base section', () => {
-    const segs = parseConflicts('<<<<<<< HEAD\nmine\n||||||| base\nold\n=======\ntheirs\n>>>>>>> feature');
+    const segs = parseConflicts(
+      '<<<<<<< HEAD\nmine\n||||||| base\nold\n=======\ntheirs\n>>>>>>> feature',
+    );
     expect(conflictOf(segs)).toMatchObject({ ours: ['mine'], theirs: ['theirs'] });
   });
 
   // Regression: startsWith('=======') also matched content like a
   // "========================" comment ruler, silently corrupting the file.
   it('does not treat longer runs of marker chars as markers', () => {
-    const content = '<<<<<<< HEAD\nmine\n========\nstill mine\n=======\ntheirs\n>>>>>>>> not-a-marker\nstill theirs\n>>>>>>> feature';
+    const content =
+      '<<<<<<< HEAD\nmine\n========\nstill mine\n=======\ntheirs\n>>>>>>>> not-a-marker\nstill theirs\n>>>>>>> feature';
     const seg = conflictOf(parseConflicts(content));
     expect(seg.ours).toEqual(['mine', '========', 'still mine']);
     expect(seg.theirs).toEqual(['theirs', '>>>>>>>> not-a-marker', 'still theirs']);
@@ -60,7 +65,9 @@ describe('parseConflicts', () => {
   });
 
   it('parses CRLF files', () => {
-    const segs = parseConflicts('before\r\n<<<<<<< HEAD\r\nmine\r\n=======\r\ntheirs\r\n>>>>>>> feature\r\nafter');
+    const segs = parseConflicts(
+      'before\r\n<<<<<<< HEAD\r\nmine\r\n=======\r\ntheirs\r\n>>>>>>> feature\r\nafter',
+    );
     const seg = conflictOf(segs);
     expect(seg.ours).toEqual(['mine\r']);
     expect(seg.theirs).toEqual(['theirs\r']);
@@ -87,7 +94,8 @@ describe('rebuild', () => {
   // Regression: unresolved blocks were re-serialized as "<<<<<<< HEAD ... >>>>>>>",
   // losing the real labels (and the diff3 base section entirely).
   it('keeps unresolved blocks verbatim, including labels and diff3 base', () => {
-    const diff3 = 'a\n<<<<<<< ours-label\nmine\n||||||| base-label\nold\n=======\ntheirs\n>>>>>>> theirs-label\nb';
+    const diff3 =
+      'a\n<<<<<<< ours-label\nmine\n||||||| base-label\nold\n=======\ntheirs\n>>>>>>> theirs-label\nb';
     expect(rebuild(parseConflicts(diff3))).toBe(diff3);
   });
 

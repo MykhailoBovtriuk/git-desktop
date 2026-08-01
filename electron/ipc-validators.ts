@@ -10,7 +10,10 @@ export function assertString(value: unknown, name: string): asserts value is str
   }
 }
 
-export function assertOptionalString(value: unknown, name: string): asserts value is string | undefined {
+export function assertOptionalString(
+  value: unknown,
+  name: string,
+): asserts value is string | undefined {
   if (value !== undefined && typeof value !== 'string') {
     throw new Error(`Invalid argument: ${name} must be a string`);
   }

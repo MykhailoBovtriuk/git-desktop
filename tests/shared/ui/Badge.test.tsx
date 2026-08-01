@@ -20,7 +20,11 @@ describe('Badge', () => {
   });
 
   it('merges extra className with variant', () => {
-    render(<Badge variant="ref" className="extra">x</Badge>);
+    render(
+      <Badge variant="ref" className="extra">
+        x
+      </Badge>,
+    );
     const el = screen.getByText('x');
     expect(el).toHaveClass('bg-surface0');
     expect(el).toHaveClass('extra');

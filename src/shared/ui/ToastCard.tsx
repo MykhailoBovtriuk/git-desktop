@@ -12,16 +12,18 @@ export interface ToastCardProps {
 
 const BORDER: Record<Variant, string> = {
   success: 'border-green',
-  error:   'border-red',
-  info:    'border-blue',
+  error: 'border-red',
+  info: 'border-blue',
 };
 
 export function ToastCard({ variant, title, message, action, onDismiss }: ToastCardProps) {
   return (
-    <div className={cn(
-      'bg-surface0 rounded-lg p-3 flex gap-2 border-l-4 shadow-lg min-w-64 max-w-80',
-      BORDER[variant],
-    )}>
+    <div
+      className={cn(
+        'bg-surface0 rounded-lg p-3 flex gap-2 border-l-4 shadow-lg min-w-64 max-w-80',
+        BORDER[variant],
+      )}
+    >
       <div className="flex-1 min-w-0">
         <p className="text-text text-sm font-medium">{title}</p>
         <p className="text-subtext text-xs mt-0.5">{message}</p>

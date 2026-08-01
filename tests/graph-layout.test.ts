@@ -3,8 +3,13 @@ import { computeLayout } from '../src/components/graph/graph-layout';
 import type { Commit } from '../src/types';
 
 const makeCommit = (hash: string, parents: string[]): Commit => ({
-  hash, abbreviatedHash: hash.slice(0, 7), message: `Commit ${hash}`,
-  author: 'Test', date: new Date().toISOString(), parents, refs: [],
+  hash,
+  abbreviatedHash: hash.slice(0, 7),
+  message: `Commit ${hash}`,
+  author: 'Test',
+  date: new Date().toISOString(),
+  parents,
+  refs: [],
 });
 
 describe('computeLayout', () => {
@@ -13,20 +18,12 @@ describe('computeLayout', () => {
   });
 
   it('output length matches input length', () => {
-    const commits = [
-      makeCommit('c', ['b']),
-      makeCommit('b', ['a']),
-      makeCommit('a', []),
-    ];
+    const commits = [makeCommit('c', ['b']), makeCommit('b', ['a']), makeCommit('a', [])];
     expect(computeLayout(commits)).toHaveLength(3);
   });
 
   it('linear commits all get lane 0', () => {
-    const commits = [
-      makeCommit('c', ['b']),
-      makeCommit('b', ['a']),
-      makeCommit('a', []),
-    ];
+    const commits = [makeCommit('c', ['b']), makeCommit('b', ['a']), makeCommit('a', [])];
     const layout = computeLayout(commits);
     expect(layout.every(l => l.lane === 0)).toBe(true);
   });

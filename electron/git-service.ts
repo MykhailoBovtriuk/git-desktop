@@ -1,7 +1,7 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
-import type { Commit, Branch, GitStatus, FileStatus, AheadBehind, StashEntry } from '../src/types';
+import type { Commit, Branch, GitStatus, FileStatus, StashEntry } from '../src/types';
 
 // A GUI app has no TTY: without these, any fetch/pull/push that needs
 // credentials hangs forever on an invisible prompt. GIT_TERMINAL_PROMPT=0
@@ -110,7 +110,7 @@ export class GitService {
       .trim()
       .split('\n')
       .filter(Boolean)
-      .map((line) => {
+      .map(line => {
         const [hash, message, author, date, parents, refs] = line.split('\x00');
         return {
           hash,
@@ -119,7 +119,12 @@ export class GitService {
           author,
           date,
           parents: parents ? parents.split(' ').filter(Boolean) : [],
-          refs: refs ? refs.split(',').map((r) => r.trim()).filter(Boolean) : [],
+          refs: refs
+            ? refs
+                .split(',')
+                .map(r => r.trim())
+                .filter(Boolean)
+            : [],
         };
       });
   }
@@ -195,7 +200,13 @@ export class GitService {
 
   private mapStatus(code: string): FileStatus['status'] {
     const map: Record<string, FileStatus['status']> = {
-      A: 'A', M: 'M', D: 'D', R: 'R', C: 'C', U: 'U', '?': 'N',
+      A: 'A',
+      M: 'M',
+      D: 'D',
+      R: 'R',
+      C: 'C',
+      U: 'U',
+      '?': 'N',
     };
     return map[code] ?? 'M';
   }
@@ -233,8 +244,8 @@ export class GitService {
     const git = this.ensureRepo();
     const status = await git.status();
     const untracked = new Set(status.not_added);
-    const trackedPaths = paths.filter((p) => !untracked.has(p));
-    const untrackedPaths = paths.filter((p) => untracked.has(p));
+    const trackedPaths = paths.filter(p => !untracked.has(p));
+    const untrackedPaths = paths.filter(p => untracked.has(p));
     // Tracked changes/deletions are restored from HEAD; `git checkout` cannot
     // remove untracked files, so those are deleted with `clean` (-d to also
     // remove fully-untracked directories).
@@ -258,7 +269,9 @@ export class GitService {
   async pull(): Promise<string> {
     const result = await this.ensureRepo().pull();
     const s = result.summary ?? { changes: 0, insertions: 0, deletions: 0 };
-    const ch = s.changes ?? 0, ins = s.insertions ?? 0, del = s.deletions ?? 0;
+    const ch = s.changes ?? 0,
+      ins = s.insertions ?? 0,
+      del = s.deletions ?? 0;
     if (ch === 0 && ins === 0 && del === 0) return 'Already up to date';
     return `${ch} changes, ${ins} insertions, ${del} deletions`;
   }
@@ -395,7 +408,7 @@ export class GitService {
       ? [`${hash}^`, hash]
       : ['4b825dc642cb6eb9a060e54bf8d69288fbee4904', hash];
     const diff = await this.ensureRepo().diffSummary(range);
-    return diff.files.map((f) => ({
+    return diff.files.map(f => ({
       path: f.file,
       status: (f as any).status || 'M',
     }));
@@ -458,11 +471,6 @@ export class GitService {
     return this.ensureRepo().diff(['--cached', '--', filePath]);
   }
 
-  async getAheadBehind(): Promise<AheadBehind> {
-    const status = await this.ensureRepo().status();
-    return { ahead: status.ahead, behind: status.behind };
-  }
-
   async getMergeConflicts(): Promise<string[]> {
     const status = await this.ensureRepo().status();
     return status.conflicted;
@@ -477,17 +485,18 @@ export class GitService {
   }
 
   async getStashList(): Promise<StashEntry[]> {
-    const result = await this.ensureRepo().raw([
-      'stash', 'list', '--format=%gd|||%s|||%ai',
-    ]);
+    const result = await this.ensureRepo().raw(['stash', 'list', '--format=%gd|||%s|||%ai']);
     if (!result.trim()) return [];
-    return result.trim().split('\n').map(line => {
-      const [ref, message, date] = line.split('|||');
-      const index = parseInt(ref.match(/\{(\d+)\}/)?.[1] ?? '0', 10);
-      const wipMatch = message.match(/^WIP on ([^:]+):/);
-      const branch = wipMatch ? wipMatch[1] : null;
-      return { index, message, branch, date: (date ?? '').trim() };
-    });
+    return result
+      .trim()
+      .split('\n')
+      .map(line => {
+        const [ref, message, date] = line.split('|||');
+        const index = parseInt(ref.match(/\{(\d+)\}/)?.[1] ?? '0', 10);
+        const wipMatch = message.match(/^WIP on ([^:]+):/);
+        const branch = wipMatch ? wipMatch[1] : null;
+        return { index, message, branch, date: (date ?? '').trim() };
+      });
   }
 
   async stashSave(message?: string, staged = false): Promise<void> {
@@ -525,9 +534,7 @@ export class GitService {
   }
 
   async getStashDiff(index: number): Promise<string> {
-    return await this.ensureRepo().raw([
-      'stash', 'show', '-p', '--unified=3', `stash@{${index}}`,
-    ]);
+    return await this.ensureRepo().raw(['stash', 'show', '-p', '--unified=3', `stash@{${index}}`]);
   }
 
   async readFile(filePath: string): Promise<string> {
@@ -540,7 +547,9 @@ export class GitService {
     await fs.writeFile(abs, content, 'utf-8');
   }
 
-  async getConflictSides(filePath: string): Promise<{ ours: string; theirs: string; base: string }> {
+  async getConflictSides(
+    filePath: string,
+  ): Promise<{ ours: string; theirs: string; base: string }> {
     const git = this.ensureRepo();
     const [ours, theirs, base] = await Promise.all([
       git.show([`:2:${filePath}`]).catch(() => ''),

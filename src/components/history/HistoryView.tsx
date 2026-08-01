@@ -32,7 +32,10 @@ export function HistoryView() {
     // pair and the file list doesn't highlight a path that may not exist.
     setSelectedFile(null);
 
-    if (!selectedCommit) { setChangedFiles([]); return; }
+    if (!selectedCommit) {
+      setChangedFiles([]);
+      return;
+    }
 
     // Guard against a stale response overwriting files for a newer selection,
     // and surface load failures instead of crashing on an unhandled rejection.
@@ -56,7 +59,9 @@ export function HistoryView() {
         if (!cancelled) setLoadingFiles(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedCommit, setSelectedFile, addToast, t]);
 
   return (
@@ -87,7 +92,9 @@ export function HistoryView() {
           <>
             <div className="px-4 py-3 border-b border-surface0 shrink-0">
               <p className="text-text text-sm font-medium">{commit.message}</p>
-              <p className="text-subtext text-xs mt-1">{commit.author} · {commit.hash}</p>
+              <p className="text-subtext text-xs mt-1">
+                {commit.author} · {commit.hash}
+              </p>
             </div>
             <div className="flex h-full overflow-hidden">
               {/* Changed files list */}

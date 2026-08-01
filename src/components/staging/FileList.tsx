@@ -13,11 +13,24 @@ interface FileListProps {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  A: 'text-green', M: 'text-yellow', D: 'text-red',
-  R: 'text-blue', C: 'text-peach', U: 'text-red', N: 'text-sky',
+  A: 'text-green',
+  M: 'text-yellow',
+  D: 'text-red',
+  R: 'text-blue',
+  C: 'text-peach',
+  U: 'text-red',
+  N: 'text-sky',
 };
 
-export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelect, selectedFile }: FileListProps) {
+export function FileList({
+  files,
+  staged,
+  onStage,
+  onUnstage,
+  onDiscard,
+  onSelect,
+  selectedFile,
+}: FileListProps) {
   const { t } = useTranslation('staging');
   if (files.length === 0) return null;
 
@@ -49,22 +62,37 @@ export function FileList({ files, staged, onStage, onUnstage, onDiscard, onSelec
                 <IconButton
                   tint="green"
                   title={t('stage')}
-                  onClick={e => { e.stopPropagation(); onStage(file.path); }}
-                >+</IconButton>
+                  onClick={e => {
+                    e.stopPropagation();
+                    onStage(file.path);
+                  }}
+                >
+                  +
+                </IconButton>
               )}
               {!staged && onDiscard && (
                 <IconButton
                   tint="red"
                   title={file.status === 'N' ? t('deleteUntrackedFile') : t('discard')}
-                  onClick={e => { e.stopPropagation(); onDiscard(file.path); }}
-                >×</IconButton>
+                  onClick={e => {
+                    e.stopPropagation();
+                    onDiscard(file.path);
+                  }}
+                >
+                  ×
+                </IconButton>
               )}
               {staged && onUnstage && (
                 <IconButton
                   tint="yellow"
                   title={t('unstage')}
-                  onClick={e => { e.stopPropagation(); onUnstage(file.path); }}
-                >−</IconButton>
+                  onClick={e => {
+                    e.stopPropagation();
+                    onUnstage(file.path);
+                  }}
+                >
+                  −
+                </IconButton>
               )}
             </div>
           </ListItem>

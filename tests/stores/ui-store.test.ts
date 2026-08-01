@@ -11,7 +11,9 @@ const INITIAL = {
 };
 
 describe('ui-store', () => {
-  beforeEach(() => { useUiStore.setState(INITIAL); });
+  beforeEach(() => {
+    useUiStore.setState(INITIAL);
+  });
 
   it('has correct initial state', () => {
     const s = useUiStore.getState();
@@ -97,15 +99,21 @@ describe('ui-store', () => {
 
     it('resolves false on cancel', async () => {
       const promise = useUiStore.getState().requestConfirm({
-        title: 'T', message: 'M', confirmLabel: 'OK',
+        title: 'T',
+        message: 'M',
+        confirmLabel: 'OK',
       });
       useUiStore.getState().resolveConfirm(false);
       await expect(promise).resolves.toBe(false);
     });
 
     it('a second request cancels the pending one', async () => {
-      const first = useUiStore.getState().requestConfirm({ title: '1', message: 'M', confirmLabel: 'OK' });
-      const second = useUiStore.getState().requestConfirm({ title: '2', message: 'M', confirmLabel: 'OK' });
+      const first = useUiStore
+        .getState()
+        .requestConfirm({ title: '1', message: 'M', confirmLabel: 'OK' });
+      const second = useUiStore
+        .getState()
+        .requestConfirm({ title: '2', message: 'M', confirmLabel: 'OK' });
       await expect(first).resolves.toBe(false);
       useUiStore.getState().resolveConfirm(true);
       await expect(second).resolves.toBe(true);

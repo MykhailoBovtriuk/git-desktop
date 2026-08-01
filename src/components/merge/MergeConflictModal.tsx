@@ -25,7 +25,11 @@ export function MergeConflictModal() {
       await abortMerge();
       addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('abortFailed'), message: err instanceof Error ? err.message : String(err) });
+      addToast({
+        variant: 'error',
+        title: t('abortFailed'),
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 
@@ -42,8 +46,12 @@ export function MergeConflictModal() {
       subtitle={t('merging', { source: mergeState.sourceBranch, target: mergeState.targetBranch })}
       footer={
         <>
-          <Button variant="secondary" onClick={handleAbort}>{t('abortMerge')}</Button>
-          <Button variant="primary" onClick={handleResolve}>{t('resolveConflicts')}</Button>
+          <Button variant="secondary" onClick={handleAbort}>
+            {t('abortMerge')}
+          </Button>
+          <Button variant="primary" onClick={handleResolve}>
+            {t('resolveConflicts')}
+          </Button>
         </>
       }
     >
@@ -52,7 +60,9 @@ export function MergeConflictModal() {
       </p>
       <div className="bg-mantle rounded-lg p-2 mb-4 max-h-40 overflow-y-auto">
         {mergeState.conflictingFiles.map(f => (
-          <p key={f} className="text-red text-xs py-0.5">{f}</p>
+          <p key={f} className="text-red text-xs py-0.5">
+            {f}
+          </p>
         ))}
       </div>
     </Modal>

@@ -6,20 +6,20 @@ import { resolveAppAssetPath } from './app-asset-path';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.mjs':  'application/javascript; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
-  '.svg':  'image/svg+xml',
-  '.png':  'image/png',
-  '.jpg':  'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.gif':  'image/gif',
-  '.ico':  'image/x-icon',
-  '.woff':  'font/woff',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
   '.woff2': 'font/woff2',
-  '.ttf':  'font/ttf',
-  '.otf':  'font/otf',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
 };
 
 // Register custom protocol BEFORE app.ready so it has privileged status.
@@ -113,12 +113,13 @@ app.whenReady().then(() => {
     copyright: '© 2026 Mykhailo Bovtriuk',
     website: 'https://github.com/MykhailoBovtriuk/git-desktop',
     iconPath,
-    credits: 'A cross-platform Git desktop client with visual commit graph and conflict resolution.',
+    credits:
+      'A cross-platform Git desktop client with visual commit graph and conflict resolution.',
   });
 
   const distRoot = path.resolve(__dirname, '../../dist');
 
-  protocol.handle('app', async (request) => {
+  protocol.handle('app', async request => {
     const resolved = resolveAppAssetPath(distRoot, request.url);
     if (!resolved.ok) {
       console.error(`[app://] 403 forbidden for ${request.url}`);

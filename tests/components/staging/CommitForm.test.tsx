@@ -27,7 +27,11 @@ function setupMocks({
   const mockAddToast = vi.fn();
 
   // Selector-aware: CommitForm and useGitAction both select from the stores.
-  const repoState = { commit: mockCommit, status: { staged: staged.map(p => ({ path: p })), unstaged: [] }, merging: false };
+  const repoState = {
+    commit: mockCommit,
+    status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
+    merging: false,
+  };
   const uiState = { addToast: mockAddToast };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);

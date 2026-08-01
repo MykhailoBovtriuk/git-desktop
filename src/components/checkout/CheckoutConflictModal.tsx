@@ -8,21 +8,16 @@ import { Button, Modal } from '../../shared/ui';
 
 export function CheckoutConflictModal() {
   const { t } = useTranslation('checkout');
-  const {
-    checkoutConflict,
-    stashAndCheckout,
-    migrateCheckout,
-    forceCheckout,
-    cancelCheckout,
-  } = useRepoStore(
-    useShallow(s => ({
-      checkoutConflict: s.checkoutConflict,
-      stashAndCheckout: s.stashAndCheckout,
-      migrateCheckout: s.migrateCheckout,
-      forceCheckout: s.forceCheckout,
-      cancelCheckout: s.cancelCheckout,
-    })),
-  );
+  const { checkoutConflict, stashAndCheckout, migrateCheckout, forceCheckout, cancelCheckout } =
+    useRepoStore(
+      useShallow(s => ({
+        checkoutConflict: s.checkoutConflict,
+        stashAndCheckout: s.stashAndCheckout,
+        migrateCheckout: s.migrateCheckout,
+        forceCheckout: s.forceCheckout,
+        cancelCheckout: s.cancelCheckout,
+      })),
+    );
   const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const runAction = useGitAction();
   // All three actions are mutually exclusive and must not double-fire on a
@@ -55,21 +50,36 @@ export function CheckoutConflictModal() {
       <div className="flex flex-col gap-3 mt-2">
         <div>
           <p className="text-subtext text-xs mb-1">{t('stashDesc')}</p>
-          <Button variant="primary" fullWidth disabled={busy} onClick={run(stashAndCheckout, t('stashedSwitched', { branch }))}>
+          <Button
+            variant="primary"
+            fullWidth
+            disabled={busy}
+            onClick={run(stashAndCheckout, t('stashedSwitched', { branch }))}
+          >
             {t('stashAction')}
           </Button>
         </div>
 
         <div>
           <p className="text-subtext text-xs mb-1">{t('migrateDesc', { branch })}</p>
-          <Button variant="neutral" fullWidth disabled={busy} onClick={run(migrateCheckout, t('migrated', { branch }))}>
+          <Button
+            variant="neutral"
+            fullWidth
+            disabled={busy}
+            onClick={run(migrateCheckout, t('migrated', { branch }))}
+          >
             {t('migrateAction')}
           </Button>
         </div>
 
         <div>
           <p className="text-subtext text-xs mb-1">{t('forceDesc')}</p>
-          <Button variant="danger" fullWidth disabled={busy} onClick={run(forceCheckout, t('forced', { branch }))}>
+          <Button
+            variant="danger"
+            fullWidth
+            disabled={busy}
+            onClick={run(forceCheckout, t('forced', { branch }))}
+          >
             {t('forceAction')}
           </Button>
         </div>

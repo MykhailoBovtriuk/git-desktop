@@ -45,7 +45,7 @@ describe('GitService', () => {
   it('getBranches returns current branch', async () => {
     await git.openRepo(tmpDir);
     const branches = await git.getBranches();
-    const current = branches.find((b) => b.current);
+    const current = branches.find(b => b.current);
     expect(current).toBeDefined();
     expect(current!.name).toMatch(/main|master/);
   });
@@ -65,11 +65,11 @@ describe('GitService', () => {
 
     await git.stageFiles(['new.txt']);
     let status = await git.getStatus();
-    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(true);
+    expect(status.staged.some(f => f.path === 'new.txt')).toBe(true);
 
     await git.unstageFiles(['new.txt']);
     status = await git.getStatus();
-    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(false);
+    expect(status.staged.some(f => f.path === 'new.txt')).toBe(false);
   });
 
   it('commit creates a new commit', async () => {
@@ -100,7 +100,7 @@ describe('GitService', () => {
 
     await git.checkout('develop');
     const branches = await git.getBranches();
-    expect(branches.find((b) => b.current)!.name).toBe('develop');
+    expect(branches.find(b => b.current)!.name).toBe('develop');
   });
 
   it('getWorkingDiff returns diff text', async () => {
@@ -117,7 +117,7 @@ describe('GitService', () => {
     const initialHash = log[log.length - 1].hash;
     const files = await git.getCommitDiff(initialHash);
     expect(files.length).toBeGreaterThan(0);
-    expect(files.some((f) => f.path === 'file.txt')).toBe(true);
+    expect(files.some(f => f.path === 'file.txt')).toBe(true);
   });
 
   it('getFileDiff works on the initial commit (no parent)', async () => {
@@ -150,7 +150,7 @@ describe('GitService', () => {
   // P4.31 — upstream tracking / publish flow
   it('getBranches reports no tracking for a branch without an upstream', async () => {
     await git.openRepo(tmpDir);
-    const current = (await git.getBranches()).find((b) => b.current)!;
+    const current = (await git.getBranches()).find(b => b.current)!;
     expect(current.tracking).toBeUndefined();
   });
 
@@ -160,7 +160,7 @@ describe('GitService', () => {
     execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
     execSync('git push -u origin HEAD', { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    const current = (await git.getBranches()).find((b) => b.current)!;
+    const current = (await git.getBranches()).find(b => b.current)!;
     expect(current.tracking).toMatch(/^origin\//);
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
@@ -170,12 +170,12 @@ describe('GitService', () => {
     execSync('git init --bare', { cwd: remoteDir });
     execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    const before = (await git.getBranches()).find((b) => b.current)!;
+    const before = (await git.getBranches()).find(b => b.current)!;
     expect(before.tracking).toBeUndefined();
 
     await git.pushSetUpstream('origin', before.name);
 
-    const after = (await git.getBranches()).find((b) => b.current)!;
+    const after = (await git.getBranches()).find(b => b.current)!;
     expect(after.tracking).toMatch(/^origin\//);
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
@@ -192,8 +192,8 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
     await git.stageFiles(['-A']);
 
     const status = await git.getStatus();
-    expect(status.staged.map((f) => f.path)).toEqual(['-A']);
-    expect(status.unstaged.map((f) => f.path)).toEqual(['other.txt']);
+    expect(status.staged.map(f => f.path)).toEqual(['-A']);
+    expect(status.unstaged.map(f => f.path)).toEqual(['other.txt']);
   });
 
   it('markResolved stages only the named file', async () => {
@@ -204,8 +204,8 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
     await git.markResolved('-A');
 
     const status = await git.getStatus();
-    expect(status.staged.map((f) => f.path)).toEqual(['-A']);
-    expect(status.unstaged.map((f) => f.path)).toEqual(['other.txt']);
+    expect(status.staged.map(f => f.path)).toEqual(['-A']);
+    expect(status.unstaged.map(f => f.path)).toEqual(['other.txt']);
   });
 });
 
@@ -262,8 +262,8 @@ describe('rebase lifecycle', () => {
 
     expect(await git.isRebasing()).toBe(false);
     const log = await git.getLog(10, 0);
-    expect(log.map((c) => c.message)).toContain('feature edit');
-    expect(log.map((c) => c.message)).toContain('main edit');
+    expect(log.map(c => c.message)).toContain('feature edit');
+    expect(log.map(c => c.message)).toContain('main edit');
   });
 });
 
@@ -302,12 +302,12 @@ describe('empty repository (unborn HEAD)', () => {
 
     await git.stageFiles(['new.txt']);
     let status = await git.getStatus();
-    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(true);
+    expect(status.staged.some(f => f.path === 'new.txt')).toBe(true);
 
     await git.unstageFiles(['new.txt']);
     status = await git.getStatus();
-    expect(status.staged.some((f) => f.path === 'new.txt')).toBe(false);
-    expect(status.unstaged.some((f) => f.path === 'new.txt' && !f.staged)).toBe(true);
+    expect(status.staged.some(f => f.path === 'new.txt')).toBe(false);
+    expect(status.unstaged.some(f => f.path === 'new.txt' && !f.staged)).toBe(true);
     // The file itself must survive unstaging.
     expect(fs.readFileSync(path.join(emptyDir, 'new.txt'), 'utf-8')).toBe('content');
   });

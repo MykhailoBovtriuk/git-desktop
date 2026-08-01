@@ -25,9 +25,10 @@ export function CommitList({ filter }: CommitListProps) {
   );
 
   const filtered = filter
-    ? commits.filter(c =>
-        c.message.toLowerCase().includes(filter.toLowerCase()) ||
-        c.abbreviatedHash.includes(filter)
+    ? commits.filter(
+        c =>
+          c.message.toLowerCase().includes(filter.toLowerCase()) ||
+          c.abbreviatedHash.includes(filter),
       )
     : commits;
 
@@ -46,7 +47,9 @@ export function CommitList({ filter }: CommitListProps) {
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-subtext text-xs">{commit.author}</span>
               <span className="text-subtext text-xs">·</span>
-              <span className="text-subtext text-xs">{relativeTime(commit.date, i18n.language)}</span>
+              <span className="text-subtext text-xs">
+                {relativeTime(commit.date, i18n.language)}
+              </span>
             </div>
             {commit.refs.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">

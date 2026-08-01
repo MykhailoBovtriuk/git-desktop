@@ -42,11 +42,7 @@ export function CommitGraph() {
     <div className="h-full overflow-y-auto overflow-x-auto bg-base select-none">
       <div className="relative" style={{ minWidth: graphW + 400 }}>
         {/* SVG graph lines and circles */}
-        <svg
-          className="absolute top-0 left-0 pointer-events-none"
-          width={graphW}
-          height={totalH}
-        >
+        <svg className="absolute top-0 left-0 pointer-events-none" width={graphW} height={totalH}>
           {layout.map(({ lane, row, color, edges }) => (
             <g key={row}>
               {edges.map((edge, i) => {
@@ -87,10 +83,10 @@ export function CommitGraph() {
               style={{ paddingLeft: graphW }}
             >
               <div className="flex items-center gap-2 min-w-0 w-full pl-2">
-                <span className="text-subtext font-mono text-xs shrink-0">{commit.abbreviatedHash}</span>
-                <span className="text-text text-xs truncate flex-1">
-                  {commit.message}
+                <span className="text-subtext font-mono text-xs shrink-0">
+                  {commit.abbreviatedHash}
                 </span>
+                <span className="text-text text-xs truncate flex-1">{commit.message}</span>
                 <div className="flex items-center gap-1 shrink-0">
                   {commit.refs.slice(0, 3).map(ref => (
                     <Badge key={ref} variant="ref">
@@ -98,7 +94,9 @@ export function CommitGraph() {
                     </Badge>
                   ))}
                 </div>
-                <span className="text-subtext text-xs shrink-0">{relativeTime(commit.date, i18n.language)}</span>
+                <span className="text-subtext text-xs shrink-0">
+                  {relativeTime(commit.date, i18n.language)}
+                </span>
               </div>
             </div>
           );

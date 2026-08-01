@@ -47,7 +47,12 @@ index abc..def 100644
     const lines = diffs[0].hunks[0].lines;
     expect(lines).toHaveLength(3);
     expect(lines[1]).toEqual({ type: 'remove', content: '--i;', oldLineNumber: 2 });
-    expect(lines[2]).toEqual({ type: 'context', content: 'return i;', oldLineNumber: 3, newLineNumber: 2 });
+    expect(lines[2]).toEqual({
+      type: 'context',
+      content: 'return i;',
+      oldLineNumber: 3,
+      newLineNumber: 2,
+    });
     expect(diffs[0].deletions).toBe(1);
   });
 
@@ -65,7 +70,12 @@ index abc..def 100644
     const lines = diffs[0].hunks[0].lines;
     expect(lines).toHaveLength(3);
     expect(lines[1]).toEqual({ type: 'add', content: '++counter;', newLineNumber: 2 });
-    expect(lines[2]).toEqual({ type: 'context', content: 'return i;', oldLineNumber: 2, newLineNumber: 3 });
+    expect(lines[2]).toEqual({
+      type: 'context',
+      content: 'return i;',
+      oldLineNumber: 2,
+      newLineNumber: 3,
+    });
     expect(diffs[0].additions).toBe(1);
   });
 

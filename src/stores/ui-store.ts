@@ -25,7 +25,12 @@ interface UiState {
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null, area?: SelectedFileArea) => void;
   setActiveMergeFile: (path: string | null) => void;
-  addToast: (toast: { variant: ToastVariant; title: string; message: string; action?: Toast['action'] }) => void;
+  addToast: (toast: {
+    variant: ToastVariant;
+    title: string;
+    message: string;
+    action?: Toast['action'];
+  }) => void;
   removeToast: (id: string) => void;
   setSelectedStash: (index: number | null) => void;
   // Promise-based replacement for window.confirm: the caller awaits
@@ -45,26 +50,26 @@ export const useUiStore = create<UiState>()((set, get) => ({
   toasts: [],
   selectedStash: null,
 
-  setActiveView: (view) => set({ activeView: view }),
-  setSelectedCommit: (hash) => set({ selectedCommit: hash }),
+  setActiveView: view => set({ activeView: view }),
+  setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
-    set({ selectedFile: path, selectedFileArea: path ? area ?? null : null }),
-  setActiveMergeFile: (path) => set({ activeMergeFile: path }),
-  addToast: (toast) =>
+    set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),
+  setActiveMergeFile: path => set({ activeMergeFile: path }),
+  addToast: toast =>
     set(s => ({
       toasts: [...s.toasts, { ...toast, id: crypto.randomUUID() }],
     })),
-  removeToast: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
-  setSelectedStash: (index) => set({ selectedStash: index }),
+  removeToast: id => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
+  setSelectedStash: index => set({ selectedStash: index }),
 
   confirmRequest: null,
-  requestConfirm: (opts) =>
-    new Promise<boolean>((resolve) => {
+  requestConfirm: opts =>
+    new Promise<boolean>(resolve => {
       // Only one dialog at a time — a newer request cancels the pending one.
       get().confirmRequest?.resolve(false);
       set({ confirmRequest: { ...opts, resolve } });
     }),
-  resolveConfirm: (ok) => {
+  resolveConfirm: ok => {
     const request = get().confirmRequest;
     if (!request) return;
     set({ confirmRequest: null });

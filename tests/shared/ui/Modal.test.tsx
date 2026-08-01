@@ -15,22 +15,38 @@ describe('Modal', () => {
   });
 
   it('applies overlay z-index based on level prop', () => {
-    const { container } = render(<Modal title="x" level="low">y</Modal>);
+    const { container } = render(
+      <Modal title="x" level="low">
+        y
+      </Modal>,
+    );
     expect(container.firstChild).toHaveClass('z-40');
   });
 
   it('renders red title when titleVariant=danger', () => {
-    render(<Modal title="Oops" titleVariant="danger">y</Modal>);
+    render(
+      <Modal title="Oops" titleVariant="danger">
+        y
+      </Modal>,
+    );
     expect(screen.getByText('Oops')).toHaveClass('text-red');
   });
 
   it('renders footer slot when provided', () => {
-    render(<Modal title="x" footer={<span>FOOT</span>}>y</Modal>);
+    render(
+      <Modal title="x" footer={<span>FOOT</span>}>
+        y
+      </Modal>,
+    );
     expect(screen.getByText('FOOT')).toBeInTheDocument();
   });
 
   it('renders subtitle when provided', () => {
-    render(<Modal title="T" subtitle="Sub text">y</Modal>);
+    render(
+      <Modal title="T" subtitle="Sub text">
+        y
+      </Modal>,
+    );
     expect(screen.getByText('Sub text')).toBeInTheDocument();
   });
 
@@ -40,7 +56,11 @@ describe('Modal', () => {
   });
 
   it('applies custom width class', () => {
-    render(<Modal title="T" width="w-80">y</Modal>);
+    render(
+      <Modal title="T" width="w-80">
+        y
+      </Modal>,
+    );
     const inner = document.querySelector('.w-80');
     expect(inner).not.toBeNull();
   });
@@ -67,7 +87,11 @@ describe('Modal', () => {
 
   it('calls onClose when Escape is pressed', () => {
     const onClose = vi.fn();
-    render(<Modal title="T" onClose={onClose}>y</Modal>);
+    render(
+      <Modal title="T" onClose={onClose}>
+        y
+      </Modal>,
+    );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });

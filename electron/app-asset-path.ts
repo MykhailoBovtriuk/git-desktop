@@ -1,8 +1,7 @@
 import path from 'path';
 
 export type AppAssetResolution =
-  | { ok: true; filePath: string }
-  | { ok: false; reason: 'forbidden' };
+  { ok: true; filePath: string } | { ok: false; reason: 'forbidden' };
 
 /**
  * Resolve an `app://` request URL to an absolute path inside `distRoot`,

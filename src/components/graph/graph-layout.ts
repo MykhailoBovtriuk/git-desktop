@@ -16,8 +16,14 @@ export interface LayoutCommit {
 }
 
 const COLORS = [
-  '#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8',
-  '#fab387', '#cba6f7', '#94e2d5', '#89dceb',
+  '#89b4fa',
+  '#a6e3a1',
+  '#f9e2af',
+  '#f38ba8',
+  '#fab387',
+  '#cba6f7',
+  '#94e2d5',
+  '#89dceb',
 ];
 
 export function computeLayout(commits: Commit[]): LayoutCommit[] {

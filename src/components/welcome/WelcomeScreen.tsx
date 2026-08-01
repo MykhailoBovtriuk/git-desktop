@@ -7,7 +7,11 @@ import { Button, Badge } from '../../shared/ui';
 export function WelcomeScreen() {
   const { t } = useTranslation('repo');
   const { openDialog, openRepo, recentRepos } = useRepoStore(
-    useShallow(s => ({ openDialog: s.openDialog, openRepo: s.openRepo, recentRepos: s.recentRepos })),
+    useShallow(s => ({
+      openDialog: s.openDialog,
+      openRepo: s.openRepo,
+      recentRepos: s.recentRepos,
+    })),
   );
   const runAction = useGitAction();
   const repos = recentRepos.filter(Boolean);

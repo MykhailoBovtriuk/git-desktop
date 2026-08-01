@@ -44,12 +44,12 @@ describe('registered IPC channels', () => {
   const registered = () => {
     registerIpcHandlers();
     const handle = ipcMain.handle as unknown as ReturnType<typeof vi.fn>;
-    return [...new Set(handle.mock.calls.map((c) => c[0] as string))].sort();
+    return [...new Set(handle.mock.calls.map(c => c[0] as string))].sort();
   };
 
   const channelsInFile = (relPath: string) => {
     const src = fs.readFileSync(path.resolve(__dirname, '..', relPath), 'utf-8');
-    return [...new Set([...src.matchAll(/'(git:[a-z-]+)'/g)].map((m) => m[1]))].sort();
+    return [...new Set([...src.matchAll(/'(git:[a-z-]+)'/g)].map(m => m[1]))].sort();
   };
 
   it('registers the rebase lifecycle channels', () => {

@@ -16,7 +16,9 @@ describe('StashForm', () => {
   });
 
   it('renders nothing in list mode', () => {
-    const { container } = render(<StashForm canStash listMode={true} onStash={vi.fn()} onToggle={vi.fn()} />);
+    const { container } = render(
+      <StashForm canStash listMode={true} onStash={vi.fn()} onToggle={vi.fn()} />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -33,7 +35,9 @@ describe('StashForm', () => {
   it('calls onStash with trimmed message when Stash clicked', () => {
     const onStash = vi.fn();
     render(<StashForm canStash listMode={false} onStash={onStash} onToggle={vi.fn()} />);
-    fireEvent.change(screen.getByPlaceholderText('messagePlaceholder'), { target: { value: '  my stash  ' } });
+    fireEvent.change(screen.getByPlaceholderText('messagePlaceholder'), {
+      target: { value: '  my stash  ' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'stashStaged' }));
     expect(onStash).toHaveBeenCalledWith('my stash');
   });

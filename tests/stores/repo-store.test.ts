@@ -7,7 +7,6 @@ vi.mock('../../src/api/git-api', () => ({
     getLog: vi.fn().mockResolvedValue([]),
     getBranches: vi.fn().mockResolvedValue([{ name: 'main', current: true, remote: false }]),
     getStatus: vi.fn().mockResolvedValue({ staged: [], unstaged: [] }),
-    getAheadBehind: vi.fn().mockResolvedValue({ ahead: 0, behind: 0 }),
     stageFiles: vi.fn().mockResolvedValue(null),
     unstageFiles: vi.fn().mockResolvedValue(null),
     discardChanges: vi.fn().mockResolvedValue(null),
@@ -100,7 +99,9 @@ describe('repo-store', () => {
   });
 
   it('abortMerge clears mergeState', async () => {
-    useRepoStore.setState({ mergeState: { sourceBranch: 'feature', targetBranch: 'main', conflictingFiles: ['a.ts'] } });
+    useRepoStore.setState({
+      mergeState: { sourceBranch: 'feature', targetBranch: 'main', conflictingFiles: ['a.ts'] },
+    });
     await useRepoStore.getState().abortMerge();
     expect(useRepoStore.getState().mergeState).toBeNull();
   });
@@ -199,13 +200,19 @@ describe('repo-store', () => {
     (gitApi.checkout as any).mockRejectedValueOnce(
       new Error('Your local changes to the following files would be overwritten by checkout: a.ts'),
     );
-    await expect(useRepoStore.getState().checkout('feature')).rejects.toBeInstanceOf(CheckoutConflictError);
+    await expect(useRepoStore.getState().checkout('feature')).rejects.toBeInstanceOf(
+      CheckoutConflictError,
+    );
     expect(useRepoStore.getState().checkoutConflict).toEqual({ branch: 'feature' });
   });
 
   it('checkout rethrows non-conflict errors without setting checkoutConflict', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', branches: [], checkoutConflict: null } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      branches: [],
+      checkoutConflict: null,
+    } as any);
     (gitApi.checkout as any).mockRejectedValueOnce(new Error('some other failure'));
     await expect(useRepoStore.getState().checkout('feature')).rejects.toThrow('some other failure');
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
@@ -213,7 +220,10 @@ describe('repo-store', () => {
 
   it('stashAndCheckout stashes then switches', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     await useRepoStore.getState().stashAndCheckout();
     expect(gitApi.stashSave).toHaveBeenCalled();
     expect(gitApi.checkout).toHaveBeenCalledWith('feature');
@@ -222,7 +232,10 @@ describe('repo-store', () => {
 
   it('migrateCheckout stashes, switches, then pops', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     // Empty stack before, a new stash after — proves a stash was created so the
     // pop targets our own stash@{0}, not a pre-existing one.
     (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('newstashsha');
@@ -235,7 +248,10 @@ describe('repo-store', () => {
 
   it('forceCheckout discards changes and switches', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     await useRepoStore.getState().forceCheckout();
     expect(gitApi.checkoutForce).toHaveBeenCalledWith('feature');
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
@@ -253,7 +269,9 @@ describe('repo-store', () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
     (gitApi.getLog as any).mockRejectedValueOnce(new Error('log boom'));
-    (gitApi.getBranches as any).mockResolvedValueOnce([{ name: 'dev', current: true, remote: false }]);
+    (gitApi.getBranches as any).mockResolvedValueOnce([
+      { name: 'dev', current: true, remote: false },
+    ]);
 
     await expect(useRepoStore.getState().refresh()).resolves.toBeUndefined();
 
@@ -341,10 +359,13 @@ describe('repo-store', () => {
   });
 });
 
-const deferred = <T,>() => {
+const deferred = <T>() => {
   let resolve!: (v: T) => void;
   let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
   return { promise, resolve, reject };
 };
 
@@ -373,7 +394,7 @@ describe('repo-store race conditions', () => {
     const slow = deferred<unknown[]>();
     (gitApi.getLog as any)
       .mockImplementationOnce(() => slow.promise) // repo A — hangs
-      .mockResolvedValueOnce(makeCommits(1));     // repo B — fresh
+      .mockResolvedValueOnce(makeCommits(1)); // repo B — fresh
     const first = useRepoStore.getState().openRepo('/a');
     await useRepoStore.getState().openRepo('/b');
     slow.resolve(makeCommits(5)); // stale data for /a lands last
@@ -387,7 +408,12 @@ describe('repo-store race conditions', () => {
     (gitApi.getStatus as any).mockImplementationOnce(() => slow.promise);
     const stale = useRepoStore.getState().loadStatus();
     await useRepoStore.getState().runOperation('commit', async () => {});
-    slow.resolve({ staged: [{ path: 'ghost.txt', status: 'M', staged: true }], unstaged: [], ahead: 0, behind: 0 });
+    slow.resolve({
+      staged: [{ path: 'ghost.txt', status: 'M', staged: true }],
+      unstaged: [],
+      ahead: 0,
+      behind: 0,
+    });
     await stale;
     expect(useRepoStore.getState().status.staged).toHaveLength(0);
   });
@@ -410,8 +436,8 @@ describe('repo-store race conditions', () => {
     useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
     const slow = deferred<unknown[]>();
     (gitApi.getLog as any)
-      .mockImplementationOnce(() => slow.promise)  // load more — hangs
-      .mockResolvedValueOnce(makeCommits(3));      // concurrent reload
+      .mockImplementationOnce(() => slow.promise) // load more — hangs
+      .mockResolvedValueOnce(makeCommits(3)); // concurrent reload
     const more = useRepoStore.getState().loadMoreCommits();
     await useRepoStore.getState().loadLog();
     slow.resolve(makeCommits(10)); // stale next page for the old offset
@@ -461,7 +487,9 @@ describe('repo-store state consistency', () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ checkoutConflict: { branch: 'feature' } } as any);
     (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('sha');
-    (gitApi.stashPop as any).mockRejectedValueOnce(new Error('CONFLICT (content): merge conflict in a.ts'));
+    (gitApi.stashPop as any).mockRejectedValueOnce(
+      new Error('CONFLICT (content): merge conflict in a.ts'),
+    );
     await expect(useRepoStore.getState().migrateCheckout()).rejects.toThrow(/CONFLICT/);
     // The branch DID switch before the pop failed — the UI must reflect it.
     expect(gitApi.getLog).toHaveBeenCalled();
