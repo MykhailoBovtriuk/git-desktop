@@ -9,6 +9,7 @@ import enDiff from './en/diff.json';
 import enFooter from './en/footer.json';
 import enBranches from './en/branches.json';
 import enMerge from './en/merge.json';
+import enRebase from './en/rebase.json';
 import enStash from './en/stash.json';
 import enCheckout from './en/checkout.json';
 import enRepo from './en/repo.json';
@@ -20,6 +21,7 @@ import ukDiff from './uk/diff.json';
 import ukFooter from './uk/footer.json';
 import ukBranches from './uk/branches.json';
 import ukMerge from './uk/merge.json';
+import ukRebase from './uk/rebase.json';
 import ukStash from './uk/stash.json';
 import ukCheckout from './uk/checkout.json';
 import ukRepo from './uk/repo.json';
@@ -39,6 +41,7 @@ i18n
         footer: enFooter,
         branches: enBranches,
         merge: enMerge,
+        rebase: enRebase,
         stash: enStash,
         checkout: enCheckout,
         repo: enRepo,
@@ -51,6 +54,7 @@ i18n
         footer: ukFooter,
         branches: ukBranches,
         merge: ukMerge,
+        rebase: ukRebase,
         stash: ukStash,
         checkout: ukCheckout,
         repo: ukRepo,

@@ -33,6 +33,10 @@ interface RepoState {
   aheadBehind: AheadBehind;
   mergeState: MergeState | null;
   merging: boolean;
+  // True while git is mid-rebase (rebase-apply/rebase-merge present). Drives the
+  // RebaseBanner: unlike merge, a rebase conflict has no dedicated modal state —
+  // the conflicting files come straight from `status` (unmerged 'U' entries).
+  rebasing: boolean;
   checkoutConflict: { branch: string } | null;
   stashes: StashEntry[];
   // Pagination for the commit log. hasMoreCommits is true when the backend
@@ -80,6 +84,8 @@ interface RepoState {
   abortMerge: () => Promise<void>;
   clearMergeState: () => void;
   concludeMerge: () => Promise<void>;
+  abortRebase: () => Promise<void>;
+  continueRebase: () => Promise<void>;
 }
 
 export const useRepoStore = create<RepoState>()(
@@ -101,6 +107,7 @@ export const useRepoStore = create<RepoState>()(
         aheadBehind: { ahead: 0, behind: 0 },
         mergeState: null,
         merging: false,
+        rebasing: false,
         checkoutConflict: null,
         stashes: [],
         hasMoreCommits: false,
@@ -218,11 +225,20 @@ export const useRepoStore = create<RepoState>()(
           } catch {
             merging = false;
           }
+          // Same defensive default as merging: an older main process without the
+          // handler must not freeze status on a stale rebasing value.
+          let rebasing = false;
+          try {
+            rebasing = await gitApi.isRebasing();
+          } catch {
+            rebasing = false;
+          }
           if (get().epoch !== startedEpoch) return;
           set({
             status: { staged: result.staged, unstaged: result.unstaged },
             aheadBehind: { ahead: result.ahead, behind: result.behind },
             merging,
+            rebasing,
           });
         },
 
@@ -469,6 +485,22 @@ export const useRepoStore = create<RepoState>()(
           get().runOperation('merge', async () => {
             await gitApi.concludeMerge();
             set({ mergeState: null });
+            await get().refresh();
+          }),
+
+        // Abort a conflicted rebase: `git rebase --abort` returns HEAD to where it
+        // was before the rebase started. refresh() picks up the cleared rebasing flag.
+        abortRebase: async () =>
+          get().runOperation('rebase', async () => {
+            await gitApi.abortRebase();
+            await get().refresh();
+          }),
+
+        // Continue a rebase after conflicts are resolved & staged. If unresolved
+        // conflicts remain, git-service rejects — the caller (useGitAction) surfaces it.
+        continueRebase: async () =>
+          get().runOperation('rebase', async () => {
+            await gitApi.continueRebase();
             await get().refresh();
           }),
       };

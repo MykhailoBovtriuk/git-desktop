@@ -61,4 +61,6 @@ export const gitApi = {
   stashPop: (index: number) => invoke<null>('git:stash-pop', index),
   stashDrop: (index: number) => invoke<null>('git:stash-drop', index),
   getStashDiff: (index: number) => invoke<string>('git:get-stash-diff', index),
+  // Event subscription, not an invoke channel — returns an unsubscribe fn.
+  onGitChanged: (cb: () => void) => window.electronAPI.onGitChanged(cb),
 };

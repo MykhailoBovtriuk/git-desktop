@@ -10,6 +10,7 @@ import { CommitGraph } from '../graph/CommitGraph';
 import { HistoryView } from '../history/HistoryView';
 import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
+import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
@@ -47,6 +48,7 @@ export function Shell() {
   return (
     <div className="h-screen flex flex-col bg-base overflow-hidden">
       <Titlebar />
+      <RebaseBanner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-hidden">

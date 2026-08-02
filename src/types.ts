@@ -97,6 +97,11 @@ export interface Toast {
 
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+  /**
+   * Subscribe to main-process notifications that the open repo's .git changed
+   * (including external CLI/IDE edits). Returns an unsubscribe function.
+   */
+  onGitChanged: (cb: () => void) => () => void;
   /** Node's process.platform, e.g. 'darwin' | 'win32' | 'linux'. */
   platform: string;
 }

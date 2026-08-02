@@ -56,5 +56,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
     return ipcRenderer.invoke(channel, ...args);
   },
+  // One-way main→renderer event: the main process pushes on any .git change of
+  // the open repo. Kept separate from the invoke allowlist since it's an event
+  // subscription, not a request. Returns an unsubscribe function. The wrapper
+  // listener drops the IpcRendererEvent so the renderer callback stays argless.
+  onGitChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('repo:changed', listener);
+    return () => ipcRenderer.removeListener('repo:changed', listener);
+  },
   platform: process.platform,
 });

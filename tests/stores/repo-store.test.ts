@@ -22,6 +22,9 @@ vi.mock('../../src/api/git-api', () => ({
     getMergeConflicts: vi.fn().mockResolvedValue([]),
     getMergeMessage: vi.fn().mockResolvedValue(''),
     rebase: vi.fn().mockResolvedValue(null),
+    isRebasing: vi.fn().mockResolvedValue(false),
+    abortRebase: vi.fn().mockResolvedValue(null),
+    continueRebase: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
     getStashList: vi.fn().mockResolvedValue([]),
@@ -104,6 +107,45 @@ describe('repo-store', () => {
     });
     await useRepoStore.getState().abortMerge();
     expect(useRepoStore.getState().mergeState).toBeNull();
+  });
+
+  it('loadStatus reflects an in-progress rebase via isRebasing', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.isRebasing as any).mockResolvedValueOnce(true);
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().loadStatus();
+    expect(useRepoStore.getState().rebasing).toBe(true);
+  });
+
+  it('loadStatus defaults rebasing to false when isRebasing throws', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.isRebasing as any).mockRejectedValueOnce(new Error('old main process'));
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', rebasing: true } as any);
+    await useRepoStore.getState().loadStatus();
+    expect(useRepoStore.getState().rebasing).toBe(false);
+  });
+
+  it('abortRebase calls gitApi.abortRebase', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().abortRebase();
+    expect(gitApi.abortRebase).toHaveBeenCalled();
+  });
+
+  it('continueRebase calls gitApi.continueRebase', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().continueRebase();
+    expect(gitApi.continueRebase).toHaveBeenCalled();
+  });
+
+  it('continueRebase propagates errors (unresolved conflicts)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    (gitApi.continueRebase as any).mockRejectedValueOnce(
+      new Error('needs merge / unmerged files'),
+    );
+    await expect(useRepoStore.getState().continueRebase()).rejects.toThrow(/unmerged/);
   });
 
   it('recentRepos is capped at 10 entries', async () => {

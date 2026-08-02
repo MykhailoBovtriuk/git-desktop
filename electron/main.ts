@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { registerIpcHandlers } from './ipc-handlers';
 import { resolveAppAssetPath } from './app-asset-path';
+import { RepoWatcher } from './repo-watcher';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -40,6 +41,14 @@ protocol.registerSchemesAsPrivileged([
 const iconPath = path.join(__dirname, '../../build/icon.png');
 
 let mainWindow: BrowserWindow | null = null;
+
+// Watches the open repo's .git and pushes a 'repo:changed' event to the
+// renderer so external changes (CLI/IDE) refresh the UI in near real time.
+// Channel is deliberately outside the 'git:' invoke namespace — it's a
+// one-way main→renderer event, not a request/response handler.
+const repoWatcher = new RepoWatcher(() => {
+  mainWindow?.webContents.send('repo:changed');
+});
 
 function createWindow() {
   const icon = nativeImage.createFromPath(iconPath);
@@ -168,7 +177,7 @@ app.whenReady().then(() => {
 
   // Register IPC handlers once per app lifecycle, before any window exists.
   // Doing this inside createWindow() would re-register on macOS `activate`.
-  registerIpcHandlers();
+  registerIpcHandlers({ onRepoOpened: root => repoWatcher.watch(root) });
   createWindow();
 });
 

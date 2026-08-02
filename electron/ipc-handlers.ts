@@ -27,16 +27,24 @@ export function wrap<T>(fn: () => Promise<T>) {
 
 let registered = false;
 
-export function registerIpcHandlers() {
+export interface IpcHandlerOptions {
+  // Invoked with the canonical repo root each time a repo is opened, so the
+  // caller (main.ts) can (re)point the file watcher at it.
+  onRepoOpened?: (root: string) => void;
+}
+
+export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   // ipcMain.handle throws if a channel is registered twice; guard against
   // repeated calls (e.g. macOS window recreate on `activate`).
   if (registered) return;
   registered = true;
 
   ipcMain.handle('git:open-repo', (_e, dirPath: string) =>
-    wrap(() => {
+    wrap(async () => {
       assertString(dirPath, 'dirPath');
-      return gitService.openRepo(dirPath);
+      const root = await gitService.openRepo(dirPath);
+      options.onRepoOpened?.(root);
+      return root;
     }),
   );
 
