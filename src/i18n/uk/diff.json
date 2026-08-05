@@ -1,1 +1,1 @@
-{ "noDiff": "Оберіть файл для перегляду різниці", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "Немає різниці для показу", "loadFailed": "Не вдалося завантажити різницю" }
+{ "noDiff": "Оберіть файл для перегляду різниці", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "Немає різниці для показу", "loadFailed": "Не вдалося завантажити різницю", "stageHunk": "Застейджити фрагмент", "unstageHunk": "Прибрати фрагмент" }

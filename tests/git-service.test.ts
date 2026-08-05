@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { GitService, credentialSafeEnv } from '../electron/git-service';
+import { buildHunkPatch } from '../src/lib/build-patch';
 
 let tmpDir: string;
 let git: GitService;
@@ -378,5 +379,71 @@ describe('readFile/writeFile path guards', () => {
     await expect(git.writeFile('file-link.txt', 'overwrite')).rejects.toThrow(/outside repository/);
     expect(fs.readFileSync(target, 'utf-8')).toBe('outside content');
     fs.rmSync(outside, { recursive: true, force: true });
+  });
+});
+
+describe('applyPatch (hunk-level staging)', () => {
+  const TWENTY = Array.from({ length: 20 }, (_, i) => `line${i + 1}`).join('\n') + '\n';
+
+  const seedMultiHunk = () => {
+    fs.writeFileSync(path.join(tmpDir, 'multi.txt'), TWENTY);
+    execSync('git add multi.txt && git commit -m "multi"', { cwd: tmpDir });
+    // Two well-separated edits (line 2 and line 18) → two independent hunks.
+    const lines = TWENTY.split('\n');
+    lines[1] = 'LINE2';
+    lines[17] = 'LINE18';
+    fs.writeFileSync(path.join(tmpDir, 'multi.txt'), lines.join('\n'));
+  };
+
+  it('stages only the selected hunk, leaving the other unstaged', async () => {
+    seedMultiHunk();
+    await git.openRepo(tmpDir);
+
+    const raw = await git.getWorkingDiff('multi.txt');
+    expect((raw.match(/^@@ /gm) || []).length).toBe(2); // sanity: two hunks
+
+    await git.applyPatch(buildHunkPatch(raw, 0), { cached: true });
+
+    // Index (staged) carries the first change only.
+    const staged = await git.getStagedDiff('multi.txt');
+    expect(staged).toContain('LINE2');
+    expect(staged).not.toContain('LINE18');
+
+    // The working tree still shows the second, still-unstaged change.
+    const working = await git.getWorkingDiff('multi.txt');
+    expect(working).toContain('LINE18');
+    expect(working).not.toContain('LINE2');
+  });
+
+  it('unstages a single hunk with reverse', async () => {
+    seedMultiHunk();
+    await git.openRepo(tmpDir);
+
+    // Stage the whole file, then peel one hunk back off the index.
+    await git.stageFiles(['multi.txt']);
+    let staged = await git.getStagedDiff('multi.txt');
+    expect((staged.match(/^@@ /gm) || []).length).toBe(2);
+
+    await git.applyPatch(buildHunkPatch(staged, 0), { cached: true, reverse: true });
+
+    staged = await git.getStagedDiff('multi.txt');
+    expect(staged).not.toContain('LINE2'); // first hunk peeled back
+    expect(staged).toContain('LINE18'); // second hunk stays staged
+  });
+
+  it('rejects a patch that does not apply and cleans up its temp file', async () => {
+    seedMultiHunk();
+    await git.openRepo(tmpDir);
+    const bogus = [
+      'diff --git a/multi.txt b/multi.txt',
+      'index 1111111..2222222 100644',
+      '--- a/multi.txt',
+      '+++ b/multi.txt',
+      '@@ -1,1 +1,1 @@',
+      '-nonexistent context',
+      '+something',
+      '',
+    ].join('\n');
+    await expect(git.applyPatch(bogus, { cached: true })).rejects.toThrow();
   });
 });

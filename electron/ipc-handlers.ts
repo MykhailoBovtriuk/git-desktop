@@ -151,6 +151,23 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
     wrap(() => gitService.continueRebase().then(() => null)),
   );
 
+  ipcMain.handle(
+    'git:apply-patch',
+    (_e, patch: string, opts?: { cached?: boolean; reverse?: boolean }) =>
+      wrap(() => {
+        assertString(patch, 'patch');
+        const cached = opts?.cached;
+        const reverse = opts?.reverse;
+        if (cached !== undefined && typeof cached !== 'boolean') {
+          throw new Error('Invalid argument: cached must be a boolean');
+        }
+        if (reverse !== undefined && typeof reverse !== 'boolean') {
+          throw new Error('Invalid argument: reverse must be a boolean');
+        }
+        return gitService.applyPatch(patch, { cached, reverse }).then(() => null);
+      }),
+  );
+
   ipcMain.handle('git:delete-branch', (_e, branch: string, force?: boolean) =>
     wrap(() => {
       assertBranchName(branch, 'branch');

@@ -32,6 +32,8 @@ export const gitApi = {
   isRebasing: () => invoke<boolean>('git:is-rebasing'),
   abortRebase: () => invoke<null>('git:abort-rebase'),
   continueRebase: () => invoke<null>('git:continue-rebase'),
+  applyPatch: (patch: string, opts?: { cached?: boolean; reverse?: boolean }) =>
+    invoke<null>('git:apply-patch', patch, opts),
   deleteBranch: (branch: string, force?: boolean) =>
     invoke<null>('git:delete-branch', branch, force),
   deleteRemoteBranch: (remote: string, branch: string) =>

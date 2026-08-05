@@ -28,11 +28,13 @@
   "homepage": "https://github.com/MykhailoBovtriuk/git-desktop#readme",
   "description": "A cross-platform Git desktop client with visual commit graph and conflict resolution",
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.9",
     "i18next": "^26.0.5",
     "i18next-browser-languagedetector": "^8.2.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-i18next": "^17.0.4",
+    "shiki": "^4.4.1",
     "simple-git": "^3.36.0",
     "zustand": "^5.0.12"
   },

@@ -24,6 +24,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:is-rebasing',
   'git:abort-rebase',
   'git:continue-rebase',
+  'git:apply-patch',
   'git:delete-branch',
   'git:delete-remote-branch',
   'git:get-commit-diff',

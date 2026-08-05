@@ -66,6 +66,8 @@ interface RepoState {
   refresh: () => Promise<void>;
   stageFiles: (paths: string[]) => Promise<void>;
   unstageFiles: (paths: string[]) => Promise<void>;
+  stageHunk: (patch: string) => Promise<void>;
+  unstageHunk: (patch: string) => Promise<void>;
   discardChanges: (paths: string[]) => Promise<void>;
   commit: (message: string) => Promise<void>;
   fetch: () => Promise<void>;
@@ -196,8 +198,13 @@ export const useRepoStore = create<RepoState>()(
             // Discard when the log was reloaded meanwhile (refresh or repo switch):
             // the offset no longer matches and the base array is gone.
             if (get().epoch !== startedEpoch || get().commits !== commits) return;
+            // Dedupe on append: `git log --all --skip=N` shifts when new commits
+            // land at the top, so the page can overlap the tail of what's loaded.
+            // Drop already-present hashes to avoid duplicate rows/React keys.
+            const seen = new Set(commits.map(c => c.hash));
+            const fresh = page.slice(0, LOG_PAGE_SIZE).filter(c => !seen.has(c.hash));
             set({
-              commits: [...commits, ...page.slice(0, LOG_PAGE_SIZE)],
+              commits: [...commits, ...fresh],
               hasMoreCommits: page.length > LOG_PAGE_SIZE,
             });
           } finally {
@@ -286,6 +293,23 @@ export const useRepoStore = create<RepoState>()(
           await gitApi.discardChanges(paths);
           await get().loadStatus();
         },
+
+        // Stage a single hunk: apply its patch to the index. Wrapped in
+        // runOperation so auto-refresh stands aside and the epoch bump makes the
+        // open diff re-fetch (the working diff shrinks by exactly this hunk).
+        stageHunk: async patch =>
+          get().runOperation('stage', async () => {
+            await gitApi.applyPatch(patch, { cached: true });
+            await get().loadStatus();
+          }),
+
+        // Unstage a single hunk: apply the staged hunk's patch to the index in
+        // reverse.
+        unstageHunk: async patch =>
+          get().runOperation('unstage', async () => {
+            await gitApi.applyPatch(patch, { cached: true, reverse: true });
+            await get().loadStatus();
+          }),
 
         loadStashes: async () => {
           if (!get().repoPath) return;

@@ -1,1 +1,1 @@
-{ "noDiff": "Select a file to view diff", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "No diff to display", "loadFailed": "Failed to load diff" }
+{ "noDiff": "Select a file to view diff", "additions": "+{{count}}", "deletions": "-{{count}}", "noDiffToDisplay": "No diff to display", "loadFailed": "Failed to load diff", "stageHunk": "Stage hunk", "unstageHunk": "Unstage hunk" }

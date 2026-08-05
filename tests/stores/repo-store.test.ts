@@ -25,6 +25,7 @@ vi.mock('../../src/api/git-api', () => ({
     isRebasing: vi.fn().mockResolvedValue(false),
     abortRebase: vi.fn().mockResolvedValue(null),
     continueRebase: vi.fn().mockResolvedValue(null),
+    applyPatch: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
     getStashList: vi.fn().mockResolvedValue([]),
@@ -192,6 +193,20 @@ describe('repo-store', () => {
     // Manual stash flow forwards the `staged` flag; StashSection passes `true`,
     // the store action forwards whatever it receives (undefined here).
     expect(gitApi.stashSave).toHaveBeenCalledWith('my work', undefined);
+  });
+
+  it('stageHunk applies its patch to the index (cached)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().stageHunk('PATCH');
+    expect(gitApi.applyPatch).toHaveBeenCalledWith('PATCH', { cached: true });
+  });
+
+  it('unstageHunk applies its patch in reverse', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().unstageHunk('PATCH');
+    expect(gitApi.applyPatch).toHaveBeenCalledWith('PATCH', { cached: true, reverse: true });
   });
 
   it('stashApply calls gitApi.stashApply with index', async () => {
@@ -372,11 +387,41 @@ describe('repo-store', () => {
   it('loadMoreCommits appends the next page and requests it at the current offset', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
-    (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(2));
+    // Distinct hashes (h200, h201) so this exercises plain append, not dedupe.
+    const nextPage = [200, 201].map(i => ({
+      hash: `h${i}`,
+      abbreviatedHash: `h${i}`,
+      message: `c${i}`,
+      author: 'a',
+      date: '2024-01-01T00:00:00Z',
+      parents: [],
+      refs: [],
+    }));
+    (gitApi.getLog as any).mockResolvedValueOnce(nextPage);
     await useRepoStore.getState().loadMoreCommits();
     expect(gitApi.getLog).toHaveBeenCalledWith(LOG_PAGE_SIZE + 1, LOG_PAGE_SIZE);
     expect(useRepoStore.getState().commits).toHaveLength(LOG_PAGE_SIZE + 2);
     expect(useRepoStore.getState().hasMoreCommits).toBe(false);
+  });
+
+  // With `git log --all --topo-order --skip=N`, a new commit landing at the top
+  // shifts the window down by one, so the next page overlaps the last loaded
+  // commit. Dedupe-on-append keeps the list free of duplicate keys (React) and
+  // duplicate rows without needing exact offset arithmetic.
+  it('loadMoreCommits drops commits already present (dedupe on append)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const existing = makeCommits(5); // h0..h4
+    useRepoStore.setState({ commits: existing, hasMoreCommits: true } as any);
+    const dupOfLast = { ...existing[4] }; // h4 re-appears at the top of the page
+    const h5 = { ...makeCommits(6)[5] }; // h5
+    const h6 = { ...makeCommits(7)[6] }; // h6
+    (gitApi.getLog as any).mockResolvedValueOnce([dupOfLast, h5, h6]);
+
+    await useRepoStore.getState().loadMoreCommits();
+
+    const hashes = useRepoStore.getState().commits.map((c: any) => c.hash);
+    expect(hashes).toEqual(['h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+    expect(new Set(hashes).size).toBe(hashes.length); // no duplicate keys
   });
 
   it('loadMoreCommits is a no-op when there are no more commits', async () => {

@@ -1,6 +1,7 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import type { Commit, Branch, GitStatus, FileStatus, StashEntry } from '../src/types';
 
 // A GUI app has no TTY: without these, any fetch/pull/push that needs
@@ -382,6 +383,34 @@ export class GitService {
       },
     }).env(credentialSafeEnv());
     await git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
+  }
+
+  /**
+   * Apply a unified-diff patch to the index (hunk-level staging). simple-git
+   * cannot pipe a patch to `git apply` via stdin, so we write it to a temp file
+   * and pass the path. `--cached` targets the index; `--reverse` unstages
+   * (applying the staged hunk backwards). --whitespace=nowarn keeps intentional
+   * whitespace-only hunks from being rejected.
+   */
+  async applyPatch(
+    patch: string,
+    opts: { cached?: boolean; reverse?: boolean } = {},
+  ): Promise<void> {
+    const git = this.ensureRepo();
+    const tmpFile = path.join(
+      os.tmpdir(),
+      `git-desktop-${process.pid}-${Date.now()}.patch`,
+    );
+    await fs.writeFile(tmpFile, patch, 'utf8');
+    try {
+      const args = ['apply'];
+      if (opts.cached !== false) args.push('--cached');
+      if (opts.reverse) args.push('--reverse');
+      args.push('--whitespace=nowarn', tmpFile);
+      await git.raw(args);
+    } finally {
+      await fs.unlink(tmpFile).catch(() => {});
+    }
   }
 
   async deleteBranch(branch: string, force = false): Promise<void> {
