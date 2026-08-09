@@ -21,7 +21,7 @@ A cross-platform Git desktop client with a visual commit graph, side-by-side con
 
 #### Apple Silicon (M1 / M2 / M3 / M4)
 
-1. Download **`Git Desktop-1.0.0-arm64.dmg`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
+1. Download **`Git Desktop-1.0.2-arm64.dmg`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
 2. Double-click the `.dmg` file to mount it.
 3. Drag **Git Desktop.app** into the **Applications** folder.
 4. Eject the disk image (right-click → Eject).
@@ -29,7 +29,7 @@ A cross-platform Git desktop client with a visual commit graph, side-by-side con
 
 #### Intel Macs
 
-Same steps as above, but download **`Git Desktop-1.0.0-x64.dmg`** instead.
+Same steps as above, but download **`Git Desktop-1.0.2-x64.dmg`** instead.
 
 > **⚠️ "App is from an unidentified developer" warning on first launch**
 >
@@ -45,7 +45,7 @@ Same steps as above, but download **`Git Desktop-1.0.0-x64.dmg`** instead.
 
 ### Windows 10 / 11
 
-1. Download **`Git Desktop-1.0.0-x64.zip`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
+1. Download **`Git Desktop-1.0.2-x64.zip`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
 2. Right-click the zip → **Extract All** → choose a folder like `C:\Program Files\Git Desktop` (or anywhere convenient).
 3. Open the extracted folder and double-click **`Git Desktop.exe`**.
 4. Optional: pin to taskbar — right-click the running app icon in the taskbar → **Pin to taskbar**.
@@ -61,14 +61,14 @@ Same steps as above, but download **`Git Desktop-1.0.0-x64.dmg`** instead.
 
 ### Linux
 
-1. Download **`Git Desktop-1.0.0-x86_64.AppImage`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
+1. Download **`Git Desktop-1.0.2-x86_64.AppImage`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
 2. Make it executable:
    ```bash
-   chmod +x "Git Desktop-1.0.0-x86_64.AppImage"
+   chmod +x "Git Desktop-1.0.2-x86_64.AppImage"
    ```
 3. Run it:
    ```bash
-   ./"Git Desktop-1.0.0-x86_64.AppImage"
+   ./"Git Desktop-1.0.2-x86_64.AppImage"
    ```
 
 > AppImages are self-contained — no installation needed. To integrate with your app menu, use a tool like [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
@@ -81,7 +81,7 @@ Same steps as above, but download **`Git Desktop-1.0.0-x64.dmg`** instead.
 
 You'll need:
 
-- **Node.js 20+** — [nodejs.org](https://nodejs.org) (or via [nvm](https://github.com/nvm-sh/nvm))
+- **Node.js 20+** — [nodejs.org](https://nodejs.org) (or via [nvm](https://github.com/nvm-sh/nvm)); CI builds and tests on Node 22
 - **npm** (comes with Node)
 - **Git** — [git-scm.com](https://git-scm.com/)
 - **Platform-specific tools** for packaging (see [Build per platform](#build-per-platform) below)
@@ -135,10 +135,10 @@ Output goes to **`release/`**:
 
 | Platform | Output file | Size (approx) |
 |---|---|---|
-| macOS Apple Silicon | `release/Git Desktop-1.0.0-arm64.dmg` | ~110 MB |
-| macOS Intel | `release/Git Desktop-1.0.0-x64.dmg` | ~115 MB |
-| Windows | `release/Git Desktop-1.0.0-x64.zip` | ~620 MB |
-| Linux | `release/Git Desktop-1.0.0-x86_64.AppImage` | ~130 MB |
+| macOS Apple Silicon | `release/Git Desktop-1.0.2-arm64.dmg` | ~110 MB |
+| macOS Intel | `release/Git Desktop-1.0.2-x64.dmg` | ~115 MB |
+| Windows | `release/Git Desktop-1.0.2-x64.zip` | ~620 MB |
+| Linux | `release/Git Desktop-1.0.2-x86_64.AppImage` | ~130 MB |
 
 #### Building for a specific platform / architecture
 
@@ -182,6 +182,7 @@ git-desktop/
 │   ├── main.ts                  # App entry, window creation
 │   ├── preload.ts               # Secure IPC bridge to renderer
 │   ├── ipc-handlers.ts          # All git:* IPC channels
+│   ├── repo-watcher.ts          # fs.watch on the repo → emits git-changed events
 │   └── git-service.ts           # simple-git wrapper, owns repo state
 ├── src/                         # Renderer process (React + browser APIs)
 │   ├── main.tsx                 # React root
@@ -196,11 +197,14 @@ git-desktop/
 │   └── components/              # All React UI
 │       ├── layout/              # Shell, Titlebar, Sidebar, Footer
 │       ├── welcome/             # First-launch screen
-│       ├── staging/             # File list, commit form
-│       ├── diff/                # Diff viewer, unified-diff parser
-│       ├── history/             # Commit list, commit details
+│       ├── staging/             # File list, commit form, hunk staging
+│       ├── diff/                # Diff viewer, unified-diff parser, Shiki highlighter
+│       ├── history/             # Virtualized commit list, commit details
 │       ├── graph/               # SVG commit graph + lane layout
 │       ├── merge/               # 3-panel merge editor, conflict modal
+│       ├── checkout/            # Checkout conflict modal
+│       ├── rebase/              # Rebase conflict banner
+│       ├── stash/               # Stash list, form, section, diff preview
 │       ├── dropdowns/           # Branch picker, repo picker
 │       └── common/              # Accordion, Toast
 ├── tests/                       # Vitest test suite
@@ -231,15 +235,16 @@ git-desktop/
 
 ## ✨ Features
 
-- **Changes view** — staged / unstaged files with status badges, selective staging, discard, commit with `Cmd / Ctrl + Enter`
-- **History view** — searchable commit list with per-file diffs, including the very first commit (no-parent diff against empty tree)
+- **Changes view** — staged / unstaged files with status badges, selective staging down to individual **hunks**, discard, commit with `Cmd / Ctrl + Enter`
+- **History view** — searchable, **virtualized** commit list (stays fast on large repos) with per-file diffs, including the very first commit (no-parent diff against empty tree)
+- **Syntax-highlighted diffs** — powered by [Shiki](https://shiki.style/), with language auto-detection from file extension
 - **Commit graph** — SVG visualization of branch topology with colored lanes
 - **Branch management** — checkout, merge, rebase, delete via a searchable dropdown; confirmation prompt before delete
 - **3-panel merge editor** — CURRENT / RESULT / INCOMING panes reading real conflict sides from the Git index (`:2:path`, `:3:path`), "Use this" buttons, write-back to disk before marking resolved
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
 - **Localization** — English and Ukrainian, auto-detected from the browser and remembered across restarts
-- **Auto-refresh** — picks up external `git` activity every 30 seconds
+- **Auto-refresh** — event-driven via `fs.watch` (debounced 300 ms), so external `git` activity shows up almost instantly; a 60-second poll acts as a safety-net fallback
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
 - **Catppuccin Mocha** dark palette out of the box
 
