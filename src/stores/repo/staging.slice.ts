@@ -17,16 +17,12 @@ export const createStagingSlice: RepoSlice<StagingSlice> = (_set, get) => ({
     await get().loadStatus();
   },
 
-  // Stage a single hunk: apply its patch to the index. Wrapped in runOperation
-  // so auto-refresh stands aside and the epoch bump makes the open diff
-  // re-fetch (the working diff shrinks by exactly this hunk).
   stageHunk: async patch =>
     get().runOperation('stage', async () => {
       await gitApi.applyPatch(patch, { cached: true });
       await get().loadStatus();
     }),
 
-  // Unstage a single hunk: apply the staged hunk's patch to the index in reverse.
   unstageHunk: async patch =>
     get().runOperation('unstage', async () => {
       await gitApi.applyPatch(patch, { cached: true, reverse: true });

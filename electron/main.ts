@@ -42,10 +42,6 @@ const iconPath = path.join(__dirname, '../../build/icon.png');
 
 let mainWindow: BrowserWindow | null = null;
 
-// Watches the open repo's .git and pushes a 'repo:changed' event to the
-// renderer so external changes (CLI/IDE) refresh the UI in near real time.
-// Channel is deliberately outside the 'git:' invoke namespace — it's a
-// one-way main→renderer event, not a request/response handler.
 const repoWatcher = new RepoWatcher(() => {
   mainWindow?.webContents.send('repo:changed');
 });
@@ -85,12 +81,9 @@ function createWindow() {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    // Use app://localhost/... so URL parses with proper host + pathname.
     mainWindow.loadURL('app://localhost/index.html');
   }
 
-  // Desktop app has no legitimate popups or external navigation: deny new
-  // windows outright and block navigation to anything but our own origin.
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (e, url) => {
     const allowed = process.env.VITE_DEV_SERVER_URL
@@ -139,11 +132,9 @@ app.whenReady().then(() => {
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
       const data = await fs.readFile(filePath);
-      // Convert Node Buffer to Uint8Array so Response is happy in both Node and Electron contexts.
       const body = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
       return new Response(body, { headers: { 'Content-Type': contentType } });
     } catch (err) {
-      // Directory reads and missing files both land here as 404.
       console.error(`[app://] 404 for ${request.url}:`, err);
       return new Response('Not Found', { status: 404 });
     }
@@ -175,8 +166,6 @@ app.whenReady().then(() => {
     });
   }
 
-  // Register IPC handlers once per app lifecycle, before any window exists.
-  // Doing this inside createWindow() would re-register on macOS `activate`.
   registerIpcHandlers({ onRepoOpened: root => repoWatcher.watch(root) });
   createWindow();
 });

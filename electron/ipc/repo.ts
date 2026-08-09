@@ -4,8 +4,6 @@ import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '.
 import { wrap } from './wrap';
 
 export interface RepoHandlerOptions {
-  // Invoked with the canonical repo root each time a repo is opened, so the
-  // caller (main.ts) can (re)point the file watcher at it.
   onRepoOpened?: (root: string) => void;
 }
 
@@ -21,8 +19,6 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
 
   ipcMain.handle('git:open-dialog', () =>
     wrap(async () => {
-      // The dialog only selects a folder; opening/validating the repo is the
-      // caller's job (store → openRepo), so we don't touch repo state here.
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: 'Open Repository',

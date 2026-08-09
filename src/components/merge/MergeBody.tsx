@@ -8,7 +8,6 @@ interface MergeBodyProps {
   setChoice: (idx: number, choice: Choice) => void;
 }
 
-// Single scroll container so the three columns stay aligned.
 export function MergeBody({ segs, setChoice }: MergeBodyProps) {
   return (
     <div className="flex-1 overflow-auto bg-base font-mono text-xs">

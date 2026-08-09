@@ -5,12 +5,10 @@ export interface ModalProps {
   title: string;
   subtitle?: ReactNode;
   titleVariant?: 'default' | 'danger';
-  level?: 'low' | 'high'; // z-40 (low) or z-50 (high)
-  width?: string; // tailwind width class, default 'w-96'
+  level?: 'low' | 'high';
+  width?: string;
   footer?: ReactNode;
   children: ReactNode;
-  // When provided, pressing Escape invokes it. Optional so display-only modals
-  // (no dismiss affordance) can omit it.
   onClose?: () => void;
 }
 
@@ -27,9 +25,6 @@ export function Modal({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Move focus into the dialog on mount and restore it to the previously
-  // focused element on unmount, so keyboard users aren't dropped back at the
-  // top of the document.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
@@ -45,9 +40,6 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
-  // Trap Tab / Shift+Tab inside the panel: the modal is the only interactive
-  // surface, so keyboard focus must wrap within it instead of escaping to
-  // the (visually inert but still tabbable) background.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;

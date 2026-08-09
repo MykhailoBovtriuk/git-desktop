@@ -1,7 +1,3 @@
-// Wrap a handler so every IPC reply is a uniform { data } | { error, code }
-// envelope. Exported for unit tests. Validators throw synchronously, so `fn`
-// must run inside the promise chain — otherwise the exception escapes the
-// envelope.
 export function wrap<T>(fn: () => Promise<T>) {
   return Promise.resolve()
     .then(fn)

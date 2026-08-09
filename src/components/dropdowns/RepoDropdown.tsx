@@ -24,8 +24,6 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
 
   const handleOpen = async (path: string) => {
     onClose();
-    // A recent path may no longer exist — surface the failure instead of
-    // leaving the rejection unhandled with zero feedback.
     await runAction(() => openRepo(path), { title: t('addRepository') });
   };
 

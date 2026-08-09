@@ -5,8 +5,16 @@ import { DiffFile } from './DiffFile';
 
 export function DiffViewer() {
   const { t } = useTranslation('diff');
-  const { selectedFile, diffs, loading, error, hasSelection, isStaged, showHunkActions, handleHunk } =
-    useFileDiff();
+  const {
+    selectedFile,
+    diffs,
+    loading,
+    error,
+    hasSelection,
+    isStaged,
+    showHunkActions,
+    handleHunk,
+  } = useFileDiff();
   const renderContent = useDiffHighlighter(selectedFile);
 
   if (!hasSelection) return <Centered>{t('noDiff')}</Centered>;
@@ -21,8 +29,6 @@ export function DiffViewer() {
   }
   if (diffs.length === 0) return <Centered>{t('noDiffToDisplay')}</Centered>;
 
-  // Running offset so each file's per-hunk action can address the right hunk in
-  // the raw patch. Normally one file, but be defensive about multi-file diffs.
   const hunkOffsets = diffs.reduce<number[]>((acc, _d, i) => {
     acc[i] = i === 0 ? 0 : acc[i - 1] + diffs[i - 1].hunks.length;
     return acc;

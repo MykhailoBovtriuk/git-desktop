@@ -58,9 +58,6 @@ export function computeLayout(commits: Commit[]): LayoutCommit[] {
     const lane = findLane(commit.hash);
 
     while (lanes.length <= lane) lanes.push(null);
-    // Clear ALL occurrences of this hash: a commit reachable from several
-    // children may transiently occupy more than one lane; leaving stale
-    // entries behind leaks lanes forever.
     for (let i = 0; i < lanes.length; i++) {
       if (lanes[i] === commit.hash) lanes[i] = null;
     }
@@ -76,9 +73,6 @@ export function computeLayout(commits: Commit[]): LayoutCommit[] {
 
       let targetLane: number;
       if (p === 0) {
-        // If the parent already occupies a lane (assigned by another child
-        // via allocateLane or as another branch's first parent), route the
-        // edge there instead of claiming a second lane for the same hash.
         const existing = lanes.indexOf(parentHash);
         if (existing !== -1) {
           targetLane = existing;

@@ -16,8 +16,6 @@ export function WelcomeScreen() {
   const runAction = useGitAction();
   const repos = recentRepos.filter(Boolean);
 
-  // A recent repo may have been moved or deleted since it was saved — without
-  // the wrapper the click fails silently and the user is left guessing.
   const handleOpen = (path: string) => runAction(() => openRepo(path), { title: t('open') });
   const handleDialog = () => runAction(() => openDialog(), { title: t('open') });
 

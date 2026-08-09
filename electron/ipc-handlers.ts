@@ -10,7 +10,6 @@ import { registerStashHandlers } from './ipc/stash';
 import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
 
-// Re-exported so existing importers (and tests) keep their entry point.
 export { wrap };
 export type IpcHandlerOptions = RepoHandlerOptions;
 
@@ -19,8 +18,6 @@ const gitService = new GitService();
 let registered = false;
 
 export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
-  // ipcMain.handle throws if a channel is registered twice; guard against
-  // repeated calls (e.g. macOS window recreate on `activate`).
   if (registered) return;
   registered = true;
 

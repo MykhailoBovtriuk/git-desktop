@@ -28,10 +28,6 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   busyOperation: null,
   lastRefreshError: null,
 
-  // Mark the store busy for the duration of fn so auto-refresh skips while a
-  // mutating git operation runs. Clears the marker even if fn throws. Bumping
-  // the epoch on both edges discards loader responses that were in flight
-  // before the mutation and any that read half-applied state during it.
   runOperation: async (name, fn) => {
     set(s => ({ busyCount: s.busyCount + 1, busyOperation: name, epoch: s.epoch + 1 }));
     try {
@@ -49,20 +45,14 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   },
 
   openRepo: async path => {
-    // Backend normalizes to the canonical repo root; store that, not the raw
-    // path the user picked (which may be a subfolder). Fall back to the input
-    // path if the backend returns nothing, so repoPath/recentRepos never go null.
     const root = (await gitApi.openRepo(path)) || path;
     set(s => ({
       epoch: s.epoch + 1,
       repoPath: root,
       mergeState: null,
-      // Drop any falsy/duplicate entries while prepending the freshly opened root.
       recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
-    // Restore the merge context after a restart/reload mid-merge: without it
-    // the conflict UI is unreachable even though git still has MERGE_HEAD.
     if (get().merging && !get().mergeState) {
       try {
         const conflicts = await gitApi.getMergeConflicts();
@@ -77,9 +67,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
             },
           });
         }
-      } catch {
-        // Best-effort: the Changes view still works via the `merging` flag.
-      }
+      } catch {}
     }
   },
 
@@ -90,14 +78,10 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
 
   refresh: async () => {
     const epoch = get().epoch;
-    // Same generation → join the round already in flight instead of firing a
-    // duplicate set of loaders.
     if (refreshInFlight && refreshInFlight.epoch === epoch) {
       return refreshInFlight.promise;
     }
     const promise = (async () => {
-      // allSettled (not all): one failing segment must not discard the others.
-      // A failed log shouldn't blank out branches/status that loaded fine.
       const results = await Promise.allSettled([
         get().loadLog(),
         get().loadBranches(),

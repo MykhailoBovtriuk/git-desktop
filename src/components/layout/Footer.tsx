@@ -50,8 +50,6 @@ export function Footer() {
       addToast({ variant: 'success', title: label, message: msg });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
-      // Map raw git stderr to a friendly explanation; fall back to the raw text
-      // for unrecognized errors. A missing upstream offers a Publish action.
       const { kind, action: errAction } = classifyGitError(err);
       const friendly = t(`error.${kind}`);
       addToast({

@@ -1,10 +1,3 @@
-// Classifies a raw git error string into a small set of actionable kinds, so
-// the UI can show a human-friendly message (and offer a follow-up action)
-// instead of dumping the raw stderr into a toast.
-//
-// Pure classifier: it returns a `kind` + optional `action` id. Translation of
-// title/message lives in the UI layer (i18n `errors` namespace), keyed by kind.
-
 export type GitErrorKind =
   'auth' | 'noUpstream' | 'conflict' | 'uncommitted' | 'notRepo' | 'network' | 'hook' | 'unknown';
 
@@ -15,9 +8,6 @@ export interface ClassifiedGitError {
   action?: GitErrorAction;
 }
 
-// Ordered most-specific → most-generic. Auth is checked before network because
-// an HTTPS auth failure ("The requested URL returned error: 403") also matches
-// the generic "unable to access" network wording.
 const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> = [
   { kind: 'notRepo', re: /not a git repository/i },
   {

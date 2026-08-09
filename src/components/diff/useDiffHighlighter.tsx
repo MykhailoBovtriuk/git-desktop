@@ -3,10 +3,6 @@ import { langForPath, DIFF_THEME } from './highlight-lang';
 import type { HighlighterCore } from './highlighter';
 import type { DiffLine } from '../../types';
 
-// Syntax highlighting for diff lines. Resolves the language from the file
-// extension, lazy-loads shiki only for files we have a grammar for, and returns
-// a renderer that falls back to plain +/- coloured text until (or unless) the
-// highlighter is ready.
 export function useDiffHighlighter(selectedFile: string | null) {
   const lang = selectedFile ? langForPath(selectedFile) : null;
   const [highlighter, setHighlighter] = useState<HighlighterCore | null>(null);
@@ -19,17 +15,12 @@ export function useDiffHighlighter(selectedFile: string | null) {
       .then(h => {
         if (active) setHighlighter(h);
       })
-      .catch(() => {
-        // Highlighting is cosmetic — on any load failure the diff still renders
-        // as plain text.
-      });
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, [lang, highlighter]);
 
-  // Per-line tokenization loses cross-line context (block comments, multi-line
-  // strings) but keeps each line aligned with its +/- background.
   return function renderContent(line: DiffLine) {
     if (highlighter && lang) {
       try {
@@ -39,9 +30,7 @@ export function useDiffHighlighter(selectedFile: string | null) {
             {tk.content}
           </span>
         ));
-      } catch {
-        // Fall through to plain text.
-      }
+      } catch {}
     }
     const cls =
       line.type === 'add' ? 'text-green' : line.type === 'remove' ? 'text-red' : 'text-text';

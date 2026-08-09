@@ -17,7 +17,6 @@ export function CommitForm() {
   const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const runAction = useGitAction();
 
-  // While a merge is in progress, prefill git's default merge message once.
   useEffect(() => {
     if (merging && !message) {
       gitApi
@@ -31,7 +30,6 @@ export function CommitForm() {
   }, [merging]);
 
   const hasStaged = status.staged.length > 0;
-  // During a merge, committing concludes it even with nothing extra staged.
   const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading;
   const overLimit = message.length > 100;
 

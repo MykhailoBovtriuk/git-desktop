@@ -19,7 +19,12 @@ const TWO_HUNK = [
   '',
 ].join('\n');
 
-const header = ['diff --git a/f.txt b/f.txt', 'index 1111111..2222222 100644', '--- a/f.txt', '+++ b/f.txt'];
+const header = [
+  'diff --git a/f.txt b/f.txt',
+  'index 1111111..2222222 100644',
+  '--- a/f.txt',
+  '+++ b/f.txt',
+];
 
 describe('buildHunkPatch', () => {
   it('keeps the file header for the selected hunk', () => {
@@ -104,7 +109,9 @@ describe('buildHunkPatch', () => {
   });
 
   it('throws when the diff has no hunks', () => {
-    const noHunk = ['diff --git a/f b/f', 'index 1..2 100644', 'Binary files differ', ''].join('\n');
+    const noHunk = ['diff --git a/f b/f', 'index 1..2 100644', 'Binary files differ', ''].join(
+      '\n',
+    );
     expect(() => buildHunkPatch(noHunk, 0)).toThrow();
   });
 });

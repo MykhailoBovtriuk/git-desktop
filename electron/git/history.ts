@@ -14,8 +14,6 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
       '--format=%H%x00%s%x00%an%x00%aI%x00%P%x00%D',
     ]);
   } catch (err) {
-    // Freshly initialized repo (unborn HEAD, no refs): some git versions
-    // fail `log --all` here. An empty history is a valid state, not an error.
     if (!(await ctx.hasHead())) return [];
     throw err;
   }
@@ -43,8 +41,6 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
     });
 }
 
-// Diff range for a commit: parent..commit, or empty-tree..commit for a root
-// commit that has no parent.
 async function commitRange(ctx: GitContext, hash: string): Promise<[string, string]> {
   return (await ctx.hasParent(hash)) ? [`${hash}^`, hash] : [EMPTY_TREE, hash];
 }

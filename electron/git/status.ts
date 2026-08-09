@@ -53,7 +53,6 @@ function mapStatus(code: string): FileStatus['status'] {
 }
 
 export async function stageFiles(ctx: GitContext, paths: string[]): Promise<void> {
-  // `--` so a path like "-A" is never parsed as a flag.
   await ctx.ensureRepo().raw(['add', '--', ...paths]);
 }
 
@@ -76,9 +75,6 @@ export async function discardChanges(ctx: GitContext, paths: string[]): Promise<
   const untracked = new Set(status.not_added);
   const trackedPaths = paths.filter(p => !untracked.has(p));
   const untrackedPaths = paths.filter(p => untracked.has(p));
-  // Tracked changes/deletions are restored from HEAD; `git checkout` cannot
-  // remove untracked files, so those are deleted with `clean` (-d to also
-  // remove fully-untracked directories).
   if (trackedPaths.length) {
     await git.checkout(['--', ...trackedPaths]);
   }
@@ -92,13 +88,6 @@ export async function commit(ctx: GitContext, message: string): Promise<string> 
   return result.commit;
 }
 
-/**
- * Apply a unified-diff patch to the index (hunk-level staging). simple-git
- * cannot pipe a patch to `git apply` via stdin, so we write it to a temp file
- * and pass the path. `--cached` targets the index; `--reverse` unstages
- * (applying the staged hunk backwards). --whitespace=nowarn keeps intentional
- * whitespace-only hunks from being rejected.
- */
 export async function applyPatch(
   ctx: GitContext,
   patch: string,
@@ -127,8 +116,6 @@ export async function getWorkingDiff(ctx: GitContext, filePath: string): Promise
   return git.diff(['--', filePath]);
 }
 
-// Untracked files have no diff against the index, so build a synthetic "new
-// file" patch (every line added) that the diff viewer can render and stage.
 async function synthesizeUntrackedDiff(ctx: GitContext, filePath: string): Promise<string> {
   try {
     const content = await readFile(ctx, filePath);

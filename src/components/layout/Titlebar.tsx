@@ -27,8 +27,6 @@ export function Titlebar() {
   const handleRefresh = async () => {
     if (refreshing) return;
     setRefreshing(true);
-    // Full refresh: status alone leaves commits/branches/stashes stale, which
-    // is not what users expect from a manual refresh.
     try {
       await refresh();
     } finally {

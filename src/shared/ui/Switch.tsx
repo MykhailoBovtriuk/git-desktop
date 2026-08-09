@@ -3,15 +3,11 @@ import { cn } from './cn';
 export interface SwitchProps {
   checked: boolean;
   onToggle: () => void;
-  // Text rendered next to the knob; also used as the accessible name.
   label?: string;
   title?: string;
   className?: string;
 }
 
-// Small labelled toggle used for view-mode and option switches. One
-// implementation instead of the hand-rolled copies that used to live in
-// MergeEditor, StashForm and Sidebar.
 export function Switch({ checked, onToggle, label, title, className }: SwitchProps) {
   return (
     <button

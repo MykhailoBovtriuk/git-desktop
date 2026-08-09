@@ -7,9 +7,6 @@ import { gitApi } from '../../api/git-api';
 import { useGitAction } from '../../hooks/use-git-action';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 
-// All state and side effects behind the merge editor: per-file conflict
-// segments, resolution tracking, and the save / abort flows. The components
-// that use it are pure presentation.
 export function useMergeEditor() {
   const { t } = useTranslation('merge');
   const { mergeState, abortMerge, refresh, clearMergeState, concludeMerge } = useRepoStore(
@@ -33,12 +30,8 @@ export function useMergeEditor() {
     );
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
   const [resolved, setResolved] = useState<Set<string>>(new Set());
-  // Guards Save/Abort against double clicks — a second concludeMerge() or a
-  // concurrent abort would corrupt the merge state.
   const [saving, setSaving] = useState(false);
   const runAction = useGitAction();
-  // Default ON: when all conflicts are resolved, the merge commit is created
-  // automatically. Off => land on Changes and commit it yourself.
   const [autoCommit, setAutoCommit] = useState(
     () => localStorage.getItem('merge-auto-commit') !== 'false',
   );
@@ -58,8 +51,6 @@ export function useMergeEditor() {
   }, [activeMergeFile, segsByFile, addToast, t]);
 
   const files = mergeState?.conflictingFiles ?? [];
-  // undefined until readFile resolves — Save must stay disabled until then,
-  // otherwise rebuild([]) would overwrite the file with an empty string.
   const loadedSegs = activeMergeFile ? segsByFile[activeMergeFile] : undefined;
   const segs = loadedSegs ?? [];
   const remaining = segs.filter(s => s.type === 'conflict' && s.choice === null).length;
@@ -140,8 +131,6 @@ export function useMergeEditor() {
 
   const handleAbort = async () => {
     if (saving) return;
-    // Aborting throws away every resolution already staged — confirm once the
-    // user has invested work in this merge.
     if (resolved.size > 0) {
       const ok = await requestConfirm({
         title: t('abortMerge'),

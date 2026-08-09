@@ -19,11 +19,8 @@ export function buildHunkPatch(rawDiff: string, hunkIndex: number): string {
     throw new Error('Cannot stage hunk: diff contains no hunks');
   }
 
-  // Header = the file preamble (diff --git, index, mode, ---/+++), i.e.
-  // everything before the first @@ line.
   const preamble = lines.slice(0, firstHunk);
 
-  // Index every hunk's start line.
   const hunkStarts: number[] = [];
   for (let i = firstHunk; i < lines.length; i++) {
     if (lines[i].startsWith('@@ ')) hunkStarts.push(i);
@@ -39,9 +36,6 @@ export function buildHunkPatch(rawDiff: string, hunkIndex: number): string {
   const end = hunkIndex + 1 < hunkStarts.length ? hunkStarts[hunkIndex + 1] : lines.length;
   const hunk = lines.slice(start, end);
 
-  // Reassemble preamble + the single hunk. Trailing blank elements from the
-  // final split are dropped, then a single newline is guaranteed so git sees a
-  // well-formed patch.
   const patch = [...preamble, ...hunk].join('\n').replace(/\n*$/, '');
   return patch + '\n';
 }

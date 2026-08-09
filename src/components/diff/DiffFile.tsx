@@ -4,8 +4,6 @@ import type { DiffLine, FileDiff } from '../../types';
 
 interface DiffFileProps {
   diff: FileDiff;
-  // Index of this file's first hunk among all hunks in the diff, so a per-hunk
-  // action can address the right hunk in the raw patch.
   baseHunkIndex: number;
   showHunkActions: boolean;
   isStaged: boolean;

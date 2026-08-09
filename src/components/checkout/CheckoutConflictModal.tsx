@@ -20,8 +20,6 @@ export function CheckoutConflictModal() {
     );
   const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const runAction = useGitAction();
-  // All three actions are mutually exclusive and must not double-fire on a
-  // double click — one busy flag disables the whole button group.
   const [busy, setBusy] = useState(false);
 
   if (!checkoutConflict) return null;

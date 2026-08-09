@@ -10,16 +10,12 @@ export const createRebaseSlice: RepoSlice<RebaseSlice> = (_set, get) => ({
       await get().refresh();
     }),
 
-  // Abort a conflicted rebase: `git rebase --abort` returns HEAD to where it
-  // was before the rebase started. refresh() picks up the cleared rebasing flag.
   abortRebase: async () =>
     get().runOperation('rebase', async () => {
       await gitApi.abortRebase();
       await get().refresh();
     }),
 
-  // Continue a rebase after conflicts are resolved & staged. If unresolved
-  // conflicts remain, git-service rejects — the caller (useGitAction) surfaces it.
   continueRebase: async () =>
     get().runOperation('rebase', async () => {
       await gitApi.continueRebase();

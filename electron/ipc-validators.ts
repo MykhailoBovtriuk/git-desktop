@@ -1,9 +1,3 @@
-// --- IPC argument validators -------------------------------------------------
-// The IPC boundary receives `unknown` from the renderer; TypeScript types only
-// hold at compile time. These guards reject malformed input before it reaches
-// GitService / raw git commands. Kept in a dedicated module so they can be
-// unit-tested independently of Electron's `ipcMain`.
-
 export function assertString(value: unknown, name: string): asserts value is string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`Invalid argument: ${name} must be a non-empty string`);
@@ -55,8 +49,6 @@ export function assertStashIndex(index: unknown): asserts index is number {
 
 export function assertCommitHash(value: unknown, name: string): asserts value is string {
   assertString(value, name);
-  // Hex only: anything else (refs, flags like --output=...) must not reach
-  // raw git commands, where a leading '-' is parsed as a flag.
   if (!/^[0-9a-f]{4,64}$/i.test(value as string)) {
     throw new Error(`Invalid argument: ${name} must be a commit hash`);
   }
@@ -65,17 +57,12 @@ export function assertCommitHash(value: unknown, name: string): asserts value is
 export function assertBranchName(value: unknown, name: string): asserts value is string {
   assertString(value, name);
   const v = value as string;
-  // A leading '-' would be parsed as a flag by raw git commands.
   if (v.startsWith('-')) {
     throw new Error(`Invalid argument: ${name} must not start with "-"`);
   }
-  // Characters git itself forbids in ref names (see `git check-ref-format`):
-  // control chars (< 0x20) + space (0x20), DEL (0x7f), and ~ ^ : ? * [ \.
-  // Hyphens, dots and '/' are allowed — they are common in real branch names.
   if (/[\x00-\x20\x7f~^:?*[\\]/.test(v)) {
     throw new Error(`Invalid argument: ${name} contains invalid characters`);
   }
-  // Sequences git forbids anywhere / at the ends of a ref name.
   if (
     v.includes('..') ||
     v.includes('@{') ||

@@ -36,7 +36,7 @@ export function BranchItem({
       return;
     }
     const r = btnRef.current.getBoundingClientRect();
-    const MENU_W = 176; // w-44
+    const MENU_W = 176;
     const MENU_H = 152;
     let left = r.right + 4;
     if (left + MENU_W > window.innerWidth) left = r.left - MENU_W - 4;
@@ -80,7 +80,6 @@ export function BranchItem({
             <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
             <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
             <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
-            {/* No delete for the checked-out branch — Git refuses it anyway. */}
             {!current && (
               <>
                 <div className="border-t border-surface2 my-1" />

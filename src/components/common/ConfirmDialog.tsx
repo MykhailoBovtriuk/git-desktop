@@ -3,9 +3,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
 
-// Host for the promise-based confirm flow (ui-store.requestConfirm). Mounted
-// once in Shell; replaces window.confirm, which is blocking, unstyled and not
-// localizable in Electron.
 export function ConfirmDialog() {
   const { t } = useTranslation('common');
   const { confirmRequest, resolveConfirm } = useUiStore(

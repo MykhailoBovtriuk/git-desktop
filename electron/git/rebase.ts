@@ -8,10 +8,6 @@ export async function rebase(ctx: GitContext, branch: string): Promise<void> {
 }
 
 export async function isRebasing(ctx: GitContext): Promise<boolean> {
-  // A rebase is in progress when .git/rebase-merge (interactive/merge
-  // backend) or .git/rebase-apply (am backend) exists. Resolve the dirs via
-  // `rev-parse --git-path` instead of hardcoding `.git/` so this also works
-  // in worktrees, where the git dir lives elsewhere.
   const git = ctx.ensureRepo();
   for (const dir of ['rebase-merge', 'rebase-apply']) {
     try {
@@ -19,9 +15,7 @@ export async function isRebasing(ctx: GitContext): Promise<boolean> {
       const abs = path.isAbsolute(rel) ? rel : path.resolve(ctx.repoPath!, rel);
       await fs.access(abs);
       return true;
-    } catch {
-      // Directory absent — not rebasing via this backend.
-    }
+    } catch {}
   }
   return false;
 }

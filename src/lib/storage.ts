@@ -1,7 +1,3 @@
-// Storage abstraction that degrades gracefully outside a browser environment
-// (Node/jsdom test runs, SSR-like contexts). Without this, touching
-// `localStorage` directly throws a ReferenceError and breaks the test suite.
-
 function createMemoryStorage(): Storage {
   const map = new Map<string, string>();
   return {
@@ -28,19 +24,12 @@ function createMemoryStorage(): Storage {
 
 let memoryStorage: Storage | undefined;
 
-/**
- * Returns the real `localStorage` when available, otherwise a process-local
- * in-memory fallback. Never throws and never returns undefined, so callers
- * (and Zustand's persist middleware) can use it unconditionally.
- */
 export function getLocalStorage(): Storage {
   try {
     if (typeof localStorage !== 'undefined') {
       return localStorage;
     }
-  } catch {
-    // Accessing localStorage can throw (e.g. disabled storage) — fall through.
-  }
+  } catch {}
   if (!memoryStorage) {
     memoryStorage = createMemoryStorage();
   }

@@ -1,6 +1,3 @@
-// Localized "3m ago"-style timestamps. Uses Intl.RelativeTimeFormat so the
-// output follows the active UI language instead of hardcoded English.
-
 const formatters = new Map<string, Intl.RelativeTimeFormat>();
 
 function formatterFor(locale: string): Intl.RelativeTimeFormat {
@@ -9,8 +6,6 @@ function formatterFor(locale: string): Intl.RelativeTimeFormat {
     try {
       rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'narrow' });
     } catch {
-      // Unknown/garbled locale tag (e.g. from a corrupted language detector
-      // cache) — better English than a crash in every list row.
       rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'narrow' });
     }
     formatters.set(locale, rtf);

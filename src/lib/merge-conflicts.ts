@@ -1,7 +1,3 @@
-// Parsing and re-serialization of git conflict markers. Extracted from
-// MergeEditor because rebuild() output overwrites the user's file — this
-// logic must stay unit-testable in isolation.
-
 export type Choice = 'ours' | 'theirs' | 'both' | null;
 
 export type Segment =
@@ -11,8 +7,6 @@ export type Segment =
       ours: string[];
       theirs: string[];
       choice: Choice;
-      // Original marker lines kept verbatim, so unresolved blocks (labels,
-      // diff3 base section, CRLF endings) round-trip exactly.
       startMarker: string;
       midMarker: string;
       endMarker: string;
@@ -20,8 +14,6 @@ export type Segment =
       base?: string[];
     };
 
-// Git markers are exactly 7 chars, optionally followed by " <label>". Longer
-// runs (comment rulers, setext underlines) are ordinary content.
 const START = /^<{7}( .*)?\r?$/;
 const BASE = /^\|{7}( .*)?\r?$/;
 const MID = /^={7}\r?$/;
@@ -29,9 +21,6 @@ const END = /^>{7}( .*)?\r?$/;
 
 type ConflictSegment = Extract<Segment, { type: 'conflict' }>;
 
-// Parse one conflict block starting at `start` (which matches START).
-// Returns null when the block is malformed — the caller then keeps the text
-// as-is instead of silently reshuffling the file.
 function tryParseBlock(
   lines: string[],
   start: number,
@@ -84,7 +73,6 @@ function tryParseBlock(
   return { segment, next: i + 1 };
 }
 
-// Split a conflicted file into common text and conflict blocks.
 export function parseConflicts(content: string): Segment[] {
   const lines = content.split('\n');
   const segs: Segment[] = [];
@@ -112,9 +100,6 @@ export function parseConflicts(content: string): Segment[] {
   return segs;
 }
 
-// Reconstruct file text from segments; unresolved blocks keep their original
-// markers. Sides are line arrays, so an empty side contributes zero lines
-// (not a spurious blank line).
 export function rebuild(segs: Segment[]): string {
   const out: string[] = [];
   for (const s of segs) {

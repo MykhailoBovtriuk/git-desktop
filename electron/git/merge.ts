@@ -22,9 +22,6 @@ export async function merge(
 }
 
 export async function isMerging(ctx: GitContext): Promise<boolean> {
-  // With --quiet, simple-git does NOT throw when MERGE_HEAD is absent (it
-  // resolves with empty output), so check the output: a real MERGE_HEAD
-  // prints its SHA, otherwise it's empty.
   try {
     const out = await ctx.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
     return out.trim().length > 0;

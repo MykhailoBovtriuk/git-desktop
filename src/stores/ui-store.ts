@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import type { ActiveView, Toast, ToastVariant } from '../types';
 
-// Where the selected file was clicked. A partially staged file appears in
-// both the staged and unstaged lists — the diff shown must follow the list
-// the user clicked in, not just the path.
 export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
 
 export interface ConfirmOptions {
@@ -33,9 +30,6 @@ interface UiState {
   }) => void;
   removeToast: (id: string) => void;
   setSelectedStash: (index: number | null) => void;
-  // Promise-based replacement for window.confirm: the caller awaits
-  // requestConfirm(), the ConfirmDialog host (mounted in Shell) shows the
-  // request and settles it via resolveConfirm().
   confirmRequest: (ConfirmOptions & { resolve: (ok: boolean) => void }) | null;
   requestConfirm: (opts: ConfirmOptions) => Promise<boolean>;
   resolveConfirm: (ok: boolean) => void;
@@ -65,7 +59,6 @@ export const useUiStore = create<UiState>()((set, get) => ({
   confirmRequest: null,
   requestConfirm: opts =>
     new Promise<boolean>(resolve => {
-      // Only one dialog at a time — a newer request cancels the pending one.
       get().confirmRequest?.resolve(false);
       set({ confirmRequest: { ...opts, resolve } });
     }),

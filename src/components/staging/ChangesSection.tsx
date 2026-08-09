@@ -52,7 +52,6 @@ export function ChangesSection() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Scrollable file lists */}
       <div className="flex-1 overflow-y-auto min-h-0 py-1">
         {status.unstaged.length > 0 && (
           <>
@@ -102,7 +101,6 @@ export function ChangesSection() {
         )}
       </div>
 
-      {/* CommitForm — always visible at the bottom */}
       <CommitForm />
     </div>
   );

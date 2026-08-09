@@ -11,8 +11,6 @@ import * as files from './git/files';
 
 export { credentialSafeEnv };
 
-// Thin facade over the git domain modules: holds one GitContext and delegates
-// each operation to its domain. Kept as the single object IPC handlers talk to.
 export class GitService {
   private ctx = new GitContext();
 

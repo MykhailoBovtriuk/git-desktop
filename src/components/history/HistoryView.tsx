@@ -27,9 +27,6 @@ export function HistoryView() {
   const commit = commits.find(c => c.hash === selectedCommit);
 
   useEffect(() => {
-    // A file selected under the previous commit is meaningless for the new
-    // one — clear it so DiffViewer doesn't request a stale (commit, file)
-    // pair and the file list doesn't highlight a path that may not exist.
     setSelectedFile(null);
 
     if (!selectedCommit) {
@@ -37,8 +34,6 @@ export function HistoryView() {
       return;
     }
 
-    // Guard against a stale response overwriting files for a newer selection,
-    // and surface load failures instead of crashing on an unhandled rejection.
     let cancelled = false;
     setLoadingFiles(true);
     (async () => {
@@ -66,7 +61,6 @@ export function HistoryView() {
 
   return (
     <div className="flex h-full">
-      {/* Left panel: commit list */}
       <div className="w-72 border-r border-surface0 flex flex-col shrink-0">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-surface0 shrink-0">
           <button
@@ -86,7 +80,6 @@ export function HistoryView() {
         <CommitList filter={filter} />
       </div>
 
-      {/* Right panel: commit detail + diff */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {commit ? (
           <>
@@ -97,7 +90,6 @@ export function HistoryView() {
               </p>
             </div>
             <div className="flex h-full overflow-hidden">
-              {/* Changed files list */}
               <div className="w-48 border-r border-surface0 overflow-y-auto shrink-0">
                 {loadingFiles && changedFiles.length === 0 && (
                   <p className="px-3 py-2 text-subtext text-xs">{t('loading')}</p>

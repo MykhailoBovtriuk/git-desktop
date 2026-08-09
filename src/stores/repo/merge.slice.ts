@@ -33,11 +33,8 @@ export const createMergeSlice: RepoSlice<MergeSlice> = (set, get) => ({
       await get().refresh();
     }),
 
-  // Clear the conflict UI without touching git — used once all files are
-  // resolved & staged, so the merge can be committed from the Changes view.
   clearMergeState: () => set({ mergeState: null }),
 
-  // Auto mode: create the merge commit (default message) to finish the merge.
   concludeMerge: async () =>
     get().runOperation('merge', async () => {
       await gitApi.concludeMerge();

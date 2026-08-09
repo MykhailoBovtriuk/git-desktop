@@ -35,8 +35,6 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
 
   loadLog: async () => {
     const startedEpoch = get().epoch;
-    // Fetch one extra to detect whether older commits remain, then trim to the
-    // page size so `hasMoreCommits` reflects reality without a separate count.
     const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, 0);
     if (get().epoch !== startedEpoch) return;
     set({
@@ -51,12 +49,7 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
     set({ loadingMoreCommits: true });
     try {
       const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, commits.length);
-      // Discard when the log was reloaded meanwhile (refresh or repo switch):
-      // the offset no longer matches and the base array is gone.
       if (get().epoch !== startedEpoch || get().commits !== commits) return;
-      // Dedupe on append: `git log --all --skip=N` shifts when new commits
-      // land at the top, so the page can overlap the tail of what's loaded.
-      // Drop already-present hashes to avoid duplicate rows/React keys.
       const seen = new Set(commits.map(c => c.hash));
       const fresh = page.slice(0, LOG_PAGE_SIZE).filter(c => !seen.has(c.hash));
       set({
@@ -79,17 +72,12 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
   loadStatus: async () => {
     const startedEpoch = get().epoch;
     const result = await gitApi.getStatus();
-    // isMerging must never block the status update: if it fails (e.g. an older
-    // main process without the handler), default to false instead of throwing
-    // — otherwise status/merging freeze on stale values.
     let merging = false;
     try {
       merging = await gitApi.isMerging();
     } catch {
       merging = false;
     }
-    // Same defensive default as merging: an older main process without the
-    // handler must not freeze status on a stale rebasing value.
     let rebasing = false;
     try {
       rebasing = await gitApi.isRebasing();

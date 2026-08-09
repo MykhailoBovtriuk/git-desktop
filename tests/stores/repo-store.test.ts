@@ -143,9 +143,7 @@ describe('repo-store', () => {
   it('continueRebase propagates errors (unresolved conflicts)', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
-    (gitApi.continueRebase as any).mockRejectedValueOnce(
-      new Error('needs merge / unmerged files'),
-    );
+    (gitApi.continueRebase as any).mockRejectedValueOnce(new Error('needs merge / unmerged files'));
     await expect(useRepoStore.getState().continueRebase()).rejects.toThrow(/unmerged/);
   });
 

@@ -33,9 +33,6 @@ export function CommitList({ filter }: CommitListProps) {
       )
     : commits;
 
-  // Virtualize the list: after several "load more" rounds the log can hold
-  // thousands of commits, and rendering every row bogs down large repos. Rows
-  // vary in height (message + optional ref badges) so we measure dynamically.
   const parentRef = useRef<HTMLDivElement>(null);
   // useVirtualizer returns a mutable instance the React Compiler lint can't
   // prove stable — expected for this library's designed usage, not a bug.
@@ -50,9 +47,6 @@ export function CommitList({ filter }: CommitListProps) {
   const virtualItems = rowVirtualizer.getVirtualItems();
   const lastIndex = virtualItems.length ? virtualItems[virtualItems.length - 1].index : 0;
 
-  // Infinite scroll: once the last row enters the render window, pull the next
-  // page. Disabled while filtering — the filter is client-side over the commits
-  // already loaded, so paging under a filter would be confusing.
   useEffect(() => {
     if (filter || !hasMoreCommits || loadingMoreCommits) return;
     if (filtered.length > 0 && lastIndex >= filtered.length - 1) {

@@ -1,5 +1,3 @@
-// --- Git data types ---
-
 export interface Commit {
   hash: string;
   abbreviatedHash: string;
@@ -40,10 +38,10 @@ export interface MergeState {
 }
 
 export interface StashEntry {
-  index: number; // 0 for stash@{0}
-  message: string; // full reflog message e.g. "WIP on main: fix nav"
-  branch: string | null; // parsed from "WIP on <branch>:" or null for custom messages
-  date: string; // ISO 8601
+  index: number;
+  message: string;
+  branch: string | null;
+  date: string;
 }
 
 export interface DiffHunk {
@@ -69,16 +67,12 @@ export interface FileDiff {
   deletions: number;
 }
 
-// --- IPC types ---
-
 export interface IpcError {
   error: string;
   code: string;
 }
 
 export type IpcResult<T> = { data: T } | IpcError;
-
-// --- UI types ---
 
 export type ActiveView =
   'changes' | 'diff' | 'history' | 'graph' | 'merge-editor' | 'stash' | 'stash-create';
@@ -93,16 +87,9 @@ export interface Toast {
   action?: { label: string; onClick: () => void };
 }
 
-// --- Electron API ---
-
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-  /**
-   * Subscribe to main-process notifications that the open repo's .git changed
-   * (including external CLI/IDE edits). Returns an unsubscribe function.
-   */
   onGitChanged: (cb: () => void) => () => void;
-  /** Node's process.platform, e.g. 'darwin' | 'win32' | 'linux'. */
   platform: string;
 }
 

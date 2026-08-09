@@ -6,11 +6,7 @@ export async function readFile(ctx: GitContext, filePath: string): Promise<strin
   return fs.readFile(abs, 'utf-8');
 }
 
-export async function writeFile(
-  ctx: GitContext,
-  filePath: string,
-  content: string,
-): Promise<void> {
+export async function writeFile(ctx: GitContext, filePath: string, content: string): Promise<void> {
   const abs = await ctx.resolveRepoPath(filePath);
   await fs.writeFile(abs, content, 'utf-8');
 }

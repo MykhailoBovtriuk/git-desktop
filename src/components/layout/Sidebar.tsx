@@ -54,7 +54,6 @@ export function Sidebar() {
       className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
       style={{ width }}
     >
-      {/* Changes accordion — flex-1 when stash is closed */}
       <div
         className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}
       >

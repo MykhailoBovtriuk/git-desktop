@@ -18,8 +18,6 @@ export async function push(ctx: GitContext): Promise<void> {
   await ctx.ensureRepo().push();
 }
 
-// Publish a branch: push and set its upstream (`git push -u <remote> <branch>`)
-// so subsequent push/pull have a tracking ref.
 export async function pushSetUpstream(
   ctx: GitContext,
   remote: string,

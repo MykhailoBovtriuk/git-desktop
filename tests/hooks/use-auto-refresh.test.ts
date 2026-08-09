@@ -37,9 +37,9 @@ describe('useAutoRefresh', () => {
   });
 
   const withRepo = (repoPath: string | null = '/some/repo') =>
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath, refresh: mockRefresh } as any),
-    );
+    vi
+      .mocked(useRepoStore)
+      .mockImplementation((selector: any) => selector({ repoPath, refresh: mockRefresh } as any));
 
   it('does not subscribe or poll when repoPath is null', () => {
     withRepo(null);

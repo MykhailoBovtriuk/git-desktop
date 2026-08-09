@@ -33,14 +33,8 @@ export const useRepoStore = create<RepoState>()(
       name: 'git-desktop-repo',
       storage: createJSONStorage(() => getLocalStorage()),
       partialize: s => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
-      // Once the persisted repoPath is restored — on a fresh launch and after a
-      // dev hot-reload — re-open it so branches/status/stashes are repopulated.
-      // Without this the UI shows an empty "no branch" until the next action.
-      // Deferred to a macrotask so `useRepoStore` is assigned before we use it
-      // (localStorage rehydrates synchronously, during store creation).
       onRehydrateStorage: () => state => {
         if (!state) return;
-        // Sanitize any persisted bad entries (e.g. a null stored by an older build).
         state.recentRepos = (state.recentRepos ?? []).filter(Boolean);
         if (!state.repoPath) return;
         const path = state.repoPath;

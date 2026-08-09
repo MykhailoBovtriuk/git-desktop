@@ -41,7 +41,6 @@ export function CommitGraph() {
   return (
     <div className="h-full overflow-y-auto overflow-x-auto bg-base select-none">
       <div className="relative" style={{ minWidth: graphW + 400 }}>
-        {/* SVG graph lines and circles */}
         <svg className="absolute top-0 left-0 pointer-events-none" width={graphW} height={totalH}>
           {layout.map(({ lane, row, color, edges }) => (
             <g key={row}>
