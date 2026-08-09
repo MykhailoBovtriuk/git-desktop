@@ -5,105 +5,121 @@ import { useAutoRefresh } from '../../src/hooks/use-auto-refresh';
 import { useRepoStore } from '../../src/stores/repo-store';
 
 vi.mock('../../src/stores/repo-store', () => ({
-  useRepoStore: Object.assign(
-    vi.fn(),
-    { getState: vi.fn() }
-  ),
+  useRepoStore: Object.assign(vi.fn(), { getState: vi.fn() }),
 }));
 
 const mockRefresh = vi.fn();
 const mockGetState = vi.fn(() => ({ refresh: mockRefresh }));
+
+// Captured onGitChanged callback so tests can emit a 'repo:changed' event.
+let gitChangedCb: (() => void) | null = null;
+const unsubscribe = vi.fn();
+const onGitChanged = vi.fn((cb: () => void) => {
+  gitChangedCb = cb;
+  return unsubscribe;
+});
 
 describe('useAutoRefresh', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockRefresh.mockClear();
     mockGetState.mockClear();
+    unsubscribe.mockClear();
+    onGitChanged.mockClear();
+    gitChangedCb = null;
     (vi.mocked(useRepoStore) as any).getState = mockGetState;
+    (window as any).electronAPI = { onGitChanged };
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    delete (window as any).electronAPI;
   });
 
-  it('does not start interval when repoPath is null', () => {
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: null, refresh: mockRefresh } as any)
-    );
+  const withRepo = (repoPath: string | null = '/some/repo') =>
+    vi
+      .mocked(useRepoStore)
+      .mockImplementation((selector: any) => selector({ repoPath, refresh: mockRefresh } as any));
 
+  it('does not subscribe or poll when repoPath is null', () => {
+    withRepo(null);
     renderHook(() => useAutoRefresh());
-    vi.advanceTimersByTime(30_000);
-
+    vi.advanceTimersByTime(60_000);
+    expect(onGitChanged).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
   });
 
-  it('starts interval when repoPath is set', () => {
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
-    );
-
+  it('subscribes to onGitChanged when a repo is open', () => {
+    withRepo();
     renderHook(() => useAutoRefresh());
-    vi.advanceTimersByTime(30_000);
+    expect(onGitChanged).toHaveBeenCalledTimes(1);
+  });
 
+  it('refreshes (debounced) when a git change event fires', () => {
+    withRepo();
+    renderHook(() => useAutoRefresh());
+    gitChangedCb!();
+    // Nothing yet — the refresh is debounced.
+    expect(mockRefresh).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(300);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it('calls refresh again after 60s (two intervals)', () => {
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
-    );
+  it('coalesces a burst of events into a single refresh', () => {
+    withRepo();
+    renderHook(() => useAutoRefresh());
+    gitChangedCb!();
+    gitChangedCb!();
+    gitChangedCb!();
+    vi.advanceTimersByTime(300);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
 
+  it('runs the fallback poll roughly once a minute', () => {
+    withRepo();
     renderHook(() => useAutoRefresh());
     vi.advanceTimersByTime(60_000);
-
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60_000);
     expect(mockRefresh).toHaveBeenCalledTimes(2);
   });
 
-  it('clears interval on unmount', () => {
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
-    );
-
+  it('unsubscribes and stops polling on unmount', () => {
+    withRepo();
     const { unmount } = renderHook(() => useAutoRefresh());
     unmount();
-    vi.advanceTimersByTime(30_000);
-
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60_000);
     expect(mockRefresh).not.toHaveBeenCalled();
   });
 
-  it('restarts interval when repoPath changes from null to value', () => {
+  it('re-subscribes when repoPath changes from null to a value', () => {
     let currentRepoPath: string | null = null;
-
     vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: currentRepoPath, refresh: mockRefresh } as any)
+      selector({ repoPath: currentRepoPath, refresh: mockRefresh } as any),
     );
-
     const { rerender } = renderHook(() => useAutoRefresh());
+    expect(onGitChanged).not.toHaveBeenCalled();
 
-    // With null repoPath, advancing 30s should not trigger refresh
-    vi.advanceTimersByTime(30_000);
-    expect(mockRefresh).not.toHaveBeenCalled();
-
-    // Now set repoPath and re-render to trigger effect re-evaluation
     currentRepoPath = '/some/repo';
     rerender();
-
-    // Advance another 30s — interval should now fire once
-    vi.advanceTimersByTime(30_000);
-    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(onGitChanged).toHaveBeenCalledTimes(1);
   });
 
   // P4.25 — auto-refresh must stand aside while a tracked git operation is in
   // flight, so it never interleaves a stale snapshot mid-commit/checkout/merge.
   it('skips refresh while an operation is busy', () => {
-    vi.mocked(useRepoStore).mockImplementation((selector: any) =>
-      selector({ repoPath: '/some/repo', refresh: mockRefresh } as any)
-    );
+    withRepo();
     mockGetState.mockReturnValue({ refresh: mockRefresh, busyOperation: 'commit' } as any);
-
     renderHook(() => useAutoRefresh());
-    vi.advanceTimersByTime(30_000);
 
+    // Event path is guarded.
+    gitChangedCb!();
+    vi.advanceTimersByTime(300);
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    // Fallback poll is guarded too.
+    vi.advanceTimersByTime(60_000);
     expect(mockRefresh).not.toHaveBeenCalled();
   });
 });

@@ -8,10 +8,10 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const TINT: Record<Tint, string> = {
-  green:   'text-green',
-  red:     'text-red',
-  yellow:  'text-yellow',
-  blue:    'text-blue',
+  green: 'text-green',
+  red: 'text-red',
+  yellow: 'text-yellow',
+  blue: 'text-blue',
   subtext: 'text-subtext hover:text-text',
 };
 

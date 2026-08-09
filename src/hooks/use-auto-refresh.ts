@@ -1,17 +1,33 @@
 import { useEffect } from 'react';
 import { useRepoStore } from '../stores/repo-store';
 
+const DEBOUNCE_MS = 300;
+const FALLBACK_POLL_MS = 60_000;
+
 export function useAutoRefresh() {
   const repoPath = useRepoStore(s => s.repoPath);
   useEffect(() => {
     if (!repoPath) return;
-    const id = setInterval(() => {
+
+    const refreshIfIdle = () => {
       const state = useRepoStore.getState();
-      // Stand aside while a tracked operation (commit/checkout/merge/…) runs —
-      // refreshing mid-operation would surface a stale, half-applied snapshot.
       if (state.busyOperation) return;
       state.refresh();
-    }, 30_000);
-    return () => clearInterval(id);
+    };
+
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(refreshIfIdle, DEBOUNCE_MS);
+    };
+
+    const unsubscribe = window.electronAPI?.onGitChanged?.(scheduleRefresh);
+    const pollId = setInterval(refreshIfIdle, FALLBACK_POLL_MS);
+
+    return () => {
+      unsubscribe?.();
+      clearInterval(pollId);
+      if (debounce) clearTimeout(debounce);
+    };
   }, [repoPath]);
 }

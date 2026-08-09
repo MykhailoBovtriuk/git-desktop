@@ -1,11 +1,9 @@
 {
   "title": "Stash",
   "list": "Список",
-  "stash": "Стеш",
   "stashStaged": "Стеш застейджених змін",
   "messagePlaceholder": "Повідомлення стешу…",
   "noStashes": "Немає stash",
-  "stashChanges": "Зберегти в stash",
   "stashed": "Збережено",
   "stashedMessage": "Застейджені зміни збережено в stash",
   "stashFailed": "Помилка stash",
@@ -19,7 +17,7 @@
   "droppedMessage": "stash@{{index}} видалено",
   "dropFailed": "Помилка видалення",
   "dropConfirm": "Видалити stash@{{index}}? Цю дію неможливо скасувати.",
-  "popConflict": "Pop призвів до конфліктів — вирішіть їх у редакторі злиття.",
+  "drop": "Видалити",
   "selectStashHint": "Виберіть stash для перегляду",
   "noStashesYet": "Stash ще немає",
   "actions": {

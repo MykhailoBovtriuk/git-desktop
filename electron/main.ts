@@ -3,23 +3,24 @@ import path from 'path';
 import fs from 'fs/promises';
 import { registerIpcHandlers } from './ipc-handlers';
 import { resolveAppAssetPath } from './app-asset-path';
+import { RepoWatcher } from './repo-watcher';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.mjs':  'application/javascript; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
-  '.svg':  'image/svg+xml',
-  '.png':  'image/png',
-  '.jpg':  'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.gif':  'image/gif',
-  '.ico':  'image/x-icon',
-  '.woff':  'font/woff',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
   '.woff2': 'font/woff2',
-  '.ttf':  'font/ttf',
-  '.otf':  'font/otf',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
 };
 
 // Register custom protocol BEFORE app.ready so it has privileged status.
@@ -40,6 +41,10 @@ protocol.registerSchemesAsPrivileged([
 const iconPath = path.join(__dirname, '../../build/icon.png');
 
 let mainWindow: BrowserWindow | null = null;
+
+const repoWatcher = new RepoWatcher(() => {
+  mainWindow?.webContents.send('repo:changed');
+});
 
 function createWindow() {
   const icon = nativeImage.createFromPath(iconPath);
@@ -76,12 +81,9 @@ function createWindow() {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    // Use app://localhost/... so URL parses with proper host + pathname.
     mainWindow.loadURL('app://localhost/index.html');
   }
 
-  // Desktop app has no legitimate popups or external navigation: deny new
-  // windows outright and block navigation to anything but our own origin.
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (e, url) => {
     const allowed = process.env.VITE_DEV_SERVER_URL
@@ -113,12 +115,13 @@ app.whenReady().then(() => {
     copyright: '© 2026 Mykhailo Bovtriuk',
     website: 'https://github.com/MykhailoBovtriuk/git-desktop',
     iconPath,
-    credits: 'A cross-platform Git desktop client with visual commit graph and conflict resolution.',
+    credits:
+      'A cross-platform Git desktop client with visual commit graph and conflict resolution.',
   });
 
   const distRoot = path.resolve(__dirname, '../../dist');
 
-  protocol.handle('app', async (request) => {
+  protocol.handle('app', async request => {
     const resolved = resolveAppAssetPath(distRoot, request.url);
     if (!resolved.ok) {
       console.error(`[app://] 403 forbidden for ${request.url}`);
@@ -129,11 +132,9 @@ app.whenReady().then(() => {
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
       const data = await fs.readFile(filePath);
-      // Convert Node Buffer to Uint8Array so Response is happy in both Node and Electron contexts.
       const body = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
       return new Response(body, { headers: { 'Content-Type': contentType } });
     } catch (err) {
-      // Directory reads and missing files both land here as 404.
       console.error(`[app://] 404 for ${request.url}:`, err);
       return new Response('Not Found', { status: 404 });
     }
@@ -165,9 +166,7 @@ app.whenReady().then(() => {
     });
   }
 
-  // Register IPC handlers once per app lifecycle, before any window exists.
-  // Doing this inside createWindow() would re-register on macOS `activate`.
-  registerIpcHandlers();
+  registerIpcHandlers({ onRepoOpened: root => repoWatcher.watch(root) });
   createWindow();
 });
 

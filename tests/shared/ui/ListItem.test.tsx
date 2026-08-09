@@ -5,7 +5,11 @@ import { ListItem } from '../../../src/shared/ui/ListItem';
 
 describe('ListItem', () => {
   it('applies selected classes when selected=true', () => {
-    render(<ListItem selected data-testid="li">x</ListItem>);
+    render(
+      <ListItem selected data-testid="li">
+        x
+      </ListItem>,
+    );
     const el = screen.getByTestId('li');
     expect(el).toHaveClass('bg-surface1', 'border-blue');
   });
@@ -18,13 +22,21 @@ describe('ListItem', () => {
 
   it('calls onClick when clicked', () => {
     const onClick = vi.fn();
-    render(<ListItem onClick={onClick} data-testid="li">x</ListItem>);
+    render(
+      <ListItem onClick={onClick} data-testid="li">
+        x
+      </ListItem>,
+    );
     screen.getByTestId('li').click();
     expect(onClick).toHaveBeenCalled();
   });
 
   it('merges extra className', () => {
-    render(<ListItem data-testid="li" className="extra">x</ListItem>);
+    render(
+      <ListItem data-testid="li" className="extra">
+        x
+      </ListItem>,
+    );
     expect(screen.getByTestId('li')).toHaveClass('extra');
   });
 

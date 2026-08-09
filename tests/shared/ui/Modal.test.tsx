@@ -15,22 +15,38 @@ describe('Modal', () => {
   });
 
   it('applies overlay z-index based on level prop', () => {
-    const { container } = render(<Modal title="x" level="low">y</Modal>);
+    const { container } = render(
+      <Modal title="x" level="low">
+        y
+      </Modal>,
+    );
     expect(container.firstChild).toHaveClass('z-40');
   });
 
   it('renders red title when titleVariant=danger', () => {
-    render(<Modal title="Oops" titleVariant="danger">y</Modal>);
+    render(
+      <Modal title="Oops" titleVariant="danger">
+        y
+      </Modal>,
+    );
     expect(screen.getByText('Oops')).toHaveClass('text-red');
   });
 
   it('renders footer slot when provided', () => {
-    render(<Modal title="x" footer={<span>FOOT</span>}>y</Modal>);
+    render(
+      <Modal title="x" footer={<span>FOOT</span>}>
+        y
+      </Modal>,
+    );
     expect(screen.getByText('FOOT')).toBeInTheDocument();
   });
 
   it('renders subtitle when provided', () => {
-    render(<Modal title="T" subtitle="Sub text">y</Modal>);
+    render(
+      <Modal title="T" subtitle="Sub text">
+        y
+      </Modal>,
+    );
     expect(screen.getByText('Sub text')).toBeInTheDocument();
   });
 
@@ -40,7 +56,11 @@ describe('Modal', () => {
   });
 
   it('applies custom width class', () => {
-    render(<Modal title="T" width="w-80">y</Modal>);
+    render(
+      <Modal title="T" width="w-80">
+        y
+      </Modal>,
+    );
     const inner = document.querySelector('.w-80');
     expect(inner).not.toBeNull();
   });
@@ -67,7 +87,11 @@ describe('Modal', () => {
 
   it('calls onClose when Escape is pressed', () => {
     const onClose = vi.fn();
-    render(<Modal title="T" onClose={onClose}>y</Modal>);
+    render(
+      <Modal title="T" onClose={onClose}>
+        y
+      </Modal>,
+    );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -81,5 +105,53 @@ describe('Modal', () => {
     render(<Modal title="T">y</Modal>);
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveFocus();
+  });
+
+  // Focus trap: Tab must not escape to elements behind the overlay.
+  it('wraps Tab from the last focusable element back to the first', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const first = screen.getByText('first');
+    const last = screen.getByText('last');
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('wraps Shift+Tab from the first focusable element back to the last', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const first = screen.getByText('first');
+    const last = screen.getByText('last');
+    first.focus();
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('pulls focus back into the panel when Tab is pressed while focus is outside', () => {
+    render(
+      <>
+        <button>outside</button>
+        <Modal title="T" footer={<button>last</button>}>
+          <button>first</button>
+        </Modal>
+      </>,
+    );
+    const outside = screen.getByText('outside');
+    outside.focus();
+    fireEvent.keyDown(outside, { key: 'Tab' });
+    expect(document.activeElement).toBe(screen.getByText('first'));
   });
 });

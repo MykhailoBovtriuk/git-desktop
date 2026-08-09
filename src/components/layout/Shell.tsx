@@ -10,11 +10,13 @@ import { CommitGraph } from '../graph/CommitGraph';
 import { HistoryView } from '../history/HistoryView';
 import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
+import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 
 function MainContent() {
-  const { activeView } = useUiStore();
+  const activeView = useUiStore(s => s.activeView);
 
   switch (activeView) {
     case 'history':
@@ -31,13 +33,14 @@ function MainContent() {
 }
 
 export function Shell() {
-  const { repoPath } = useRepoStore();
+  const repoPath = useRepoStore(s => s.repoPath);
 
   if (!repoPath) {
     return (
       <>
         <WelcomeScreen />
         <Toast />
+        <ConfirmDialog />
       </>
     );
   }
@@ -45,6 +48,7 @@ export function Shell() {
   return (
     <div className="h-screen flex flex-col bg-base overflow-hidden">
       <Titlebar />
+      <RebaseBanner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-hidden">
@@ -55,6 +59,7 @@ export function Shell() {
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
+      <ConfirmDialog />
     </div>
   );
 }

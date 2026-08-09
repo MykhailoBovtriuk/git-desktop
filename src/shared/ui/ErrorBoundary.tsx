@@ -8,12 +8,6 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// Last-resort recovery UI: if a render throws anywhere below, show a small
-// panel with a reload and a copy-details action instead of a blank window.
-//
-// Deliberately *not* internationalized and dependency-free: this is the fallback
-// for when the app (i18n included) may itself be the thing that broke, so it
-// must not rely on app runtime state.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null };
 

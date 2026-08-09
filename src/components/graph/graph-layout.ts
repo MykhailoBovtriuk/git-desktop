@@ -16,8 +16,14 @@ export interface LayoutCommit {
 }
 
 const COLORS = [
-  '#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8',
-  '#fab387', '#cba6f7', '#94e2d5', '#89dceb',
+  '#89b4fa',
+  '#a6e3a1',
+  '#f9e2af',
+  '#f38ba8',
+  '#fab387',
+  '#cba6f7',
+  '#94e2d5',
+  '#89dceb',
 ];
 
 export function computeLayout(commits: Commit[]): LayoutCommit[] {
@@ -52,6 +58,9 @@ export function computeLayout(commits: Commit[]): LayoutCommit[] {
     const lane = findLane(commit.hash);
 
     while (lanes.length <= lane) lanes.push(null);
+    for (let i = 0; i < lanes.length; i++) {
+      if (lanes[i] === commit.hash) lanes[i] = null;
+    }
     lanes[lane] = null;
 
     const color = COLORS[lane % COLORS.length];
@@ -64,8 +73,13 @@ export function computeLayout(commits: Commit[]): LayoutCommit[] {
 
       let targetLane: number;
       if (p === 0) {
-        targetLane = lane;
-        lanes[lane] = parentHash;
+        const existing = lanes.indexOf(parentHash);
+        if (existing !== -1) {
+          targetLane = existing;
+        } else {
+          targetLane = lane;
+          lanes[lane] = parentHash;
+        }
       } else {
         targetLane = allocateLane(parentHash);
       }

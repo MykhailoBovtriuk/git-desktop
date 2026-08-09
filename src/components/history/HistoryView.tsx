@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/ui-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
@@ -9,8 +10,16 @@ import { TextInput } from '../../shared/ui';
 
 export function HistoryView() {
   const { t } = useTranslation();
-  const { setActiveView, selectedCommit, setSelectedFile, selectedFile, addToast } = useUiStore();
-  const { commits } = useRepoStore();
+  const { setActiveView, selectedCommit, setSelectedFile, selectedFile, addToast } = useUiStore(
+    useShallow(s => ({
+      setActiveView: s.setActiveView,
+      selectedCommit: s.selectedCommit,
+      setSelectedFile: s.setSelectedFile,
+      selectedFile: s.selectedFile,
+      addToast: s.addToast,
+    })),
+  );
+  const { commits } = useRepoStore(useShallow(s => ({ commits: s.commits })));
   const [filter, setFilter] = useState('');
   const [changedFiles, setChangedFiles] = useState<{ path: string; status: string }[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -18,10 +27,13 @@ export function HistoryView() {
   const commit = commits.find(c => c.hash === selectedCommit);
 
   useEffect(() => {
-    if (!selectedCommit) { setChangedFiles([]); return; }
+    setSelectedFile(null);
 
-    // Guard against a stale response overwriting files for a newer selection,
-    // and surface load failures instead of crashing on an unhandled rejection.
+    if (!selectedCommit) {
+      setChangedFiles([]);
+      return;
+    }
+
     let cancelled = false;
     setLoadingFiles(true);
     (async () => {
@@ -42,12 +54,13 @@ export function HistoryView() {
         if (!cancelled) setLoadingFiles(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [selectedCommit, addToast]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCommit, setSelectedFile, addToast, t]);
 
   return (
     <div className="flex h-full">
-      {/* Left panel: commit list */}
       <div className="w-72 border-r border-surface0 flex flex-col shrink-0">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-surface0 shrink-0">
           <button
@@ -67,16 +80,16 @@ export function HistoryView() {
         <CommitList filter={filter} />
       </div>
 
-      {/* Right panel: commit detail + diff */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {commit ? (
           <>
             <div className="px-4 py-3 border-b border-surface0 shrink-0">
               <p className="text-text text-sm font-medium">{commit.message}</p>
-              <p className="text-subtext text-xs mt-1">{commit.author} · {commit.hash}</p>
+              <p className="text-subtext text-xs mt-1">
+                {commit.author} · {commit.hash}
+              </p>
             </div>
             <div className="flex h-full overflow-hidden">
-              {/* Changed files list */}
               <div className="w-48 border-r border-surface0 overflow-y-auto shrink-0">
                 {loadingFiles && changedFiles.length === 0 && (
                   <p className="px-3 py-2 text-subtext text-xs">{t('loading')}</p>
@@ -84,7 +97,7 @@ export function HistoryView() {
                 {changedFiles.map(f => (
                   <button
                     key={f.path}
-                    onClick={() => setSelectedFile(f.path)}
+                    onClick={() => setSelectedFile(f.path, 'commit')}
                     className={`w-full text-left px-3 py-1.5 text-xs border-l-2 transition-colors truncate ${
                       selectedFile === f.path
                         ? 'bg-surface1 border-blue text-text'

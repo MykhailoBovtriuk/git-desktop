@@ -7,7 +7,6 @@ vi.mock('../../src/api/git-api', () => ({
     getLog: vi.fn().mockResolvedValue([]),
     getBranches: vi.fn().mockResolvedValue([{ name: 'main', current: true, remote: false }]),
     getStatus: vi.fn().mockResolvedValue({ staged: [], unstaged: [] }),
-    getAheadBehind: vi.fn().mockResolvedValue({ ahead: 0, behind: 0 }),
     stageFiles: vi.fn().mockResolvedValue(null),
     unstageFiles: vi.fn().mockResolvedValue(null),
     discardChanges: vi.fn().mockResolvedValue(null),
@@ -19,7 +18,14 @@ vi.mock('../../src/api/git-api', () => ({
     checkout: vi.fn().mockResolvedValue(null),
     checkoutForce: vi.fn().mockResolvedValue(null),
     merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
+    isMerging: vi.fn().mockResolvedValue(false),
+    getMergeConflicts: vi.fn().mockResolvedValue([]),
+    getMergeMessage: vi.fn().mockResolvedValue(''),
     rebase: vi.fn().mockResolvedValue(null),
+    isRebasing: vi.fn().mockResolvedValue(false),
+    abortRebase: vi.fn().mockResolvedValue(null),
+    continueRebase: vi.fn().mockResolvedValue(null),
+    applyPatch: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
     getStashList: vi.fn().mockResolvedValue([]),
@@ -97,9 +103,48 @@ describe('repo-store', () => {
   });
 
   it('abortMerge clears mergeState', async () => {
-    useRepoStore.setState({ mergeState: { sourceBranch: 'feature', targetBranch: 'main', conflictingFiles: ['a.ts'] } });
+    useRepoStore.setState({
+      mergeState: { sourceBranch: 'feature', targetBranch: 'main', conflictingFiles: ['a.ts'] },
+    });
     await useRepoStore.getState().abortMerge();
     expect(useRepoStore.getState().mergeState).toBeNull();
+  });
+
+  it('loadStatus reflects an in-progress rebase via isRebasing', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.isRebasing as any).mockResolvedValueOnce(true);
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().loadStatus();
+    expect(useRepoStore.getState().rebasing).toBe(true);
+  });
+
+  it('loadStatus defaults rebasing to false when isRebasing throws', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.isRebasing as any).mockRejectedValueOnce(new Error('old main process'));
+    useRepoStore.setState({ repoPath: '/tmp/test-repo', rebasing: true } as any);
+    await useRepoStore.getState().loadStatus();
+    expect(useRepoStore.getState().rebasing).toBe(false);
+  });
+
+  it('abortRebase calls gitApi.abortRebase', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().abortRebase();
+    expect(gitApi.abortRebase).toHaveBeenCalled();
+  });
+
+  it('continueRebase calls gitApi.continueRebase', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().continueRebase();
+    expect(gitApi.continueRebase).toHaveBeenCalled();
+  });
+
+  it('continueRebase propagates errors (unresolved conflicts)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    (gitApi.continueRebase as any).mockRejectedValueOnce(new Error('needs merge / unmerged files'));
+    await expect(useRepoStore.getState().continueRebase()).rejects.toThrow(/unmerged/);
   });
 
   it('recentRepos is capped at 10 entries', async () => {
@@ -146,6 +191,20 @@ describe('repo-store', () => {
     // Manual stash flow forwards the `staged` flag; StashSection passes `true`,
     // the store action forwards whatever it receives (undefined here).
     expect(gitApi.stashSave).toHaveBeenCalledWith('my work', undefined);
+  });
+
+  it('stageHunk applies its patch to the index (cached)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().stageHunk('PATCH');
+    expect(gitApi.applyPatch).toHaveBeenCalledWith('PATCH', { cached: true });
+  });
+
+  it('unstageHunk applies its patch in reverse', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await useRepoStore.getState().unstageHunk('PATCH');
+    expect(gitApi.applyPatch).toHaveBeenCalledWith('PATCH', { cached: true, reverse: true });
   });
 
   it('stashApply calls gitApi.stashApply with index', async () => {
@@ -196,13 +255,19 @@ describe('repo-store', () => {
     (gitApi.checkout as any).mockRejectedValueOnce(
       new Error('Your local changes to the following files would be overwritten by checkout: a.ts'),
     );
-    await expect(useRepoStore.getState().checkout('feature')).rejects.toBeInstanceOf(CheckoutConflictError);
+    await expect(useRepoStore.getState().checkout('feature')).rejects.toBeInstanceOf(
+      CheckoutConflictError,
+    );
     expect(useRepoStore.getState().checkoutConflict).toEqual({ branch: 'feature' });
   });
 
   it('checkout rethrows non-conflict errors without setting checkoutConflict', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', branches: [], checkoutConflict: null } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      branches: [],
+      checkoutConflict: null,
+    } as any);
     (gitApi.checkout as any).mockRejectedValueOnce(new Error('some other failure'));
     await expect(useRepoStore.getState().checkout('feature')).rejects.toThrow('some other failure');
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
@@ -210,7 +275,10 @@ describe('repo-store', () => {
 
   it('stashAndCheckout stashes then switches', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     await useRepoStore.getState().stashAndCheckout();
     expect(gitApi.stashSave).toHaveBeenCalled();
     expect(gitApi.checkout).toHaveBeenCalledWith('feature');
@@ -219,7 +287,10 @@ describe('repo-store', () => {
 
   it('migrateCheckout stashes, switches, then pops', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     // Empty stack before, a new stash after — proves a stash was created so the
     // pop targets our own stash@{0}, not a pre-existing one.
     (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('newstashsha');
@@ -232,7 +303,10 @@ describe('repo-store', () => {
 
   it('forceCheckout discards changes and switches', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    useRepoStore.setState({ repoPath: '/tmp/test-repo', checkoutConflict: { branch: 'feature' } } as any);
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      checkoutConflict: { branch: 'feature' },
+    } as any);
     await useRepoStore.getState().forceCheckout();
     expect(gitApi.checkoutForce).toHaveBeenCalledWith('feature');
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
@@ -250,7 +324,9 @@ describe('repo-store', () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
     (gitApi.getLog as any).mockRejectedValueOnce(new Error('log boom'));
-    (gitApi.getBranches as any).mockResolvedValueOnce([{ name: 'dev', current: true, remote: false }]);
+    (gitApi.getBranches as any).mockResolvedValueOnce([
+      { name: 'dev', current: true, remote: false },
+    ]);
 
     await expect(useRepoStore.getState().refresh()).resolves.toBeUndefined();
 
@@ -309,11 +385,41 @@ describe('repo-store', () => {
   it('loadMoreCommits appends the next page and requests it at the current offset', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
-    (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(2));
+    // Distinct hashes (h200, h201) so this exercises plain append, not dedupe.
+    const nextPage = [200, 201].map(i => ({
+      hash: `h${i}`,
+      abbreviatedHash: `h${i}`,
+      message: `c${i}`,
+      author: 'a',
+      date: '2024-01-01T00:00:00Z',
+      parents: [],
+      refs: [],
+    }));
+    (gitApi.getLog as any).mockResolvedValueOnce(nextPage);
     await useRepoStore.getState().loadMoreCommits();
     expect(gitApi.getLog).toHaveBeenCalledWith(LOG_PAGE_SIZE + 1, LOG_PAGE_SIZE);
     expect(useRepoStore.getState().commits).toHaveLength(LOG_PAGE_SIZE + 2);
     expect(useRepoStore.getState().hasMoreCommits).toBe(false);
+  });
+
+  // With `git log --all --topo-order --skip=N`, a new commit landing at the top
+  // shifts the window down by one, so the next page overlaps the last loaded
+  // commit. Dedupe-on-append keeps the list free of duplicate keys (React) and
+  // duplicate rows without needing exact offset arithmetic.
+  it('loadMoreCommits drops commits already present (dedupe on append)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const existing = makeCommits(5); // h0..h4
+    useRepoStore.setState({ commits: existing, hasMoreCommits: true } as any);
+    const dupOfLast = { ...existing[4] }; // h4 re-appears at the top of the page
+    const h5 = { ...makeCommits(6)[5] }; // h5
+    const h6 = { ...makeCommits(7)[6] }; // h6
+    (gitApi.getLog as any).mockResolvedValueOnce([dupOfLast, h5, h6]);
+
+    await useRepoStore.getState().loadMoreCommits();
+
+    const hashes = useRepoStore.getState().commits.map((c: any) => c.hash);
+    expect(hashes).toEqual(['h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+    expect(new Set(hashes).size).toBe(hashes.length); // no duplicate keys
   });
 
   it('loadMoreCommits is a no-op when there are no more commits', async () => {
@@ -335,5 +441,161 @@ describe('repo-store', () => {
   it('publishBranch throws when there is no current branch', async () => {
     useRepoStore.setState({ repoPath: '/tmp/test-repo', currentBranch: '' } as any);
     await expect(useRepoStore.getState().publishBranch()).rejects.toThrow();
+  });
+});
+
+const deferred = <T>() => {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
+// Phase 2 — every loader captures a generation token; responses that resolve
+// after the repo was switched or a mutation ran must be discarded.
+describe('repo-store race conditions', () => {
+  beforeEach(() => {
+    useRepoStore.setState({
+      repoPath: null,
+      commits: [],
+      branches: [],
+      currentBranch: '',
+      status: { staged: [], unstaged: [] },
+      mergeState: null,
+      merging: false,
+      checkoutConflict: null,
+      hasMoreCommits: false,
+      loadingMoreCommits: false,
+      busyOperation: null,
+    } as any);
+    vi.clearAllMocks();
+  });
+
+  it('discards log results that arrive after the repo was switched', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const slow = deferred<unknown[]>();
+    (gitApi.getLog as any)
+      .mockImplementationOnce(() => slow.promise) // repo A — hangs
+      .mockResolvedValueOnce(makeCommits(1)); // repo B — fresh
+    const first = useRepoStore.getState().openRepo('/a');
+    await useRepoStore.getState().openRepo('/b');
+    slow.resolve(makeCommits(5)); // stale data for /a lands last
+    await first;
+    expect(useRepoStore.getState().commits).toHaveLength(1);
+  });
+
+  it('discards a refresh snapshot that started before a mutation', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const slow = deferred<unknown>();
+    (gitApi.getStatus as any).mockImplementationOnce(() => slow.promise);
+    const stale = useRepoStore.getState().loadStatus();
+    await useRepoStore.getState().runOperation('commit', async () => {});
+    slow.resolve({
+      staged: [{ path: 'ghost.txt', status: 'M', staged: true }],
+      unstaged: [],
+      ahead: 0,
+      behind: 0,
+    });
+    await stale;
+    expect(useRepoStore.getState().status.staged).toHaveLength(0);
+  });
+
+  it('keeps busyOperation set until every concurrent operation finishes', async () => {
+    const g1 = deferred<void>();
+    const g2 = deferred<void>();
+    const op1 = useRepoStore.getState().runOperation('pull', () => g1.promise);
+    const op2 = useRepoStore.getState().runOperation('checkout', () => g2.promise);
+    g2.resolve();
+    await op2;
+    expect(useRepoStore.getState().busyOperation).not.toBeNull();
+    g1.resolve();
+    await op1;
+    expect(useRepoStore.getState().busyOperation).toBeNull();
+  });
+
+  it('discards a "load more" page when the log was reloaded meanwhile', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
+    const slow = deferred<unknown[]>();
+    (gitApi.getLog as any)
+      .mockImplementationOnce(() => slow.promise) // load more — hangs
+      .mockResolvedValueOnce(makeCommits(3)); // concurrent reload
+    const more = useRepoStore.getState().loadMoreCommits();
+    await useRepoStore.getState().loadLog();
+    slow.resolve(makeCommits(10)); // stale next page for the old offset
+    await more;
+    expect(useRepoStore.getState().commits).toHaveLength(3);
+  });
+
+  it('coalesces concurrent refreshes into one round of loaders', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
+    await Promise.all([useRepoStore.getState().refresh(), useRepoStore.getState().refresh()]);
+    expect(gitApi.getLog).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Phase 2 — after a mutation, everything the mutation may have changed must
+// be reloaded, and failure paths must still leave the UI in sync.
+describe('repo-store state consistency', () => {
+  beforeEach(() => {
+    useRepoStore.setState({
+      repoPath: '/tmp/test-repo',
+      commits: [],
+      branches: [],
+      currentBranch: '',
+      mergeState: null,
+      merging: false,
+      checkoutConflict: null,
+      busyOperation: null,
+    } as any);
+    vi.clearAllMocks();
+  });
+
+  it('fetch reloads branches and log (new remote branches must appear)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    await useRepoStore.getState().fetch();
+    expect(gitApi.getBranches).toHaveBeenCalled();
+    expect(gitApi.getLog).toHaveBeenCalled();
+  });
+
+  it('push reloads the log (remote ref badges must move)', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    await useRepoStore.getState().push();
+    expect(gitApi.getLog).toHaveBeenCalled();
+  });
+
+  it('migrateCheckout refreshes even when the stash pop conflicts', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    useRepoStore.setState({ checkoutConflict: { branch: 'feature' } } as any);
+    (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('sha');
+    (gitApi.stashPop as any).mockRejectedValueOnce(
+      new Error('CONFLICT (content): merge conflict in a.ts'),
+    );
+    await expect(useRepoStore.getState().migrateCheckout()).rejects.toThrow(/CONFLICT/);
+    // The branch DID switch before the pop failed — the UI must reflect it.
+    expect(gitApi.getLog).toHaveBeenCalled();
+    expect(gitApi.getBranches).toHaveBeenCalled();
+  });
+
+  it('openRepo reconstructs mergeState when the repo is mid-merge', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.isMerging as any).mockResolvedValueOnce(true);
+    (gitApi.getMergeConflicts as any).mockResolvedValueOnce(['a.ts']);
+    (gitApi.getMergeMessage as any).mockResolvedValueOnce("Merge branch 'feature' into main");
+    await useRepoStore.getState().openRepo('/tmp/test-repo');
+    expect(useRepoStore.getState().mergeState).toMatchObject({
+      sourceBranch: 'feature',
+      targetBranch: 'main',
+      conflictingFiles: ['a.ts'],
+    });
+  });
+
+  it('openRepo leaves mergeState null when not merging', async () => {
+    await useRepoStore.getState().openRepo('/tmp/test-repo');
+    expect(useRepoStore.getState().mergeState).toBeNull();
   });
 });

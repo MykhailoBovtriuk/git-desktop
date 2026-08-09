@@ -1,4 +1,4 @@
-import type { Commit, Branch, GitStatus, AheadBehind, StashEntry } from '../types';
+import type { Commit, Branch, GitStatus, StashEntry } from '../types';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
@@ -29,14 +29,21 @@ export const gitApi = {
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
   rebase: (branch: string) => invoke<null>('git:rebase', branch),
-  deleteBranch: (branch: string, force?: boolean) => invoke<null>('git:delete-branch', branch, force),
+  isRebasing: () => invoke<boolean>('git:is-rebasing'),
+  abortRebase: () => invoke<null>('git:abort-rebase'),
+  continueRebase: () => invoke<null>('git:continue-rebase'),
+  applyPatch: (patch: string, opts?: { cached?: boolean; reverse?: boolean }) =>
+    invoke<null>('git:apply-patch', patch, opts),
+  deleteBranch: (branch: string, force?: boolean) =>
+    invoke<null>('git:delete-branch', branch, force),
   deleteRemoteBranch: (remote: string, branch: string) =>
     invoke<null>('git:delete-remote-branch', remote, branch),
-  getCommitDiff: (hash: string) => invoke<{ path: string; status: string }[]>('git:get-commit-diff', hash),
-  getFileDiff: (hash: string, filePath: string) => invoke<string>('git:get-file-diff', hash, filePath),
+  getCommitDiff: (hash: string) =>
+    invoke<{ path: string; status: string }[]>('git:get-commit-diff', hash),
+  getFileDiff: (hash: string, filePath: string) =>
+    invoke<string>('git:get-file-diff', hash, filePath),
   getWorkingDiff: (filePath: string) => invoke<string>('git:get-working-diff', filePath),
   getStagedDiff: (filePath: string) => invoke<string>('git:get-staged-diff', filePath),
-  getAheadBehind: () => invoke<AheadBehind>('git:get-ahead-behind'),
   getMergeConflicts: () => invoke<string[]>('git:get-merge-conflicts'),
   abortMerge: () => invoke<null>('git:abort-merge'),
   isMerging: () => invoke<boolean>('git:is-merging'),
@@ -49,10 +56,12 @@ export const gitApi = {
   getConflictSides: (p: string) =>
     invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
   getStashList: () => invoke<StashEntry[]>('git:get-stash-list'),
-  stashSave: (message?: string, staged?: boolean) => invoke<null>('git:stash-save', message, staged),
+  stashSave: (message?: string, staged?: boolean) =>
+    invoke<null>('git:stash-save', message, staged),
   getStashTop: () => invoke<string | null>('git:get-stash-top'),
   stashApply: (index: number) => invoke<null>('git:stash-apply', index),
   stashPop: (index: number) => invoke<null>('git:stash-pop', index),
   stashDrop: (index: number) => invoke<null>('git:stash-drop', index),
   getStashDiff: (index: number) => invoke<string>('git:get-stash-diff', index),
+  onGitChanged: (cb: () => void) => window.electronAPI.onGitChanged(cb),
 };

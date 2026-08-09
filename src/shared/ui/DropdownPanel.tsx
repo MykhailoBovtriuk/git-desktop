@@ -10,7 +10,7 @@ export interface DropdownPanelProps extends HTMLAttributes<HTMLDivElement> {
 
 const ALIGN: Record<Align, string> = {
   center: 'left-1/2 -translate-x-1/2',
-  right:  'right-0',
+  right: 'right-0',
 };
 
 export function DropdownPanel({

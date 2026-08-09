@@ -1,8 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Allowlist of IPC channels the renderer may invoke. This reduces the attack
-// surface of the generic `invoke` bridge — it does NOT replace argument
-// validation in the main process, which remains the source of truth.
 const ALLOWED_CHANNELS = new Set<string>([
   'git:open-repo',
   'git:open-dialog',
@@ -21,13 +18,16 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:checkout-force',
   'git:merge',
   'git:rebase',
+  'git:is-rebasing',
+  'git:abort-rebase',
+  'git:continue-rebase',
+  'git:apply-patch',
   'git:delete-branch',
   'git:delete-remote-branch',
   'git:get-commit-diff',
   'git:get-file-diff',
   'git:get-working-diff',
   'git:get-staged-diff',
-  'git:get-ahead-behind',
   'git:get-merge-conflicts',
   'git:abort-merge',
   'git:is-merging',
@@ -53,6 +53,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       throw new Error(`Blocked IPC channel: ${channel}`);
     }
     return ipcRenderer.invoke(channel, ...args);
+  },
+  onGitChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('repo:changed', listener);
+    return () => ipcRenderer.removeListener('repo:changed', listener);
   },
   platform: process.platform,
 });

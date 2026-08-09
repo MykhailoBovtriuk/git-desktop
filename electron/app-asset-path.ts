@@ -1,15 +1,8 @@
 import path from 'path';
 
 export type AppAssetResolution =
-  | { ok: true; filePath: string }
-  | { ok: false; reason: 'forbidden' };
+  { ok: true; filePath: string } | { ok: false; reason: 'forbidden' };
 
-/**
- * Resolve an `app://` request URL to an absolute path inside `distRoot`,
- * rejecting anything that escapes the root (path traversal, absolute paths).
- *
- * Pure function with no Electron/fs dependency so it can be unit-tested.
- */
 export function resolveAppAssetPath(distRoot: string, requestUrl: string): AppAssetResolution {
   const root = path.resolve(distRoot);
 

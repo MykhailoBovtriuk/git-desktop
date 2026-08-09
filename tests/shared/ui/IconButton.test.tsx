@@ -5,22 +5,38 @@ import { IconButton } from '../../../src/shared/ui/IconButton';
 
 describe('IconButton', () => {
   it('applies green tint', () => {
-    render(<IconButton tint="green" aria-label="stage">+</IconButton>);
+    render(
+      <IconButton tint="green" aria-label="stage">
+        +
+      </IconButton>,
+    );
     expect(screen.getByRole('button')).toHaveClass('text-green');
   });
 
   it('applies red tint', () => {
-    render(<IconButton tint="red" aria-label="discard">x</IconButton>);
+    render(
+      <IconButton tint="red" aria-label="discard">
+        x
+      </IconButton>,
+    );
     expect(screen.getByRole('button')).toHaveClass('text-red');
   });
 
   it('applies hover background', () => {
-    render(<IconButton tint="yellow" aria-label="unstage">-</IconButton>);
+    render(
+      <IconButton tint="yellow" aria-label="unstage">
+        -
+      </IconButton>,
+    );
     expect(screen.getByRole('button')).toHaveClass('hover:bg-surface1');
   });
 
   it('applies blue tint', () => {
-    render(<IconButton tint="blue" aria-label="x">i</IconButton>);
+    render(
+      <IconButton tint="blue" aria-label="x">
+        i
+      </IconButton>,
+    );
     expect(screen.getByRole('button')).toHaveClass('text-blue');
   });
 
@@ -30,7 +46,11 @@ describe('IconButton', () => {
   });
 
   it('merges extra className', () => {
-    render(<IconButton tint="green" aria-label="x" className="extra">i</IconButton>);
+    render(
+      <IconButton tint="green" aria-label="x" className="extra">
+        i
+      </IconButton>,
+    );
     const btn = screen.getByRole('button');
     expect(btn).toHaveClass('text-green');
     expect(btn).toHaveClass('extra');

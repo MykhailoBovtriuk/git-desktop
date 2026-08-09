@@ -1,12 +1,22 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
 
 export function MergeConflictModal() {
   const { t } = useTranslation('merge');
-  const { mergeState, abortMerge } = useRepoStore();
-  const { activeView, setActiveView, setActiveMergeFile, addToast } = useUiStore();
+  const { mergeState, abortMerge } = useRepoStore(
+    useShallow(s => ({ mergeState: s.mergeState, abortMerge: s.abortMerge })),
+  );
+  const { activeView, setActiveView, setActiveMergeFile, addToast } = useUiStore(
+    useShallow(s => ({
+      activeView: s.activeView,
+      setActiveView: s.setActiveView,
+      setActiveMergeFile: s.setActiveMergeFile,
+      addToast: s.addToast,
+    })),
+  );
 
   if (!mergeState || activeView === 'merge-editor') return null;
 
@@ -15,7 +25,11 @@ export function MergeConflictModal() {
       await abortMerge();
       addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
     } catch (err: unknown) {
-      addToast({ variant: 'error', title: t('abortFailed'), message: err instanceof Error ? err.message : String(err) });
+      addToast({
+        variant: 'error',
+        title: t('abortFailed'),
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 
@@ -32,8 +46,12 @@ export function MergeConflictModal() {
       subtitle={t('merging', { source: mergeState.sourceBranch, target: mergeState.targetBranch })}
       footer={
         <>
-          <Button variant="secondary" onClick={handleAbort}>{t('abortMerge')}</Button>
-          <Button variant="primary" onClick={handleResolve}>{t('resolveConflicts')}</Button>
+          <Button variant="secondary" onClick={handleAbort}>
+            {t('abortMerge')}
+          </Button>
+          <Button variant="primary" onClick={handleResolve}>
+            {t('resolveConflicts')}
+          </Button>
         </>
       }
     >
@@ -42,7 +60,9 @@ export function MergeConflictModal() {
       </p>
       <div className="bg-mantle rounded-lg p-2 mb-4 max-h-40 overflow-y-auto">
         {mergeState.conflictingFiles.map(f => (
-          <p key={f} className="text-red text-xs py-0.5">{f}</p>
+          <p key={f} className="text-red text-xs py-0.5">
+            {f}
+          </p>
         ))}
       </div>
     </Modal>

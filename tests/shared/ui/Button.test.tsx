@@ -52,7 +52,11 @@ describe('Button', () => {
   });
 
   it('merges extra className with variant classes', () => {
-    render(<Button variant="primary" className="my-custom">x</Button>);
+    render(
+      <Button variant="primary" className="my-custom">
+        x
+      </Button>,
+    );
     const btn = screen.getByRole('button');
     expect(btn).toHaveClass('bg-blue');
     expect(btn).toHaveClass('my-custom');

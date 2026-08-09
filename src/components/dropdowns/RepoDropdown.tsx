@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { useGitAction } from '../../hooks/use-git-action';
 import { DropdownPanel } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
 
@@ -9,17 +11,25 @@ interface RepoDropdownProps {
 
 export function RepoDropdown({ onClose }: RepoDropdownProps) {
   const { t } = useTranslation('repo');
-  const { repoPath, recentRepos, openRepo, openDialog } = useRepoStore();
+  const { repoPath, recentRepos, openRepo, openDialog } = useRepoStore(
+    useShallow(s => ({
+      repoPath: s.repoPath,
+      recentRepos: s.recentRepos,
+      openRepo: s.openRepo,
+      openDialog: s.openDialog,
+    })),
+  );
+  const runAction = useGitAction();
   const repos = recentRepos.filter(Boolean);
 
   const handleOpen = async (path: string) => {
     onClose();
-    await openRepo(path);
+    await runAction(() => openRepo(path), { title: t('addRepository') });
   };
 
   const handleAdd = async () => {
     onClose();
-    await openDialog();
+    await runAction(() => openDialog(), { title: t('addRepository') });
   };
 
   return (

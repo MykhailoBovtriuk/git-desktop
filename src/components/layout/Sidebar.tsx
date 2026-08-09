@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { Accordion } from '../../shared/ui';
+import { Accordion, Switch } from '../../shared/ui';
 import { ChangesSection } from '../staging/ChangesSection';
 import { StashSection } from '../stash/StashSection';
 import { getLocalStorage } from '../../lib/storage';
@@ -17,8 +18,12 @@ function loadWidth(): number {
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { status, stashes } = useRepoStore();
-  const { activeView, setActiveView } = useUiStore();
+  const { status, stashes } = useRepoStore(
+    useShallow(s => ({ status: s.status, stashes: s.stashes })),
+  );
+  const { activeView, setActiveView } = useUiStore(
+    useShallow(s => ({ activeView: s.activeView, setActiveView: s.setActiveView })),
+  );
 
   const [width, setWidth] = useState(loadWidth);
 
@@ -30,7 +35,10 @@ export function Sidebar() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
-      setWidth(w => { getLocalStorage().setItem('sidebar-width', String(w)); return w; });
+      setWidth(w => {
+        getLocalStorage().setItem('sidebar-width', String(w));
+        return w;
+      });
     };
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);
@@ -46,9 +54,9 @@ export function Sidebar() {
       className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
       style={{ width }}
     >
-
-      {/* Changes accordion — flex-1 when stash is closed */}
-      <div className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}>
+      <div
+        className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}
+      >
         <Accordion
           title={t('staging:changes')}
           badge={totalChanges}
@@ -60,27 +68,27 @@ export function Sidebar() {
       </div>
 
       {/* Stash accordion — flex-1 when open */}
-      <div className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}>
+      <div
+        className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}
+      >
         <Accordion
           title={t('stash:title')}
-          badge={!stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined}
+          badge={
+            !stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined
+          }
           open={stashOpen}
           indicateOpen={stashOpen && !listMode}
           onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
-          action={listMode ? (
-            <button
-              type="button"
-              aria-label={t('stash:list')}
-              aria-pressed
-              onClick={() => setActiveView('stash-create')}
-              className="flex items-center gap-1.5 px-1 py-0.5 hover:opacity-80 transition-colors"
-            >
-              <span className="relative inline-flex h-3.5 w-6 items-center rounded-full bg-blue transition-colors duration-200">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm translate-x-3 transition-transform duration-200" />
-              </span>
-              <span className="text-xs text-subtext">{t('stash:list')}</span>
-            </button>
-          ) : undefined}
+          action={
+            listMode ? (
+              <Switch
+                checked
+                onToggle={() => setActiveView('stash-create')}
+                label={t('stash:list')}
+                className="px-1 py-0.5"
+              />
+            ) : undefined
+          }
         >
           <StashSection />
         </Accordion>

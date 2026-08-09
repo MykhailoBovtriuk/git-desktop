@@ -1,11 +1,9 @@
 {
   "title": "Stash",
   "list": "List",
-  "stash": "Stash",
   "stashStaged": "Stash staged changes",
   "messagePlaceholder": "Stash message…",
   "noStashes": "No stashes",
-  "stashChanges": "Stash Changes",
   "stashed": "Stashed",
   "stashedMessage": "Staged changes saved to stash",
   "stashFailed": "Stash failed",
@@ -19,7 +17,7 @@
   "droppedMessage": "stash@{{index}} deleted",
   "dropFailed": "Drop failed",
   "dropConfirm": "Drop stash@{{index}}? This cannot be undone.",
-  "popConflict": "Pop produced conflicts — resolve them in the merge editor.",
+  "drop": "Drop",
   "selectStashHint": "Select a stash to preview",
   "noStashesYet": "No stashes yet",
   "actions": {

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
@@ -11,9 +12,18 @@ const LANE_W = 20;
 const GRAPH_PAD = 10;
 
 export function CommitGraph() {
-  const { t } = useTranslation('graph');
-  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore();
-  const { selectedCommit, setSelectedCommit } = useUiStore();
+  const { t, i18n } = useTranslation('graph');
+  const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
+    useShallow(s => ({
+      commits: s.commits,
+      hasMoreCommits: s.hasMoreCommits,
+      loadingMoreCommits: s.loadingMoreCommits,
+      loadMoreCommits: s.loadMoreCommits,
+    })),
+  );
+  const { selectedCommit, setSelectedCommit } = useUiStore(
+    useShallow(s => ({ selectedCommit: s.selectedCommit, setSelectedCommit: s.setSelectedCommit })),
+  );
   const layout = useMemo(() => computeLayout(commits), [commits]);
 
   if (commits.length === 0) {
@@ -31,12 +41,7 @@ export function CommitGraph() {
   return (
     <div className="h-full overflow-y-auto overflow-x-auto bg-base select-none">
       <div className="relative" style={{ minWidth: graphW + 400 }}>
-        {/* SVG graph lines and circles */}
-        <svg
-          className="absolute top-0 left-0 pointer-events-none"
-          width={graphW}
-          height={totalH}
-        >
+        <svg className="absolute top-0 left-0 pointer-events-none" width={graphW} height={totalH}>
           {layout.map(({ lane, row, color, edges }) => (
             <g key={row}>
               {edges.map((edge, i) => {
@@ -67,7 +72,7 @@ export function CommitGraph() {
         </svg>
 
         {/* Commit rows with text */}
-        {layout.map(({ commit, lane, row }) => {
+        {layout.map(({ commit }) => {
           const isSelected = selectedCommit === commit.hash;
           return (
             <div
@@ -77,10 +82,10 @@ export function CommitGraph() {
               style={{ paddingLeft: graphW }}
             >
               <div className="flex items-center gap-2 min-w-0 w-full pl-2">
-                <span className="text-subtext font-mono text-xs shrink-0">{commit.abbreviatedHash}</span>
-                <span className="text-text text-xs truncate flex-1">
-                  {commit.message}
+                <span className="text-subtext font-mono text-xs shrink-0">
+                  {commit.abbreviatedHash}
                 </span>
+                <span className="text-text text-xs truncate flex-1">{commit.message}</span>
                 <div className="flex items-center gap-1 shrink-0">
                   {commit.refs.slice(0, 3).map(ref => (
                     <Badge key={ref} variant="ref">
@@ -88,7 +93,9 @@ export function CommitGraph() {
                     </Badge>
                   ))}
                 </div>
-                <span className="text-subtext text-xs shrink-0">{relativeTime(commit.date)}</span>
+                <span className="text-subtext text-xs shrink-0">
+                  {relativeTime(commit.date, i18n.language)}
+                </span>
               </div>
             </div>
           );

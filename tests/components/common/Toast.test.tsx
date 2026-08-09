@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Toast } from '../../../src/components/common/Toast';
 import { useUiStore } from '../../../src/stores/ui-store';
@@ -7,7 +7,12 @@ import { useUiStore } from '../../../src/stores/ui-store';
 vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 
 type MockState = {
-  toasts: Array<{ id: string; variant: 'success' | 'error' | 'info'; title: string; message: string }>;
+  toasts: Array<{
+    id: string;
+    variant: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+  }>;
   removeToast: ReturnType<typeof vi.fn>;
 };
 
@@ -58,7 +63,9 @@ describe('Toast', () => {
     });
     render(<Toast />);
     expect(mockRemoveToast).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(5000); });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(mockRemoveToast).toHaveBeenCalledWith('toast-99');
     vi.useRealTimers();
   });

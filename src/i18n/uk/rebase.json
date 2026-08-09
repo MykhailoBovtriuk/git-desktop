@@ -1,0 +1,12 @@
+{
+  "rebaseConflict": "Конфлікт перебазування",
+  "rebasing": "Триває перебазування — вирішіть конфлікти, потім продовжте",
+  "abortRebase": "Перервати перебазування",
+  "continueRebase": "Продовжити перебазування",
+  "conflictingFilesCount_one": "{{count}} конфліктний файл:",
+  "conflictingFilesCount_few": "{{count}} конфліктні файли:",
+  "conflictingFilesCount_many": "{{count}} конфліктних файлів:",
+  "conflictingFilesCount_other": "{{count}} конфліктного файлу:",
+  "rebaseAborted": "Перебазування перервано",
+  "rebaseContinued": "Перебазування продовжено"
+}

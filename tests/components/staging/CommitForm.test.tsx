@@ -6,9 +6,14 @@ import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  // error.unknown is empty in the real footer namespace — unclassified errors
+  // must fall back to the raw git message.
+  useTranslation: () => ({ t: (k: string) => (k === 'error.unknown' ? '' : k) }),
 }));
-vi.mock('../../../src/stores/repo-store', () => ({ useRepoStore: vi.fn() }));
+vi.mock('../../../src/stores/repo-store', () => ({
+  useRepoStore: vi.fn(),
+  CheckoutConflictError: class CheckoutConflictError extends Error {},
+}));
 vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 
 function setupMocks({
@@ -21,14 +26,15 @@ function setupMocks({
   const mockCommit = commitImpl;
   const mockAddToast = vi.fn();
 
-  vi.mocked(useRepoStore).mockReturnValue({
+  // Selector-aware: CommitForm and useGitAction both select from the stores.
+  const repoState = {
     commit: mockCommit,
-    status: { staged, unstaged: [] },
-  } as any);
-
-  vi.mocked(useUiStore).mockReturnValue({
-    addToast: mockAddToast,
-  } as any);
+    status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
+    merging: false,
+  };
+  const uiState = { addToast: mockAddToast };
+  vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
+  vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 
   return { mockCommit, mockAddToast };
 }

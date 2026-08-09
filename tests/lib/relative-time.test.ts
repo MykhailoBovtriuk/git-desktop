@@ -20,23 +20,23 @@ describe('relativeTime', () => {
 
   // ── future / boundary ────────────────────────────────────────────────────
 
-  it('returns "just now" for a future date (diff < 0)', () => {
+  it('returns "now" for a future date (diff < 0)', () => {
     const future = new Date(FROZEN_NOW + 5_000).toISOString();
-    expect(relativeTime(future)).toBe('just now');
+    expect(relativeTime(future)).toBe('now');
   });
 
-  it('returns "just now" for exactly 0 ms ago', () => {
-    expect(relativeTime(msAgo(0))).toBe('just now');
+  it('returns "now" for exactly 0 ms ago', () => {
+    expect(relativeTime(msAgo(0))).toBe('now');
   });
 
-  // ── secs < 60 → "just now" ───────────────────────────────────────────────
+  // ── secs < 60 → "now" ────────────────────────────────────────────────────
 
-  it('returns "just now" for 30 seconds ago', () => {
-    expect(relativeTime(msAgo(30_000))).toBe('just now');
+  it('returns "now" for 30 seconds ago', () => {
+    expect(relativeTime(msAgo(30_000))).toBe('now');
   });
 
-  it('returns "just now" for 59 seconds ago', () => {
-    expect(relativeTime(msAgo(59_000))).toBe('just now');
+  it('returns "now" for 59 seconds ago', () => {
+    expect(relativeTime(msAgo(59_000))).toBe('now');
   });
 
   // ── mins < 60 → Xm ago ──────────────────────────────────────────────────
@@ -71,8 +71,8 @@ describe('relativeTime', () => {
 
   // ── days < 30 → Xd ago ──────────────────────────────────────────────────
 
-  it('returns "1d ago" for exactly 24 hours ago', () => {
-    expect(relativeTime(msAgo(24 * 60 * 60_000))).toBe('1d ago');
+  it('returns "yesterday" for exactly 24 hours ago (numeric: auto)', () => {
+    expect(relativeTime(msAgo(24 * 60 * 60_000))).toBe('yesterday');
   });
 
   it('returns "29d ago" for 29 days ago', () => {
@@ -81,9 +81,9 @@ describe('relativeTime', () => {
 
   // ── months < 12 → Xmo ago ───────────────────────────────────────────────
 
-  it('returns "1mo ago" for exactly 30 days ago', () => {
-    // days=30, months=floor(30/30)=1 → months < 12 → "1mo ago"
-    expect(relativeTime(msAgo(30 * 24 * 60 * 60_000))).toBe('1mo ago');
+  it('returns "last mo." for exactly 30 days ago (numeric: auto)', () => {
+    // days=30, months=floor(30/30)=1 → months < 12
+    expect(relativeTime(msAgo(30 * 24 * 60 * 60_000))).toBe('last mo.');
   });
 
   it('returns "11mo ago" for 335 days ago', () => {
@@ -93,13 +93,32 @@ describe('relativeTime', () => {
 
   // ── years ────────────────────────────────────────────────────────────────
 
-  it('returns "1y ago" for exactly 365 days ago', () => {
-    // days=365, months=floor(365/30)=12 → months < 12 is FALSE → floor(12/12)=1 → "1y ago"
-    expect(relativeTime(msAgo(365 * 24 * 60 * 60_000))).toBe('1y ago');
+  it('returns "last yr." for exactly 365 days ago (numeric: auto)', () => {
+    // days=365, months=floor(365/30)=12 → months < 12 is FALSE → floor(12/12)=1
+    expect(relativeTime(msAgo(365 * 24 * 60 * 60_000))).toBe('last yr.');
   });
 
   it('returns "2y ago" for 730 days ago', () => {
     // days=730, months=floor(730/30)=24 → floor(24/12)=2 → "2y ago"
     expect(relativeTime(msAgo(730 * 24 * 60 * 60_000))).toBe('2y ago');
+  });
+
+  // ── localization ─────────────────────────────────────────────────────────
+  // Regression: output was hardcoded English ("3m ago") even in the uk locale.
+
+  it('localizes minutes for uk', () => {
+    expect(relativeTime(msAgo(60_000), 'uk')).toBe('1 хв тому');
+  });
+
+  it('localizes "now" for uk', () => {
+    expect(relativeTime(msAgo(30_000), 'uk')).toBe('зараз');
+  });
+
+  it('localizes months for uk', () => {
+    expect(relativeTime(msAgo(90 * 24 * 60 * 60_000), 'uk')).toBe('3 міс. тому');
+  });
+
+  it('falls back to en for an unknown locale tag', () => {
+    expect(relativeTime(msAgo(60_000), 'xx-INVALID')).toBe('1m ago');
   });
 });

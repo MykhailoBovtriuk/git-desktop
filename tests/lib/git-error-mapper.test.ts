@@ -9,7 +9,9 @@ describe('classifyGitError', () => {
   });
 
   it('classifies a missing username prompt as auth', () => {
-    expect(classifyGitError('fatal: could not read Username for https://github.com').kind).toBe('auth');
+    expect(classifyGitError('fatal: could not read Username for https://github.com').kind).toBe(
+      'auth',
+    );
   });
 
   it('classifies an SSH permission denial as auth', () => {
@@ -17,7 +19,9 @@ describe('classifyGitError', () => {
   });
 
   it('treats an HTTP 403 as auth even though it mentions "unable to access"', () => {
-    const r = classifyGitError("fatal: unable to access 'https://x/': The requested URL returned error: 403");
+    const r = classifyGitError(
+      "fatal: unable to access 'https://x/': The requested URL returned error: 403",
+    );
     expect(r.kind).toBe('auth');
   });
 
@@ -28,27 +32,38 @@ describe('classifyGitError', () => {
   });
 
   it('classifies "no tracking information" as noUpstream', () => {
-    expect(classifyGitError('There is no tracking information for the current branch.').kind).toBe('noUpstream');
+    expect(classifyGitError('There is no tracking information for the current branch.').kind).toBe(
+      'noUpstream',
+    );
   });
 
   it('classifies a merge conflict as conflict', () => {
-    expect(classifyGitError('CONFLICT (content): Merge conflict in src/a.ts').kind).toBe('conflict');
-    expect(classifyGitError('Automatic merge failed; fix conflicts and then commit.').kind).toBe('conflict');
+    expect(classifyGitError('CONFLICT (content): Merge conflict in src/a.ts').kind).toBe(
+      'conflict',
+    );
+    expect(classifyGitError('Automatic merge failed; fix conflicts and then commit.').kind).toBe(
+      'conflict',
+    );
   });
 
   it('classifies uncommitted-changes-would-be-overwritten as uncommitted', () => {
     expect(
-      classifyGitError('Your local changes to the following files would be overwritten by checkout:').kind,
+      classifyGitError(
+        'Your local changes to the following files would be overwritten by checkout:',
+      ).kind,
     ).toBe('uncommitted');
   });
 
   it('classifies "not a git repository" as notRepo', () => {
-    expect(classifyGitError('fatal: not a git repository (or any parent up to /): .git').kind).toBe('notRepo');
+    expect(classifyGitError('fatal: not a git repository (or any parent up to /): .git').kind).toBe(
+      'notRepo',
+    );
   });
 
   it('classifies an unreachable host as network', () => {
     expect(
-      classifyGitError("fatal: unable to access 'https://x/': Could not resolve host: github.com").kind,
+      classifyGitError("fatal: unable to access 'https://x/': Could not resolve host: github.com")
+        .kind,
     ).toBe('network');
   });
 

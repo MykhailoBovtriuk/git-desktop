@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { StashEntry } from '../../types';
 import { relativeTime } from '../../lib/relative-time';
+import { useUiStore } from '../../stores/ui-store';
 import { ListItem, IconButton } from '../../shared/ui';
 
 interface StashListProps {
@@ -13,13 +14,24 @@ interface StashListProps {
 }
 
 export function StashList({
-  stashes, selectedIndex,
-  onSelect, onApply, onPop, onDrop,
+  stashes,
+  selectedIndex,
+  onSelect,
+  onApply,
+  onPop,
+  onDrop,
 }: StashListProps) {
-  const { t } = useTranslation('stash');
+  const { t, i18n } = useTranslation('stash');
+  const requestConfirm = useUiStore(s => s.requestConfirm);
 
-  const handleDrop = (index: number) => {
-    if (window.confirm(t('dropConfirm', { index }))) onDrop(index);
+  const handleDrop = async (index: number) => {
+    const ok = await requestConfirm({
+      title: t('drop'),
+      message: t('dropConfirm', { index }),
+      confirmLabel: t('drop'),
+      danger: true,
+    });
+    if (ok) onDrop(index);
   };
 
   return (
@@ -39,13 +51,40 @@ export function StashList({
               <div className="text-text text-xs truncate">{s.message}</div>
               <p className="text-subtext text-xs mt-0.5">
                 {s.branch && <>{s.branch} · </>}
-                {relativeTime(s.date)}
+                {relativeTime(s.date, i18n.language)}
               </p>
             </div>
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <IconButton tint="blue" title={t('actions.apply')} onClick={e => { e.stopPropagation(); onApply(s.index); }}>📋</IconButton>
-              <IconButton tint="green" title={t('actions.pop')} onClick={e => { e.stopPropagation(); onPop(s.index); }}>↩</IconButton>
-              <IconButton tint="red" title={t('actions.drop')} onClick={e => { e.stopPropagation(); handleDrop(s.index); }}>✕</IconButton>
+              <IconButton
+                tint="blue"
+                title={t('actions.apply')}
+                onClick={e => {
+                  e.stopPropagation();
+                  onApply(s.index);
+                }}
+              >
+                📋
+              </IconButton>
+              <IconButton
+                tint="green"
+                title={t('actions.pop')}
+                onClick={e => {
+                  e.stopPropagation();
+                  onPop(s.index);
+                }}
+              >
+                ↩
+              </IconButton>
+              <IconButton
+                tint="red"
+                title={t('actions.drop')}
+                onClick={e => {
+                  e.stopPropagation();
+                  handleDrop(s.index);
+                }}
+              >
+                ✕
+              </IconButton>
             </div>
           </div>
         </ListItem>
