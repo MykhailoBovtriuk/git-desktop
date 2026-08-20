@@ -10,6 +10,8 @@ A cross-platform Git desktop client with a visual commit graph, side-by-side con
 
 ## 📦 For Users — Install the app
 
+**[⬇ Download page](https://mykhailobovtriuk.github.io/git-desktop/)** — picks the right file for your OS. Or grab any build straight from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
+
 ### Requirements
 
 - **Git must be installed on your system** and available in your `PATH`.
@@ -21,7 +23,7 @@ A cross-platform Git desktop client with a visual commit graph, side-by-side con
 
 #### Apple Silicon (M1 / M2 / M3 / M4)
 
-1. Download **`Git Desktop-1.0.2-arm64.dmg`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
+1. Download **`Git-Desktop-arm64.dmg`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
 2. Double-click the `.dmg` file to mount it.
 3. Drag **Git Desktop.app** into the **Applications** folder.
 4. Eject the disk image (right-click → Eject).
@@ -29,7 +31,7 @@ A cross-platform Git desktop client with a visual commit graph, side-by-side con
 
 #### Intel Macs
 
-Same steps as above, but download **`Git Desktop-1.0.2-x64.dmg`** instead.
+Same steps as above, but download **`Git-Desktop-x64.dmg`** instead.
 
 > **⚠️ "App is from an unidentified developer" warning on first launch**
 >
@@ -45,14 +47,18 @@ Same steps as above, but download **`Git Desktop-1.0.2-x64.dmg`** instead.
 
 ### Windows 10 / 11
 
-1. Download **`Git Desktop-1.0.2-x64.zip`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
-2. Right-click the zip → **Extract All** → choose a folder like `C:\Program Files\Git Desktop` (or anywhere convenient).
-3. Open the extracted folder and double-click **`Git Desktop.exe`**.
-4. Optional: pin to taskbar — right-click the running app icon in the taskbar → **Pin to taskbar**.
+1. Download the installer for your CPU from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases):
+   - **`Git-Desktop-Setup-x64.exe`** — regular 64-bit PCs
+   - **`Git-Desktop-Setup-arm64.exe`** — Windows on ARM (Snapdragon, Surface Pro X)
+   - **`Git-Desktop-Setup-ia32.exe`** — legacy 32-bit Windows 10
+2. Run the installer and follow the wizard — you can choose the install folder.
+3. Launch **Git Desktop** from the Start menu or the desktop shortcut.
+
+> Installs per user, so no administrator rights are required.
 
 > **⚠️ Windows SmartScreen warning on first launch**
 >
-> SmartScreen will say *"Windows protected your PC"* because the executable isn't code-signed.
+> SmartScreen will say *"Windows protected your PC"* because the installer isn't code-signed.
 >
 > 1. Click **More info**.
 > 2. Click **Run anyway**.
@@ -61,17 +67,22 @@ Same steps as above, but download **`Git Desktop-1.0.2-x64.dmg`** instead.
 
 ### Linux
 
-1. Download **`Git Desktop-1.0.2-x86_64.AppImage`** from [Releases](https://github.com/MykhailoBovtriuk/git-desktop/releases).
-2. Make it executable:
-   ```bash
-   chmod +x "Git Desktop-1.0.2-x86_64.AppImage"
-   ```
-3. Run it:
-   ```bash
-   ./"Git Desktop-1.0.2-x86_64.AppImage"
-   ```
+**AppImage** — works on any distro, no installation:
 
-> AppImages are self-contained — no installation needed. To integrate with your app menu, use a tool like [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
+```bash
+chmod +x git-desktop-x86_64.AppImage
+./git-desktop-x86_64.AppImage
+```
+
+> To integrate an AppImage with your app menu, use a tool like [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
+
+**Debian / Ubuntu** — installs with a menu entry:
+
+```bash
+sudo dpkg -i git-desktop-amd64.deb
+```
+
+`arm64` builds of both formats are published alongside the x64 ones.
 
 ---
 
@@ -135,10 +146,14 @@ Output goes to **`release/`**:
 
 | Platform | Output file | Size (approx) |
 |---|---|---|
-| macOS Apple Silicon | `release/Git Desktop-1.0.2-arm64.dmg` | ~110 MB |
-| macOS Intel | `release/Git Desktop-1.0.2-x64.dmg` | ~115 MB |
-| Windows | `release/Git Desktop-1.0.2-x64.zip` | ~620 MB |
-| Linux | `release/Git Desktop-1.0.2-x86_64.AppImage` | ~130 MB |
+| macOS Apple Silicon | `release/Git-Desktop-arm64.dmg` | ~110 MB |
+| macOS Intel | `release/Git-Desktop-x64.dmg` | ~115 MB |
+| Windows | `release/Git-Desktop-Setup-x64.exe` | ~95 MB |
+| Linux | `release/git-desktop-x86_64.AppImage` | ~130 MB |
+
+Artifact names deliberately carry **no version number** — that keeps
+`releases/latest/download/<name>` URLs valid across releases, so the download
+page never needs editing.
 
 #### Building for a specific platform / architecture
 
@@ -154,23 +169,36 @@ npm run build:electron -- --win --x64
 npm run build:electron -- --linux --x64
 ```
 
-#### Cross-platform building (build for OS X from OS Y)
+#### Releasing all platforms — GitHub Actions
 
-| Building on... | macOS DMG | Windows ZIP | Windows EXE installer | Linux AppImage |
-|---|:---:|:---:|:---:|:---:|
-| **macOS** | ✅ | ✅ | ⚠️ needs [Wine](https://www.winehq.org/) | ✅ |
-| **Windows** | ❌ | ✅ | ✅ | ✅ via WSL |
-| **Linux** | ❌ | ✅ | ⚠️ needs Wine | ✅ |
+Cross-building Windows installers **does not work from macOS**: electron-builder
+writes the icon and version info into the `.exe` with ResourceHacker under Wine,
+and the bundled Wine is 32-bit — which modern macOS cannot execute at all.
 
-> **For a proper NSIS Windows installer (`.exe`) from macOS:**
->
-> ```bash
-> brew install --cask wine-stable
-> # change `target: zip` to `target: nsis` in electron-builder.yml
-> npm run build:electron -- --win
-> ```
->
-> The default config uses `zip` for Windows because it doesn't require Wine.
+So releases are built in CI instead, one runner per OS
+([`.github/workflows/release.yml`](.github/workflows/release.yml)):
+
+```bash
+# Publish a release with all 9 artifacts attached
+npm version patch        # or edit package.json
+git push --follow-tags
+```
+
+Pushing a `v*` tag builds Windows (x64 / arm64 / ia32), macOS (x64 / arm64) and
+Linux (AppImage + deb, x64 / arm64), then attaches everything to a GitHub
+Release. The workflow can also be run manually from the **Actions** tab, which
+leaves the installers as run artifacts without publishing a release.
+
+The download page at
+[mykhailobovtriuk.github.io/git-desktop](https://mykhailobovtriuk.github.io/git-desktop/)
+lives in [`site/`](site/) and deploys via
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml). It reads the
+latest release from the GitHub API, so it needs no changes when you ship.
+
+> Builds are **unsigned**: Windows shows a SmartScreen prompt and macOS a
+> Gatekeeper prompt on first launch. Removing those needs paid certificates
+> (an OV/EV cert for Windows, an Apple Developer ID plus notarization for macOS)
+> wired in through `win.certificateFile` / `CSC_LINK` GitHub secrets.
 
 ---
 
@@ -208,6 +236,7 @@ git-desktop/
 │       ├── dropdowns/           # Branch picker, repo picker
 │       └── common/              # Accordion, Toast
 ├── tests/                       # Vitest test suite
+├── site/                        # Download page (GitHub Pages, static HTML)
 ├── build/                       # App icon assets (svg / png / icns)
 ├── dist/                        # Vite renderer build output (auto-gen)
 ├── dist-electron/               # Compiled main process (auto-gen)

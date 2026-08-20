@@ -1,6 +1,8 @@
 appId: com.gitdesktop.app
 productName: Git Desktop
-artifactName: "Git Desktop-${version}-${arch}.${ext}"
+# No ${version} in artifact names: keeps /releases/latest/download/<name> URLs
+# valid forever, so the download page never needs editing on a new release.
+artifactName: "Git-Desktop-${arch}.${ext}"
 directories:
   output: release
   buildResources: build
@@ -12,11 +14,35 @@ files:
   - "!dist/*.yml"
   - dist-electron/**/*
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: [x64, arm64]
   icon: build/icon.icns
 win:
-  target: zip
+  target:
+    - target: nsis
+      arch: [x64, arm64, ia32]
   icon: build/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Git Desktop
+  artifactName: "Git-Desktop-Setup-${arch}.${ext}"
+  deleteAppDataOnUninstall: false
 linux:
-  target: AppImage
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
   icon: build/icon.png
+  category: Development
+  synopsis: Git desktop client with visual commit graph and conflict resolution
+  # Required for .deb: electron-builder falls back to package.json `author`,
+  # which is empty here, and the build fails without an email.
+  maintainer: Mykhailo Bovtriuk <mykhailobovtriuk@gmail.com>
+  artifactName: "git-desktop-${arch}.${ext}"

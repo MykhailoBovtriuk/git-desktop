@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # One call per architecture yields three standalone installers; a single
+      # call listing all three would produce one combined ~3x-sized installer.
+      - name: Package Windows installers
+        if: matrix.platform == 'win'
+        run: |
+          npx electron-builder --win nsis --x64 --publish never
+          npx electron-builder --win nsis --arm64 --publish never
+          npx electron-builder --win nsis --ia32 --publish never
+
+      - name: Package macOS disk images
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dmg --x64 --arm64 --publish never
+        env:
+          # No certificate in CI: without this electron-builder searches the
+          # keychain and fails instead of falling back to an ad-hoc signature.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Package Linux artifacts
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux AppImage deb --x64 --arm64 --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
