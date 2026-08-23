@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { FileStatus } from '../../types';
-import { IconButton, ListItem } from '../../shared/ui';
+import { IconButton, ListItem, StageIcon, UnstageIcon, DiscardIcon } from '../../shared/ui';
 
 interface FileListProps {
   files: FileStatus[];
@@ -60,39 +60,39 @@ export function FileList({
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               {!staged && onStage && (
                 <IconButton
+                  icon={StageIcon}
+                  size="sm"
                   tint="green"
                   title={t('stage')}
                   onClick={e => {
                     e.stopPropagation();
                     onStage(file.path);
                   }}
-                >
-                  +
-                </IconButton>
+                />
               )}
               {!staged && onDiscard && (
                 <IconButton
+                  icon={DiscardIcon}
+                  size="sm"
                   tint="red"
                   title={file.status === 'N' ? t('deleteUntrackedFile') : t('discard')}
                   onClick={e => {
                     e.stopPropagation();
                     onDiscard(file.path);
                   }}
-                >
-                  ×
-                </IconButton>
+                />
               )}
               {staged && onUnstage && (
                 <IconButton
+                  icon={UnstageIcon}
+                  size="sm"
                   tint="yellow"
                   title={t('unstage')}
                   onClick={e => {
                     e.stopPropagation();
                     onUnstage(file.path);
                   }}
-                >
-                  −
-                </IconButton>
+                />
               )}
             </div>
           </ListItem>

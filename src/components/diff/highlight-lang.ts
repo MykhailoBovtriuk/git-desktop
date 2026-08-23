@@ -1,4 +1,15 @@
-export const DIFF_THEME = 'catppuccin-mocha';
+import type { ResolvedTheme } from '../../types';
+
+// Catppuccin Mocha/Latte match the app palette in styles/globals.css, so the
+// diff never looks like a foreign panel dropped into the window.
+const DIFF_THEMES: Record<ResolvedTheme, string> = {
+  dark: 'catppuccin-mocha',
+  light: 'catppuccin-latte',
+};
+
+export function diffTheme(resolved: ResolvedTheme): string {
+  return DIFF_THEMES[resolved];
+}
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript',

@@ -1,1 +1,6 @@
-{ "title": "Commit Graph", "noCommits": "No commits yet", "loadMore": "Load more" }
+{
+  "title": "Commit Graph",
+  "noCommits": "No commits yet",
+  "loadMore": "Load more",
+  "openInHistory": "Double-click to open in History"
+}

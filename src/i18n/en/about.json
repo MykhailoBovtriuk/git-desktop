@@ -1,0 +1,19 @@
+{
+  "title": "About",
+  "tagline": "A cross-platform Git desktop client with a visual commit graph and conflict resolution.",
+  "whatIsIt": "What is this?",
+  "description": "Git Desktop is a free and open-source Git client built for people who want to see what their repository is actually doing: a real commit graph, hunk-level staging, a side-by-side conflict editor, and stash management — without a subscription and without an account.",
+  "support": "Support the project",
+  "supportHint": "It is built in the open and in spare time. Starring the repository, reporting a bug you hit, or sending a pull request all help more than you would think.",
+  "project": "Project",
+  "links": {
+    "star": "Star on GitHub",
+    "sponsor": "Sponsor",
+    "contribute": "How to contribute",
+    "sourceCode": "Source code",
+    "reportIssue": "Report an issue",
+    "releases": "Releases",
+    "license": "License (MIT)"
+  },
+  "credits": "Built with Electron, React and simple-git. Colour palette: Catppuccin. © 2026 Mykhailo Bovtriuk."
+}

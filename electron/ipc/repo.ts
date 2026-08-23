@@ -1,6 +1,11 @@
 import { ipcMain, dialog } from 'electron';
 import { GitService } from '../git-service';
-import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '../ipc-validators';
+import {
+  assertString,
+  assertOptionalString,
+  assertBoundedLogLimit,
+  assertNonNegativeInteger,
+} from '../ipc-validators';
 import { wrap } from './wrap';
 
 export interface RepoHandlerOptions {
@@ -22,6 +27,20 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: 'Open Repository',
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      return result.filePaths[0];
+    }),
+  );
+
+  // Used for picking an SSH key; showHiddenFiles matters because keys live in
+  // ~/.ssh, which the dialog hides by default.
+  ipcMain.handle('git:open-file-dialog', (_e, title: unknown) =>
+    wrap(async () => {
+      assertOptionalString(title, 'title');
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile', 'showHiddenFiles'],
+        title: title || 'Select File',
       });
       if (result.canceled || result.filePaths.length === 0) return null;
       return result.filePaths[0];

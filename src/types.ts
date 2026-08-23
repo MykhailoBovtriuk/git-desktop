@@ -75,7 +75,41 @@ export interface IpcError {
 export type IpcResult<T> = { data: T } | IpcError;
 
 export type ActiveView =
-  'changes' | 'diff' | 'history' | 'graph' | 'merge-editor' | 'stash' | 'stash-create';
+  | 'changes'
+  | 'diff'
+  | 'history'
+  | 'graph'
+  | 'merge-editor'
+  | 'stash'
+  | 'stash-create'
+  | 'settings'
+  | 'about';
+
+// Views that take over the whole content area instead of living next to the
+// sidebar. They remember where the user came from so "back" returns there.
+export type OverlayView = Extract<ActiveView, 'settings' | 'about'>;
+
+export type ThemePreference = 'dark' | 'light' | 'system';
+export type ResolvedTheme = 'dark' | 'light';
+
+/** A git identity the app can apply to a repository's local config. */
+export interface GitProfile {
+  id: string;
+  label: string;
+  name: string;
+  email: string;
+  sshKeyPath?: string;
+  signCommits?: boolean;
+}
+
+/** What a repository's local config currently says, as read back from git. */
+export interface GitIdentity {
+  name: string | null;
+  email: string | null;
+  sshKeyPath: string | null;
+  signingKey: string | null;
+  signCommits: boolean;
+}
 
 export type ToastVariant = 'success' | 'error' | 'info';
 

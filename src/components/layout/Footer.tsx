@@ -5,6 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { classifyGitError } from '../../lib/git-error-mapper';
 import { Button } from '../../shared/ui';
+import { AppMenuButtons } from './AppMenuButtons';
 
 export function Footer() {
   const { t } = useTranslation('footer');
@@ -67,36 +68,47 @@ export function Footer() {
   };
 
   const hash = commits[0]?.abbreviatedHash ?? '—';
+  const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
 
   return (
-    <div className="h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0 select-none">
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-blue">●</span>
-        <span className="text-subtext font-mono">{hash}</span>
-        <span className="text-text">{currentBranch}</span>
+    <div className="relative h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0 select-none">
+      <div className="shrink-0">
+        <AppMenuButtons />
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-subtext">
-        {aheadBehind.ahead > 0 && (
-          <span
-            className="text-blue"
-            title={t('ahead', { count: aheadBehind.ahead })}
-            aria-label={t('ahead', { count: aheadBehind.ahead })}
-          >
-            ↑{aheadBehind.ahead}
-          </span>
-        )}
-        {aheadBehind.behind > 0 && (
-          <span
-            title={t('behind', { count: aheadBehind.behind })}
-            aria-label={t('behind', { count: aheadBehind.behind })}
-          >
-            ↓{aheadBehind.behind}
-          </span>
+      {/* Centred on the window rather than on the leftover space, so the branch
+          readout does not drift as the side blocks change width. */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs max-w-[45%]">
+        <span className="text-blue shrink-0">●</span>
+        <span className="text-subtext font-mono shrink-0">{hash}</span>
+        <span className="text-text truncate">{currentBranch}</span>
+        {diverged && (
+          <>
+            <span className="text-surface2 shrink-0">|</span>
+            <span className="flex items-center gap-2 text-subtext shrink-0">
+              {aheadBehind.ahead > 0 && (
+                <span
+                  className="text-blue"
+                  title={t('ahead', { count: aheadBehind.ahead })}
+                  aria-label={t('ahead', { count: aheadBehind.ahead })}
+                >
+                  ↑{aheadBehind.ahead}
+                </span>
+              )}
+              {aheadBehind.behind > 0 && (
+                <span
+                  title={t('behind', { count: aheadBehind.behind })}
+                  aria-label={t('behind', { count: aheadBehind.behind })}
+                >
+                  ↓{aheadBehind.behind}
+                </span>
+              )}
+            </span>
+          </>
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {(['fetch', 'pull', 'push'] as const).map(op => (
           <Button
             key={op}

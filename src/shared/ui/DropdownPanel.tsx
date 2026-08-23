@@ -23,6 +23,7 @@ export function DropdownPanel({
   return (
     <div
       {...rest}
+      data-dropdown-panel=""
       className={cn(
         'absolute top-full mt-1 bg-surface0 rounded-lg shadow-xl z-50',
         ALIGN[align],

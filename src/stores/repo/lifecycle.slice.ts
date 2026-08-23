@@ -12,6 +12,7 @@ type LifecycleSlice = Pick<
   | 'runOperation'
   | 'openRepo'
   | 'openDialog'
+  | 'removeRecentRepo'
   | 'refresh'
 >;
 
@@ -76,6 +77,15 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     if (path) await get().openRepo(path);
   },
 
+  removeRecentRepo: path => {
+    set(s => ({
+      recentRepos: s.recentRepos.filter(r => r && r !== path),
+      // Dropping the repo that is currently open leaves nothing to show, so
+      // close it too — Shell falls back to the welcome screen on a null path.
+      ...(s.repoPath === path ? { repoPath: null, mergeState: null, epoch: s.epoch + 1 } : {}),
+    }));
+  },
+
   refresh: async () => {
     const epoch = get().epoch;
     if (refreshInFlight && refreshInFlight.epoch === epoch) {
@@ -87,6 +97,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
         get().loadBranches(),
         get().loadStatus(),
         get().loadStashes(),
+        get().loadIdentity(),
       ]);
       if (get().epoch !== epoch) return;
       const errors = results

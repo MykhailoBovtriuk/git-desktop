@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { StashEntry } from '../../types';
 import { relativeTime } from '../../lib/relative-time';
 import { useUiStore } from '../../stores/ui-store';
-import { ListItem, IconButton } from '../../shared/ui';
+import { ListItem, IconButton, StashApplyIcon, StashPopIcon, StashDropIcon } from '../../shared/ui';
 
 interface StashListProps {
   stashes: StashEntry[];
@@ -56,35 +56,35 @@ export function StashList({
             </div>
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <IconButton
+                icon={StashApplyIcon}
+                size="sm"
                 tint="blue"
                 title={t('actions.apply')}
                 onClick={e => {
                   e.stopPropagation();
                   onApply(s.index);
                 }}
-              >
-                📋
-              </IconButton>
+              />
               <IconButton
+                icon={StashPopIcon}
+                size="sm"
                 tint="green"
                 title={t('actions.pop')}
                 onClick={e => {
                   e.stopPropagation();
                   onPop(s.index);
                 }}
-              >
-                ↩
-              </IconButton>
+              />
               <IconButton
+                icon={StashDropIcon}
+                size="sm"
                 tint="red"
                 title={t('actions.drop')}
                 onClick={e => {
                   e.stopPropagation();
                   handleDrop(s.index);
                 }}
-              >
-                ✕
-              </IconButton>
+              />
             </div>
           </div>
         </ListItem>

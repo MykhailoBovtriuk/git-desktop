@@ -31,7 +31,6 @@ export function CommitForm() {
 
   const hasStaged = status.staged.length > 0;
   const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading;
-  const overLimit = message.length > 100;
 
   const handleCommit = async () => {
     if (!canCommit) return;
@@ -64,11 +63,9 @@ export function CommitForm() {
           placeholder={t('commitMessage')}
           rows={3}
         />
-        <span
-          className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}
-        >
-          {message.length}/100
-        </span>
+        {/* Length is informational only — git imposes no limit, and neither do
+            we, so this never turns into a warning. */}
+        <span className="absolute bottom-2 right-2 text-xs text-subtext">{message.length}</span>
       </div>
       <Button
         variant="primary"

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { Button, Badge } from '../../shared/ui';
+import { AppMenuButtons } from '../layout/AppMenuButtons';
 
 export function WelcomeScreen() {
   const { t } = useTranslation('repo');
@@ -20,7 +21,11 @@ export function WelcomeScreen() {
   const handleDialog = () => runAction(() => openDialog(), { title: t('open') });
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-base gap-4">
+    <div className="relative h-screen flex flex-col items-center justify-center bg-base gap-4">
+      <div className="absolute bottom-3 left-3">
+        <AppMenuButtons />
+      </div>
+
       <h1 className="text-2xl text-text font-bold flex items-center gap-2">
         Git Desktop
         <Badge variant="beta">Beta</Badge>

@@ -1,4 +1,4 @@
-import type { Commit, Branch, GitStatus, StashEntry } from '../types';
+import type { Commit, Branch, GitStatus, StashEntry, GitIdentity, GitProfile } from '../types';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
@@ -13,6 +13,10 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 export const gitApi = {
   openRepo: (path: string) => invoke<string>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
+  openFileDialog: (title?: string) => invoke<string | null>('git:open-file-dialog', title),
+  getIdentity: () => invoke<GitIdentity>('git:get-identity'),
+  applyProfile: (profile: GitProfile) => invoke<GitIdentity>('git:apply-profile', profile),
+  clearProfile: () => invoke<GitIdentity>('git:clear-profile'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
   getStatus: () => invoke<StatusResult>('git:get-status'),

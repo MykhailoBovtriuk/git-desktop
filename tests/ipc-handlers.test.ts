@@ -47,9 +47,12 @@ describe('registered IPC channels', () => {
     return [...new Set(handle.mock.calls.map(c => c[0] as string))].sort();
   };
 
-  const channelsInFile = (relPath: string) => {
-    const src = fs.readFileSync(path.resolve(__dirname, '..', relPath), 'utf-8');
-    return [...new Set([...src.matchAll(/'(git:[a-z-]+)'/g)].map(m => m[1]))].sort();
+  const channelsInFiles = (...relPaths: string[]) => {
+    const found = relPaths.flatMap(relPath => {
+      const src = fs.readFileSync(path.resolve(__dirname, '..', relPath), 'utf-8');
+      return [...src.matchAll(/'((?:git|app|shell|window):[a-z-]+)'/g)].map(m => m[1]);
+    });
+    return [...new Set(found)].sort();
   };
 
   it('registers the rebase lifecycle channels', () => {
@@ -62,7 +65,7 @@ describe('registered IPC channels', () => {
   it('main-process handlers, preload allowlist and renderer api stay in sync', () => {
     const channels = registered();
     expect(channels.length).toBeGreaterThan(0);
-    expect(channelsInFile('electron/preload.ts')).toEqual(channels);
-    expect(channelsInFile('src/api/git-api.ts')).toEqual(channels);
+    expect(channelsInFiles('electron/preload.ts')).toEqual(channels);
+    expect(channelsInFiles('src/api/git-api.ts', 'src/api/app-api.ts')).toEqual(channels);
   });
 });

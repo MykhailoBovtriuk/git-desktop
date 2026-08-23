@@ -1,5 +1,14 @@
 import type { StoreApi } from 'zustand';
-import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../../types';
+import type {
+  Commit,
+  Branch,
+  GitStatus,
+  AheadBehind,
+  MergeState,
+  StashEntry,
+  GitIdentity,
+  GitProfile,
+} from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
 
@@ -35,6 +44,13 @@ export interface RepoState {
   stashDrop: (index: number) => Promise<void>;
   openRepo: (path: string) => Promise<void>;
   openDialog: () => Promise<void>;
+  removeRecentRepo: (path: string) => void;
+  // Identity is repo-scoped state: it reflects the open repository's local git
+  // config, so it belongs here rather than alongside the saved profile list.
+  identity: GitIdentity | null;
+  loadIdentity: () => Promise<void>;
+  applyProfile: (profile: GitProfile) => Promise<void>;
+  clearProfile: () => Promise<void>;
   loadLog: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;

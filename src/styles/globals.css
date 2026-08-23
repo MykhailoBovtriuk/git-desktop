@@ -1,25 +1,81 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-base: #1e1e2e;
-  --color-mantle: #181825;
-  --color-surface0: #313244;
-  --color-surface1: #45475a;
-  --color-surface2: #585b70;
-  --color-text: #cdd6f4;
-  --color-subtext: #a6adc8;
-  --color-blue: #89b4fa;
-  --color-green: #a6e3a1;
-  --color-yellow: #f9e2af;
-  --color-red: #f38ba8;
-  --color-peach: #fab387;
-  --color-sky: #89dceb;
+/* `inline` substitutes the variable into every utility instead of freezing the
+   value at build time, so flipping `data-theme` on <html> repaints the whole
+   app without regenerating any CSS. */
+@theme inline {
+  --color-base: var(--gd-base);
+  --color-mantle: var(--gd-mantle);
+  --color-surface0: var(--gd-surface0);
+  --color-surface1: var(--gd-surface1);
+  --color-surface2: var(--gd-surface2);
+  --color-text: var(--gd-text);
+  --color-subtext: var(--gd-subtext);
+  --color-blue: var(--gd-blue);
+  --color-green: var(--gd-green);
+  --color-yellow: var(--gd-yellow);
+  --color-red: var(--gd-red);
+  --color-peach: var(--gd-peach);
+  --color-sky: var(--gd-sky);
+}
+
+/* Dark — Catppuccin Mocha. Also the fallback when no theme is resolved yet. */
+:root {
+  --gd-base: #1e1e2e;
+  --gd-mantle: #181825;
+  --gd-surface0: #313244;
+  --gd-surface1: #45475a;
+  --gd-surface2: #585b70;
+  --gd-text: #cdd6f4;
+  --gd-subtext: #a6adc8;
+  --gd-blue: #89b4fa;
+  --gd-green: #a6e3a1;
+  --gd-yellow: #f9e2af;
+  --gd-red: #f38ba8;
+  --gd-peach: #fab387;
+  --gd-sky: #89dceb;
+
+  --gd-graph-1: #89b4fa;
+  --gd-graph-2: #a6e3a1;
+  --gd-graph-3: #f9e2af;
+  --gd-graph-4: #f38ba8;
+  --gd-graph-5: #fab387;
+  --gd-graph-6: #cba6f7;
+  --gd-graph-7: #94e2d5;
+  --gd-graph-8: #89dceb;
+}
+
+/* Light — Catppuccin Latte, the direct counterpart of the dark palette above,
+   so every surface/accent keeps the same role and contrast ordering. */
+:root[data-theme='light'] {
+  --gd-base: #eff1f5;
+  --gd-mantle: #e6e9ef;
+  --gd-surface0: #ccd0da;
+  --gd-surface1: #bcc0cc;
+  --gd-surface2: #acb0be;
+  --gd-text: #4c4f69;
+  --gd-subtext: #6c6f85;
+  --gd-blue: #1e66f5;
+  --gd-green: #40a02b;
+  --gd-yellow: #df8e1d;
+  --gd-red: #d20f39;
+  --gd-peach: #fe640b;
+  --gd-sky: #04a5e5;
+
+  --gd-graph-1: #1e66f5;
+  --gd-graph-2: #40a02b;
+  --gd-graph-3: #df8e1d;
+  --gd-graph-4: #d20f39;
+  --gd-graph-5: #fe640b;
+  --gd-graph-6: #8839ef;
+  --gd-graph-7: #179299;
+  --gd-graph-8: #04a5e5;
 }
 
 body {
   margin: 0;
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: var(--gd-base);
+  color: var(--gd-text);
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
   /* No global `user-select: none`: a Git client must let users copy commit
@@ -32,11 +88,10 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #181825;
+  background: var(--gd-mantle);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #45475a;
+  background: var(--gd-surface1);
   border-radius: 4px;
 }
-

@@ -14,6 +14,8 @@ import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
+import { SettingsView } from '../settings/SettingsView';
+import { AboutView } from '../about/AboutView';
 
 function MainContent() {
   const activeView = useUiStore(s => s.activeView);
@@ -34,11 +36,22 @@ function MainContent() {
 
 export function Shell() {
   const repoPath = useRepoStore(s => s.repoPath);
+  const activeView = useUiStore(s => s.activeView);
+  const isOverlayView = activeView === 'settings' || activeView === 'about';
 
   if (!repoPath) {
+    // There is no footer without a repository, so the welcome screen carries
+    // its own entry points into Settings/About — otherwise they'd be
+    // unreachable for a first-run user.
     return (
       <>
-        <WelcomeScreen />
+        {isOverlayView ? (
+          <div className="h-screen flex flex-col bg-base overflow-hidden">
+            {activeView === 'settings' ? <SettingsView /> : <AboutView />}
+          </div>
+        ) : (
+          <WelcomeScreen />
+        )}
         <Toast />
         <ConfirmDialog />
       </>
@@ -50,10 +63,20 @@ export function Shell() {
       <Titlebar />
       <RebaseBanner />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden">
-          <MainContent />
-        </main>
+        {/* Settings and About take over the whole content area — the sidebar is
+            about the open repository and has nothing to offer there. */}
+        {isOverlayView ? (
+          <main className="flex-1 overflow-hidden">
+            {activeView === 'settings' ? <SettingsView /> : <AboutView />}
+          </main>
+        ) : (
+          <>
+            <Sidebar />
+            <main className="flex-1 overflow-hidden">
+              <MainContent />
+            </main>
+          </>
+        )}
       </div>
       <Footer />
       <Toast />

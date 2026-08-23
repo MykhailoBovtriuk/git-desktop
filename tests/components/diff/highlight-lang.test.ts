@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { langForPath, DIFF_THEME } from '../../../src/components/diff/highlight-lang';
+import { langForPath, diffTheme } from '../../../src/components/diff/highlight-lang';
 
 describe('langForPath', () => {
   it('maps common source extensions to bundled shiki languages', () => {
@@ -33,7 +33,8 @@ describe('langForPath', () => {
     expect(langForPath('a/b.c/App.test.ts')).toBe('typescript');
   });
 
-  it('exposes the Catppuccin theme name', () => {
-    expect(DIFF_THEME).toBe('catppuccin-mocha');
+  it('maps each resolved app theme to its Catppuccin counterpart', () => {
+    expect(diffTheme('dark')).toBe('catppuccin-mocha');
+    expect(diffTheme('light')).toBe('catppuccin-latte');
   });
 });

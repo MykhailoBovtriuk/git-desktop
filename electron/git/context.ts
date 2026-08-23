@@ -27,9 +27,16 @@ export class GitContext {
     // The `unsafe` opt-ins exist to guard against attacker-controlled values;
     // ours are hardcoded ('echo' for askpass, 'true' as rebase editor) and the
     // inherited env may legitimately carry GIT_EDITOR from the user's shell.
+    // allowUnsafeSshCommand covers git profiles: the renderer never supplies the
+    // command, only a key path that git/profile.ts validates (absolute, exists,
+    // no shell metacharacters) before assembling the string itself.
     return simpleGit({
       baseDir: dir,
-      unsafe: { allowUnsafeAskPass: true, allowUnsafeEditor: true },
+      unsafe: {
+        allowUnsafeAskPass: true,
+        allowUnsafeEditor: true,
+        allowUnsafeSshCommand: true,
+      },
     }).env(credentialSafeEnv());
   }
 

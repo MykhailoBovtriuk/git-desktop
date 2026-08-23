@@ -47,6 +47,17 @@ export function CommitList({ filter }: CommitListProps) {
   const virtualItems = rowVirtualizer.getVirtualItems();
   const lastIndex = virtualItems.length ? virtualItems[virtualItems.length - 1].index : 0;
 
+  // Arriving from the graph (double click) preselects a commit that may sit far
+  // down the virtualized list — without this it would render offscreen.
+  const scrolledToSelection = useRef(false);
+  useEffect(() => {
+    if (scrolledToSelection.current || !selectedCommit) return;
+    const index = filtered.findIndex(c => c.hash === selectedCommit);
+    if (index < 0) return;
+    scrolledToSelection.current = true;
+    rowVirtualizer.scrollToIndex(index, { align: 'center' });
+  }, [selectedCommit, filtered, rowVirtualizer]);
+
   useEffect(() => {
     if (filter || !hasMoreCommits || loadingMoreCommits) return;
     if (filtered.length > 0 && lastIndex >= filtered.length - 1) {

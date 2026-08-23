@@ -45,6 +45,13 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:read-file',
   'git:write-file',
   'git:get-conflict-sides',
+  'git:get-identity',
+  'git:apply-profile',
+  'git:clear-profile',
+  'git:open-file-dialog',
+  'app:get-version',
+  'shell:open-external',
+  'window:set-titlebar-overlay',
 ]);
 
 contextBridge.exposeInMainWorld('electronAPI', {

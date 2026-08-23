@@ -15,15 +15,17 @@ export interface LayoutCommit {
   edges: Edge[];
 }
 
+// CSS variables rather than literals: SVG fill/stroke resolve them at paint
+// time, so the graph follows the active theme without recomputing the layout.
 const COLORS = [
-  '#89b4fa',
-  '#a6e3a1',
-  '#f9e2af',
-  '#f38ba8',
-  '#fab387',
-  '#cba6f7',
-  '#94e2d5',
-  '#89dceb',
+  'var(--gd-graph-1)',
+  'var(--gd-graph-2)',
+  'var(--gd-graph-3)',
+  'var(--gd-graph-4)',
+  'var(--gd-graph-5)',
+  'var(--gd-graph-6)',
+  'var(--gd-graph-7)',
+  'var(--gd-graph-8)',
 ];
 
 export function computeLayout(commits: Commit[]): LayoutCommit[] {

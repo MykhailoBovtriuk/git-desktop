@@ -120,3 +120,27 @@ describe('ui-store', () => {
     });
   });
 });
+
+describe('overlay views', () => {
+  beforeEach(() => {
+    useUiStore.setState({ activeView: 'changes', previousView: 'changes' });
+  });
+
+  it('returns to the view the user came from', () => {
+    useUiStore.getState().setActiveView('graph');
+    useUiStore.getState().openOverlayView('settings');
+    expect(useUiStore.getState().activeView).toBe('settings');
+
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('graph');
+  });
+
+  it('keeps the original origin when switching between overlays', () => {
+    useUiStore.getState().setActiveView('history');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('history');
+  });
+});

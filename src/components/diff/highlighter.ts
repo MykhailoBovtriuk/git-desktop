@@ -6,7 +6,10 @@ let instance: Promise<HighlighterCore> | null = null;
 export function getHighlighter(): Promise<HighlighterCore> {
   if (!instance) {
     instance = createHighlighterCore({
-      themes: [import('@shikijs/themes/catppuccin-mocha')],
+      themes: [
+        import('@shikijs/themes/catppuccin-mocha'),
+        import('@shikijs/themes/catppuccin-latte'),
+      ],
       langs: [
         import('@shikijs/langs/typescript'),
         import('@shikijs/langs/tsx'),

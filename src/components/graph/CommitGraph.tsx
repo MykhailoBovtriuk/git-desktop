@@ -21,8 +21,12 @@ export function CommitGraph() {
       loadMoreCommits: s.loadMoreCommits,
     })),
   );
-  const { selectedCommit, setSelectedCommit } = useUiStore(
-    useShallow(s => ({ selectedCommit: s.selectedCommit, setSelectedCommit: s.setSelectedCommit })),
+  const { selectedCommit, setSelectedCommit, setActiveView } = useUiStore(
+    useShallow(s => ({
+      selectedCommit: s.selectedCommit,
+      setSelectedCommit: s.setSelectedCommit,
+      setActiveView: s.setActiveView,
+    })),
   );
   const layout = useMemo(() => computeLayout(commits), [commits]);
 
@@ -78,6 +82,13 @@ export function CommitGraph() {
             <div
               key={commit.hash}
               onClick={() => setSelectedCommit(isSelected ? null : commit.hash)}
+              onDoubleClick={() => {
+                // Selecting outright rather than toggling: the second single
+                // click of the double click has already deselected the row.
+                setSelectedCommit(commit.hash);
+                setActiveView('history');
+              }}
+              title={t('openInHistory')}
               className={`flex items-center cursor-pointer h-7 px-2 transition-colors ${isSelected ? 'bg-surface1' : 'hover:bg-surface0'}`}
               style={{ paddingLeft: graphW }}
             >

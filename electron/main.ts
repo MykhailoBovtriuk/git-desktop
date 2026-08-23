@@ -166,7 +166,10 @@ app.whenReady().then(() => {
     });
   }
 
-  registerIpcHandlers({ onRepoOpened: root => repoWatcher.watch(root) });
+  registerIpcHandlers({
+    onRepoOpened: root => repoWatcher.watch(root),
+    getWindow: () => mainWindow,
+  });
   createWindow();
 });
 

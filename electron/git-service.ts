@@ -1,4 +1,4 @@
-import type { Commit, Branch, GitStatus, StashEntry } from '../src/types';
+import type { Commit, Branch, GitStatus, StashEntry, GitIdentity, GitProfile } from '../src/types';
 import { GitContext, credentialSafeEnv } from './git/context';
 import * as history from './git/history';
 import * as status from './git/status';
@@ -8,6 +8,7 @@ import * as merge from './git/merge';
 import * as rebase from './git/rebase';
 import * as stash from './git/stash';
 import * as files from './git/files';
+import * as profile from './git/profile';
 
 export { credentialSafeEnv };
 
@@ -54,6 +55,16 @@ export class GitService {
   }
   getStagedDiff(filePath: string): Promise<string> {
     return status.getStagedDiff(this.ctx, filePath);
+  }
+
+  getIdentity(): Promise<GitIdentity> {
+    return profile.getIdentity(this.ctx);
+  }
+  applyProfile(p: GitProfile): Promise<GitIdentity> {
+    return profile.applyProfile(this.ctx, p);
+  }
+  clearProfile(): Promise<GitIdentity> {
+    return profile.clearProfile(this.ctx);
   }
 
   getBranches(): Promise<Branch[]> {

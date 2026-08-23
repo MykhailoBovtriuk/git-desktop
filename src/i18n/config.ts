@@ -13,6 +13,8 @@ import enRebase from './en/rebase.json';
 import enStash from './en/stash.json';
 import enCheckout from './en/checkout.json';
 import enRepo from './en/repo.json';
+import enSettings from './en/settings.json';
+import enAbout from './en/about.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -25,6 +27,8 @@ import ukRebase from './uk/rebase.json';
 import ukStash from './uk/stash.json';
 import ukCheckout from './uk/checkout.json';
 import ukRepo from './uk/repo.json';
+import ukSettings from './uk/settings.json';
+import ukAbout from './uk/about.json';
 
 i18n
   .use(LanguageDetector)
@@ -45,6 +49,8 @@ i18n
         stash: enStash,
         checkout: enCheckout,
         repo: enRepo,
+        settings: enSettings,
+        about: enAbout,
       },
       uk: {
         common: ukCommon,
@@ -58,6 +64,8 @@ i18n
         stash: ukStash,
         checkout: ukCheckout,
         repo: ukRepo,
+        settings: ukSettings,
+        about: ukAbout,
       },
     },
     detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },

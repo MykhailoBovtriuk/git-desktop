@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ActiveView, Toast, ToastVariant } from '../types';
+import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
 export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
 
@@ -12,6 +12,7 @@ export interface ConfirmOptions {
 
 interface UiState {
   activeView: ActiveView;
+  previousView: ActiveView;
   selectedCommit: string | null;
   selectedFile: string | null;
   selectedFileArea: SelectedFileArea | null;
@@ -19,6 +20,8 @@ interface UiState {
   toasts: Toast[];
   selectedStash: number | null;
   setActiveView: (view: ActiveView) => void;
+  openOverlayView: (view: OverlayView) => void;
+  closeOverlayView: () => void;
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null, area?: SelectedFileArea) => void;
   setActiveMergeFile: (path: string | null) => void;
@@ -37,6 +40,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>()((set, get) => ({
   activeView: 'changes',
+  previousView: 'changes',
   selectedCommit: null,
   selectedFile: null,
   selectedFileArea: null,
@@ -45,6 +49,15 @@ export const useUiStore = create<UiState>()((set, get) => ({
   selectedStash: null,
 
   setActiveView: view => set({ activeView: view }),
+  // Settings/About cover the whole content area, so leaving them has to restore
+  // whatever the user was looking at rather than dumping them on 'changes'.
+  openOverlayView: view =>
+    set(s => ({
+      activeView: view,
+      previousView:
+        s.activeView === 'settings' || s.activeView === 'about' ? s.previousView : s.activeView,
+    })),
+  closeOverlayView: () => set(s => ({ activeView: s.previousView })),
   setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
     set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),
