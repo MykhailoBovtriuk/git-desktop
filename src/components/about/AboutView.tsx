@@ -23,6 +23,7 @@ const SUPPORT_LINKS = [
 export function AboutView() {
   const { t } = useTranslation('about');
   const closeOverlayView = useUiStore(s => s.closeOverlayView);
+  const overlayBack = useUiStore(s => s.overlayBack);
   const addToast = useUiStore(s => s.addToast);
   const [version, setVersion] = useState('');
 
@@ -51,7 +52,11 @@ export function AboutView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-base">
-      <PageHeader title={t('title')} onBack={closeOverlayView} />
+      <PageHeader
+        crumbs={[{ label: t('title') }]}
+        onBack={overlayBack}
+        onClose={closeOverlayView}
+      />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-6 flex flex-col gap-6">

@@ -1,4 +1,11 @@
-import type { Commit, Branch, GitStatus, StashEntry, GitIdentity, GitProfile } from '../types';
+import type {
+  Commit,
+  Branch,
+  GitStatus,
+  StashEntry,
+  EffectiveIdentity,
+  AuthStatus,
+} from '../types';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
@@ -14,9 +21,15 @@ export const gitApi = {
   openRepo: (path: string) => invoke<string>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   openFileDialog: (title?: string) => invoke<string | null>('git:open-file-dialog', title),
-  getIdentity: () => invoke<GitIdentity>('git:get-identity'),
-  applyProfile: (profile: GitProfile) => invoke<GitIdentity>('git:apply-profile', profile),
-  clearProfile: () => invoke<GitIdentity>('git:clear-profile'),
+  getIdentity: () => invoke<EffectiveIdentity>('git:get-identity'),
+  setIdentity: (name: string, email: string) =>
+    invoke<EffectiveIdentity>('git:set-identity', name, email),
+  setGlobalIdentity: (name: string, email: string) =>
+    invoke<EffectiveIdentity>('git:set-global-identity', name, email),
+  clearIdentity: () => invoke<EffectiveIdentity>('git:clear-identity'),
+  getAuthStatus: () => invoke<AuthStatus>('git:get-auth-status'),
+  setCredentialHelper: (value: string) => invoke<string>('git:set-credential-helper', value),
+  getAllowedHelpers: () => invoke<string[]>('git:get-allowed-helpers'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
   getStatus: () => invoke<StatusResult>('git:get-status'),

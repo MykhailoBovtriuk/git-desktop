@@ -9,6 +9,7 @@ export { ListItem, type ListItemProps } from './ListItem';
 export { DropdownPanel, type DropdownPanelProps } from './DropdownPanel';
 export { MenuItem, type MenuItemProps } from './MenuItem';
 export { SectionLabel } from './SectionLabel';
+export { Breadcrumbs, type Crumb, type BreadcrumbsProps } from './Breadcrumbs';
 export { Badge, type BadgeProps } from './Badge';
 export { Accordion } from './Accordion';
 export { DragRegion } from './DragRegion';

@@ -10,8 +10,7 @@ import {
 } from '../../stores/settings-store';
 import { PageHeader } from '../layout/PageHeader';
 import { SettingsSection } from './SettingsSection';
-import { ProfileSettings } from './ProfileSettings';
-import { SegmentedControl } from '../../shared/ui';
+import { ListItem, SegmentedControl } from '../../shared/ui';
 import type { ThemePreference } from '../../types';
 
 const THEMES: ThemePreference[] = ['light', 'dark', 'system'];
@@ -19,6 +18,8 @@ const THEMES: ThemePreference[] = ['light', 'dark', 'system'];
 export function SettingsView() {
   const { t, i18n } = useTranslation('settings');
   const closeOverlayView = useUiStore(s => s.closeOverlayView);
+  const overlayBack = useUiStore(s => s.overlayBack);
+  const openOverlayView = useUiStore(s => s.openOverlayView);
   const { theme, setTheme, autoRefreshMs, setAutoRefreshMs } = useSettingsStore(
     useShallow(s => ({
       theme: s.theme,
@@ -34,7 +35,11 @@ export function SettingsView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-base">
-      <PageHeader title={t('title')} onBack={closeOverlayView} />
+      <PageHeader
+        crumbs={[{ label: t('title') }]}
+        onBack={overlayBack}
+        onClose={closeOverlayView}
+      />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-2">
@@ -68,11 +73,18 @@ export function SettingsView() {
             />
           </SettingsSection>
 
-          <section className="border-b border-surface0 py-4 last:border-0">
-            <h2 className="text-text text-sm font-medium">{t('profiles')}</h2>
-            <p className="text-subtext text-xs mt-0.5 mb-3">{t('profilesHint')}</p>
-            <ProfileSettings />
-          </section>
+          {/* Identity and authentication are one topic and the largest part of
+              this page, so they live on their own screen. */}
+          <ListItem
+            onClick={() => openOverlayView('settings-account')}
+            className="rounded px-3 py-3 mt-2 flex items-center justify-between gap-4"
+          >
+            <div className="min-w-0">
+              <p className="text-text text-sm">{t('account.title')}</p>
+              <p className="text-subtext text-xs mt-0.5">{t('account.hint')}</p>
+            </div>
+            <span className="text-subtext shrink-0">›</span>
+          </ListItem>
         </div>
       </div>
     </div>

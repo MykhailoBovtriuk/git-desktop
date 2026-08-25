@@ -4,16 +4,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
-import { ProfileDropdown } from '../dropdowns/ProfileDropdown';
-import { Badge, DragRegion, IconButton, RefreshIcon, ProfileIcon } from '../../shared/ui';
+import { Badge, DragRegion, IconButton, RefreshIcon } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
-import { useSettingsStore } from '../../stores/settings-store';
-import { matchProfile } from '../../lib/git-profile';
 
 export function Titlebar() {
   const { t } = useTranslation('repo');
-  const { t: tSettings } = useTranslation('settings');
-  const { currentBranch, repoPath, mergeState, refresh, lastRefreshError, identity } = useRepoStore(
+  const { currentBranch, repoPath, mergeState, refresh, lastRefreshError } = useRepoStore(
     useShallow(s => ({
       currentBranch: s.currentBranch,
       repoPath: s.repoPath,
@@ -23,15 +19,11 @@ export function Titlebar() {
       identity: s.identity,
     })),
   );
-  const profiles = useSettingsStore(s => s.profiles);
-  const activeProfile = matchProfile(identity, profiles);
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const branchRef = useRef<HTMLDivElement>(null);
   const repoRef = useRef<HTMLDivElement>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = async () => {
     if (refreshing) return;
@@ -47,9 +39,6 @@ export function Titlebar() {
     const handleClick = (e: MouseEvent) => {
       if (branchRef.current && !branchRef.current.contains(e.target as Node)) setBranchOpen(false);
       if (repoRef.current && !repoRef.current.contains(e.target as Node)) setRepoOpen(false);
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -84,24 +73,6 @@ export function Titlebar() {
             <span className="text-subtext text-xs shrink-0">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
-        </DragRegion>
-        <DragRegion draggable={false} ref={profileRef} className="relative shrink-0">
-          <button
-            onClick={() => setProfileOpen(o => !o)}
-            title={
-              activeProfile
-                ? tSettings('currentIdentity', { name: identity?.name, email: identity?.email })
-                : tSettings('noProfile')
-            }
-            className="flex items-center gap-1.5 px-2 py-1 rounded bg-surface0 hover:bg-surface1 text-xs transition-colors max-w-40"
-          >
-            <ProfileIcon size={14} aria-hidden="true" className="shrink-0" />
-            <span className={`truncate ${activeProfile ? 'text-text' : 'text-subtext'}`}>
-              {activeProfile?.label ?? tSettings('noProfile')}
-            </span>
-            <span className="text-subtext shrink-0">▼</span>
-          </button>
-          {profileOpen && <ProfileDropdown onClose={() => setProfileOpen(false)} />}
         </DragRegion>
         <DragRegion draggable={false} className="shrink-0">
           <IconButton

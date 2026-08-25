@@ -18,5 +18,7 @@
   "unstage": "Unstage",
   "discard": "Discard",
   "deleteUntrackedFile": "Delete untracked file",
-  "untrackedFile": "Untracked (new file)"
+  "untrackedFile": "Untracked (new file)",
+  "noIdentity": "Git does not know who you are, so commits are blocked.",
+  "noIdentityAction": "Set your name and email"
 }

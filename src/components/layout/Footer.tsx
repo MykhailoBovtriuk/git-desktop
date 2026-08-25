@@ -4,23 +4,27 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { classifyGitError } from '../../lib/git-error-mapper';
-import { Button } from '../../shared/ui';
+import { Button, UserIcon } from '../../shared/ui';
 import { AppMenuButtons } from './AppMenuButtons';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, commits, aheadBehind, fetch, pull, push, publishBranch } = useRepoStore(
-    useShallow(s => ({
-      currentBranch: s.currentBranch,
-      commits: s.commits,
-      aheadBehind: s.aheadBehind,
-      fetch: s.fetch,
-      pull: s.pull,
-      push: s.push,
-      publishBranch: s.publishBranch,
-    })),
+  const { currentBranch, identity, commits, aheadBehind, fetch, pull, push, publishBranch } =
+    useRepoStore(
+      useShallow(s => ({
+        currentBranch: s.currentBranch,
+        identity: s.identity,
+        commits: s.commits,
+        aheadBehind: s.aheadBehind,
+        fetch: s.fetch,
+        pull: s.pull,
+        push: s.push,
+        publishBranch: s.publishBranch,
+      })),
+    );
+  const { addToast, openOverlayView } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
   );
-  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
 
   const handlePublish = () => {
@@ -60,7 +64,9 @@ export function Footer() {
         action:
           errAction === 'publishBranch' && currentBranch
             ? { label: t('publishBranch'), onClick: handlePublish }
-            : undefined,
+            : errAction === 'credentialHelp'
+              ? { label: t('fixAuth'), onClick: () => openOverlayView('settings-account', 'auth') }
+              : undefined,
       });
     } finally {
       setLoading(null);
@@ -69,6 +75,17 @@ export function Footer() {
 
   const hash = commits[0]?.abbreviatedHash ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
+  const noIdentity = identity?.scope === 'none';
+  // The scope is what tells a repository-level override apart from the global
+  // identity, and there is no room for it beside the name — so it rides along
+  // in the tooltip.
+  const identityLabel = noIdentity
+    ? t('identity.missing')
+    : t('identity.committingAs', {
+        name: identity?.name ?? '',
+        email: identity?.email ?? '',
+        scope: t(`identity.scope.${identity?.scope ?? 'none'}`),
+      });
 
   return (
     <div className="relative h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0 select-none">
@@ -76,12 +93,32 @@ export function Footer() {
         <AppMenuButtons />
       </div>
 
-      {/* Centred on the window rather than on the leftover space, so the branch
+      {/* Centred on the window rather than on the leftover space, so the
           readout does not drift as the side blocks change width. */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs max-w-[45%]">
         <span className="text-blue shrink-0">●</span>
         <span className="text-subtext font-mono shrink-0">{hash}</span>
-        <span className="text-text truncate">{currentBranch}</span>
+        {identity && (
+          <>
+            <span className="text-surface2 shrink-0">|</span>
+            <button
+              onClick={() => openOverlayView('settings-account')}
+              title={identityLabel}
+              aria-label={identityLabel}
+              className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
+            >
+              <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />
+              {noIdentity ? (
+                <span className="text-yellow truncate">{t('identity.missing')}</span>
+              ) : (
+                <>
+                  <span className="text-text truncate">{identity.name}</span>
+                  <span className="text-subtext truncate">&lt;{identity.email}&gt;</span>
+                </>
+              )}
+            </button>
+          </>
+        )}
         {diverged && (
           <>
             <span className="text-surface2 shrink-0">|</span>

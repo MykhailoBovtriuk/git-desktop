@@ -6,8 +6,7 @@ import type {
   AheadBehind,
   MergeState,
   StashEntry,
-  GitIdentity,
-  GitProfile,
+  EffectiveIdentity,
 } from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
@@ -45,12 +44,13 @@ export interface RepoState {
   openRepo: (path: string) => Promise<void>;
   openDialog: () => Promise<void>;
   removeRecentRepo: (path: string) => void;
-  // Identity is repo-scoped state: it reflects the open repository's local git
-  // config, so it belongs here rather than alongside the saved profile list.
-  identity: GitIdentity | null;
+  // Who the open repository commits as, as resolved by git itself — including
+  // values inherited from the global config or an includeIf file.
+  identity: EffectiveIdentity | null;
   loadIdentity: () => Promise<void>;
-  applyProfile: (profile: GitProfile) => Promise<void>;
-  clearProfile: () => Promise<void>;
+  setIdentity: (name: string, email: string) => Promise<void>;
+  setGlobalIdentity: (name: string, email: string) => Promise<void>;
+  clearIdentity: () => Promise<void>;
   loadLog: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;

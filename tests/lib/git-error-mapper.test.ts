@@ -80,4 +80,39 @@ describe('classifyGitError', () => {
     expect(r.kind).toBe('unknown');
     expect(r.action).toBeUndefined();
   });
+
+  // Taken verbatim from git when signing with a passphrase-protected key that
+  // the agent does not hold. Fails fast rather than hanging, but must still
+  // point the user somewhere.
+  it('treats a locked signing key as an auth problem', () => {
+    const r = classifyGitError(
+      'error: Enter passphrase for "/home/j/.ssh/id_ed25519": Load key: incorrect passphrase supplied to decrypt private key?\nfatal: failed to write commit object',
+    );
+    expect(r.kind).toBe('auth');
+    expect(r.action).toBe('credentialHelp');
+  });
+
+  it('does not mistake unrelated failures for auth problems', () => {
+    expect(classifyGitError('fatal: pathspec did not match any files').kind).not.toBe('auth');
+    expect(classifyGitError('error: your local changes would be overwritten').kind).not.toBe(
+      'auth',
+    );
+  });
+
+  // Deleting the key file while the profile is still applied: git keeps the
+  // config, so commits fail outright until the config is cleared.
+  it('treats a missing signing key as an auth problem', () => {
+    const r = classifyGitError(
+      "error: Couldn't load public key /home/j/.ssh/id_ed25519.pub: No such file or directory?\nfatal: failed to write commit object",
+    );
+    expect(r.kind).toBe('auth');
+    expect(r.action).toBe('credentialHelp');
+  });
+
+  it('treats a missing ssh identity file as an auth problem', () => {
+    const r = classifyGitError(
+      'Warning: Identity file /home/j/.ssh/id_ed25519 not accessible: No such file or directory.',
+    );
+    expect(r.kind).toBe('auth');
+  });
 });

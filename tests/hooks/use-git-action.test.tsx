@@ -68,4 +68,38 @@ describe('useGitAction', () => {
     expect(ok).toBe(false);
     expect(useUiStore.getState().toasts).toHaveLength(0);
   });
+
+  // The hook used to take only `kind` from classifyGitError and drop `action`,
+  // so an auth failure reached the user as a dead end with nowhere to go.
+  it('offers a way out of an authentication failure', async () => {
+    useUiStore.setState({
+      activeView: 'changes',
+      previousView: 'changes',
+      overlayStack: [],
+      settingsFocus: null,
+    });
+    const { result } = renderHook(() => useGitAction());
+
+    await result.current(() => Promise.reject(new Error('Authentication failed')), {
+      title: 'Push',
+    });
+
+    const toast = lastToast();
+    expect(toast.variant).toBe('error');
+    expect(toast.action).toBeDefined();
+
+    toast.action!.onClick();
+    // Straight to the account screen: the settings list has nothing to say
+    // about a failed push.
+    expect(useUiStore.getState().activeView).toBe('settings-account');
+    expect(useUiStore.getState().settingsFocus).toBe('auth');
+  });
+
+  it('leaves other failures without an action button', async () => {
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.reject(new Error('some unrelated failure')), {
+      title: 'Push',
+    });
+    expect(lastToast().action).toBeUndefined();
+  });
 });

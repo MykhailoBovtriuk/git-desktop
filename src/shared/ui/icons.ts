@@ -4,7 +4,7 @@
 //
 // `Fi` is Feather: a single outline set at one stroke weight, which is what
 // keeps every icon in the UI looking like it came from the same family. The
-// glyph literals these replaced (↻ ⚙ ⓘ + − × 📋 ↩ ✕ 👤) could not: each came
+// glyph literals these replaced (↻ ⚙ ⓘ + − × 📋 ↩ ✕) could not: each came
 // from whatever system font the OS picked, at its own size and weight, and the
 // emoji ones ignored colour entirely.
 export {
@@ -14,8 +14,9 @@ export {
   FiPlus as StageIcon,
   FiMinus as UnstageIcon,
   FiX as DiscardIcon,
+  FiX as CloseIcon,
+  FiUser as UserIcon,
   FiCopy as StashApplyIcon,
   FiCornerUpLeft as StashPopIcon,
   FiTrash2 as StashDropIcon,
-  FiUser as ProfileIcon,
 } from 'react-icons/fi';

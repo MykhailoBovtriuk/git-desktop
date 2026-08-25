@@ -1,5 +1,16 @@
 import { GitContext } from './context';
 
+/**
+ * The origin URL, or null for a repository with no remote. Needed to tell an
+ * SSH remote from an HTTPS one — they fail authentication for entirely
+ * different reasons and the advice differs accordingly.
+ */
+export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
+  const remotes = await ctx.ensureRepo().getRemotes(true);
+  const origin = remotes.find(r => r.name === 'origin') ?? remotes[0];
+  return origin?.refs?.push || origin?.refs?.fetch || null;
+}
+
 export async function fetch(ctx: GitContext): Promise<void> {
   await ctx.ensureRepo().fetch();
 }

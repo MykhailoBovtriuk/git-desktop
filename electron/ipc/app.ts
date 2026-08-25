@@ -2,12 +2,20 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { wrap } from './wrap';
 import { assertString } from '../ipc-validators';
 
-/** Everything the About page is allowed to open, and nothing else. */
-const EXTERNAL_ORIGIN = 'https://github.com';
+/**
+ * Everything the app is allowed to open, and nothing else.
+ *
+ * Origins come from the entries themselves and are compared with `URL.origin`,
+ * so a lookalike host such as "docs.github.com.evil.com" never matches — its
+ * origin belongs to the attacker, not to us.
+ */
 const EXTERNAL_PREFIXES = [
   'https://github.com/MykhailoBovtriuk/git-desktop',
   'https://github.com/sponsors/MykhailoBovtriuk',
+  'https://docs.github.com/en/authentication',
 ];
+
+const ALLOWED_ORIGINS = new Set(EXTERNAL_PREFIXES.map(p => new URL(p).origin));
 
 export function isAllowedExternalUrl(raw: string): boolean {
   let url: URL;
@@ -16,7 +24,7 @@ export function isAllowedExternalUrl(raw: string): boolean {
   } catch {
     return false;
   }
-  if (url.origin !== EXTERNAL_ORIGIN) return false;
+  if (!ALLOWED_ORIGINS.has(url.origin)) return false;
   // Prefix match on the full URL would let "…/git-desktop.evil" through, so the
   // next character has to end the path segment.
   return EXTERNAL_PREFIXES.some(

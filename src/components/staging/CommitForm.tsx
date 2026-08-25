@@ -11,10 +11,17 @@ export function CommitForm() {
   const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { commit, status, merging } = useRepoStore(
-    useShallow(s => ({ commit: s.commit, status: s.status, merging: s.merging })),
+  const { commit, status, merging, identity } = useRepoStore(
+    useShallow(s => ({
+      commit: s.commit,
+      status: s.status,
+      merging: s.merging,
+      identity: s.identity,
+    })),
   );
-  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
+  const { addToast, openOverlayView } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
+  );
   const runAction = useGitAction();
 
   useEffect(() => {
@@ -30,7 +37,14 @@ export function CommitForm() {
   }, [merging]);
 
   const hasStaged = status.staged.length > 0;
-  const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading;
+  // git refuses outright when neither the repository nor the global config
+  // names an author. Catching it here beats letting the user type a message and
+  // discover it only after pressing Commit. Note this is about git having no
+  // identity at all — the common case of "no local override" is perfectly fine.
+  // Unknown identity (not loaded yet) must never block: only a definite
+  // 'none' from git means committing would actually fail.
+  const hasIdentity = !identity || identity.scope !== 'none';
+  const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading && hasIdentity;
 
   const handleCommit = async () => {
     if (!canCommit) return;
@@ -67,6 +81,17 @@ export function CommitForm() {
             we, so this never turns into a warning. */}
         <span className="absolute bottom-2 right-2 text-xs text-subtext">{message.length}</span>
       </div>
+      {!hasIdentity && (
+        <div className="flex flex-col gap-1 rounded bg-yellow/10 p-2">
+          <p className="text-yellow text-xs">{t('noIdentity')}</p>
+          <button
+            onClick={() => openOverlayView('settings')}
+            className="text-blue text-xs hover:underline self-start"
+          >
+            {t('noIdentityAction')}
+          </button>
+        </div>
+      )}
       <Button
         variant="primary"
         size="sm"

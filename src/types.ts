@@ -83,32 +83,49 @@ export type ActiveView =
   | 'stash'
   | 'stash-create'
   | 'settings'
+  | 'settings-account'
   | 'about';
 
 // Views that take over the whole content area instead of living next to the
 // sidebar. They remember where the user came from so "back" returns there.
-export type OverlayView = Extract<ActiveView, 'settings' | 'about'>;
+export type OverlayView = Extract<ActiveView, 'settings' | 'settings-account' | 'about'>;
 
 export type ThemePreference = 'dark' | 'light' | 'system';
 export type ResolvedTheme = 'dark' | 'light';
 
-/** A git identity the app can apply to a repository's local config. */
-export interface GitProfile {
-  id: string;
-  label: string;
-  name: string;
-  email: string;
-  sshKeyPath?: string;
-  signCommits?: boolean;
-}
+export type IdentityScope = 'local' | 'global' | 'included' | 'none';
 
-/** What a repository's local config currently says, as read back from git. */
-export interface GitIdentity {
+/**
+ * Who this repository commits as, and which config file decided that. Resolved
+ * by git itself, so it covers a local override, the global config and any file
+ * pulled in by `includeIf` without the app modelling any of them.
+ */
+/** The identity a repository would use if its own override were removed. */
+export interface InheritedIdentity {
   name: string | null;
   email: string | null;
-  sshKeyPath: string | null;
+  origin: string | null;
+  scope: IdentityScope;
+}
+
+export interface EffectiveIdentity {
+  name: string | null;
+  email: string | null;
+  origin: string | null;
+  scope: IdentityScope;
   signingKey: string | null;
   signCommits: boolean;
+  /** Only set while a repository-level override is in effect. */
+  inherited: InheritedIdentity | null;
+}
+
+/** Read-only view of how this repository authenticates. Carries no secrets. */
+export interface AuthStatus {
+  remoteUrl: string | null;
+  isHttps: boolean;
+  credentialHelper: string | null;
+  signingReady: boolean;
+  sshSupportsKeychain: boolean;
 }
 
 export type ToastVariant = 'success' | 'error' | 'info';
