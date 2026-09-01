@@ -6,6 +6,11 @@ artifactName: "Git-Desktop-${arch}.${ext}"
 directories:
   output: release
   buildResources: build
+# The OAuth redirect target. Without this the OS has nothing to hand
+# "git-desktop-auth://oauth" to and the browser flow dead-ends after Authorize.
+protocols:
+  - name: Git Desktop Auth
+    schemes: [git-desktop-auth]
 files:
   - dist/**/*
   - "!dist/*.dmg"

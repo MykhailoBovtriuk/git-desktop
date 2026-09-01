@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../stores/ui-store';
-import { CheckoutConflictError } from '../stores/repo-store';
+import { useAccountStore } from '../stores/account-store';
+import { CheckoutConflictError, useRepoStore } from '../stores/repo-store';
 import { classifyGitError } from '../lib/git-error-mapper';
 
 interface GitActionOptions {
@@ -11,9 +11,9 @@ interface GitActionOptions {
 
 export function useGitAction() {
   const { t } = useTranslation('footer');
-  const { addToast, openOverlayView } = useUiStore(
-    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
-  );
+  const addToast = useUiStore(s => s.addToast);
+  const openSignIn = useAccountStore(s => s.openSignIn);
+  const remoteHost = useRepoStore(s => s.remoteHost);
 
   return async (fn: () => Promise<unknown>, opts: GitActionOptions): Promise<boolean> => {
     try {
@@ -31,11 +31,11 @@ export function useGitAction() {
         variant: 'error',
         title: opts.title,
         message: friendly || raw,
-        // An auth failure is a dead end without somewhere to go: send the user
-        // to the settings section that explains this repository's setup.
+        // An auth failure is a dead end without somewhere to go: offer the
+        // sign-in that would fix it, already aimed at the right server.
         action:
-          action === 'credentialHelp'
-            ? { label: t('fixAuth'), onClick: () => openOverlayView('settings-account', 'auth') }
+          action === 'signIn' && remoteHost
+            ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
             : undefined,
       });
       return false;

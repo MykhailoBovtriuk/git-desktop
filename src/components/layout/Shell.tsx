@@ -16,12 +16,11 @@ import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
-import { AccountView } from '../settings/AccountView';
 import { AboutView } from '../about/AboutView';
+import { SignInModal } from '../account/SignInModal';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
-  if (activeView === 'settings-account') return <AccountView />;
   return <AboutView />;
 }
 
@@ -62,6 +61,7 @@ export function Shell() {
         )}
         <Toast />
         <ConfirmDialog />
+        <SignInModal />
       </>
     );
   }
@@ -91,6 +91,7 @@ export function Shell() {
       <MergeConflictModal />
       <CheckoutConflictModal />
       <ConfirmDialog />
+      <SignInModal />
     </div>
   );
 }

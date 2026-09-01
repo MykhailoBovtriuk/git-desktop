@@ -30,6 +30,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Client ids are public by nature; the two secrets exist because
+          # GitHub and Bitbucket offer no PKCE flow for desktop clients. A fork
+          # without these still builds — it just offers token sign-in only.
+          OAUTH_GITHUB_ID: ${{ secrets.OAUTH_GITHUB_ID }}
+          OAUTH_GITHUB_SECRET: ${{ secrets.OAUTH_GITHUB_SECRET }}
+          OAUTH_GITLAB_ID: ${{ secrets.OAUTH_GITLAB_ID }}
+          OAUTH_AZURE_ID: ${{ secrets.OAUTH_AZURE_ID }}
+          OAUTH_BITBUCKET_ID: ${{ secrets.OAUTH_BITBUCKET_ID }}
+          OAUTH_BITBUCKET_SECRET: ${{ secrets.OAUTH_BITBUCKET_SECRET }}
+          OAUTH_GITEA_ID: ${{ secrets.OAUTH_GITEA_ID }}
 
       # One call per architecture yields three standalone installers; a single
       # call listing all three would produce one combined ~3x-sized installer.

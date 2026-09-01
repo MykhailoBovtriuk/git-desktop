@@ -209,14 +209,16 @@ git-desktop/
 ├── electron/                    # Main process (Node.js + Electron APIs)
 │   ├── main.ts                  # App entry, window creation
 │   ├── preload.ts               # Secure IPC bridge to renderer
-│   ├── ipc-handlers.ts          # All git:* IPC channels
+│   ├── ipc-handlers.ts          # All git:* and account:* IPC channels
 │   ├── repo-watcher.ts          # fs.watch on the repo → emits git-changed events
-│   └── git-service.ts           # simple-git wrapper, owns repo state
+│   ├── git-service.ts           # simple-git wrapper, owns repo state
+│   └── auth/                    # Sign-in: provider registry, OAuth flow, token store
+│       └── providers/           # One file per hosting service (GitHub, GitLab, …)
 ├── src/                         # Renderer process (React + browser APIs)
 │   ├── main.tsx                 # React root
 │   ├── App.tsx                  # Auto-refresh + auto-reopen last repo
 │   ├── types.ts                 # Shared types (used by main + renderer)
-│   ├── api/git-api.ts           # Typed IPC wrapper
+│   ├── api/                     # Typed IPC wrappers (git, app, account)
 │   ├── stores/                  # Zustand state (repo-store, ui-store)
 │   ├── hooks/                   # use-auto-refresh
 │   ├── lib/                     # relative-time util
@@ -224,6 +226,8 @@ git-desktop/
 │   ├── styles/globals.css       # Tailwind v4 @theme tokens
 │   └── components/              # All React UI
 │       ├── layout/              # Shell, Titlebar, Sidebar, Footer
+│       ├── account/             # Sign-in dialog
+│       ├── settings/            # Settings screen, accounts list
 │       ├── welcome/             # First-launch screen
 │       ├── staging/             # File list, commit form, hunk staging
 │       ├── diff/                # Diff viewer, unified-diff parser, Shiki highlighter
@@ -255,7 +259,7 @@ git-desktop/
 |---|---|
 | `npm run dev` | Vite dev server only (no Electron — useful for renderer-only iteration in a browser) |
 | `npm run dev:electron` | Full dev — Vite + Electron with HMR + DevTools |
-| `npm run build` | Type-check + build renderer (Vite) + compile main process (tsc) |
+| `npm run build` | Clean output, bake OAuth client ids, type-check + build renderer (Vite) + compile main process (tsc) |
 | `npm run build:electron` | Run `build`, then package via electron-builder |
 | `npm test` | Run all tests once |
 | `npm run test:watch` | Run tests in watch mode |
@@ -272,10 +276,46 @@ git-desktop/
 - **3-panel merge editor** — CURRENT / RESULT / INCOMING panes reading real conflict sides from the Git index (`:2:path`, `:3:path`), "Use this" buttons, write-back to disk before marking resolved
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
+- **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — see [Authentication](#-authentication)
 - **Localization** — English and Ukrainian, auto-detected from the browser and remembered across restarts
 - **Auto-refresh** — event-driven via `fs.watch` (debounced 300 ms), so external `git` activity shows up almost instantly; a 60-second poll acts as a safety-net fallback
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
 - **Catppuccin Mocha** dark palette out of the box
+
+---
+
+## 🔐 Authentication
+
+Opening a repository whose remote you are not signed in to offers a sign-in.
+The browser handles it and redirects back through `git-desktop-auth://oauth`;
+the token is encrypted with the OS keychain and handed to `git credential`, so
+ordinary `git push` and `git pull` authenticate without any further setup.
+
+| Provider | Flow | Needs a client secret |
+|---|---|---|
+| GitHub.com | OAuth 2.0 authorization code | yes — GitHub has no desktop PKCE flow |
+| GitHub Enterprise Server | same, against your instance | yes — registered by your admin |
+| GitLab.com | OAuth 2.0 + PKCE | no |
+| GitLab self-managed | same, against your instance | no |
+| Azure DevOps | Microsoft Entra ID + PKCE | no |
+| Bitbucket Cloud | OAuth 2.0 authorization code | yes |
+| Gitea / Forgejo / Codeberg | OAuth 2.0 + PKCE | no |
+| Anything else | personal access token | — |
+
+You are signed in **per host**, so GitHub, a work GitLab and Azure DevOps can be
+active at the same time; signing out of one leaves the others alone. Providers
+whose tokens expire (Bitbucket, GitLab, Entra ID) are refreshed automatically
+before the next network operation.
+
+**Building your own copy.** Client ids are baked in at build time from
+`OAUTH_GITHUB_ID`, `OAUTH_GITHUB_SECRET`, `OAUTH_GITLAB_ID`, `OAUTH_AZURE_ID`,
+`OAUTH_BITBUCKET_ID`, `OAUTH_BITBUCKET_SECRET` and `OAUTH_GITEA_ID` — from the
+environment or a local `.env.local`. A build without them still works: the
+providers it cannot complete simply are not offered, and token sign-in covers
+everything. Register the callback URL `git-desktop-auth://oauth`.
+
+On a Linux system with no keyring available, tokens are kept in memory for the
+session only rather than written to disk unencrypted; the app says so.
 
 ---
 

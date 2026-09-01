@@ -8,8 +8,6 @@ import * as merge from './git/merge';
 import * as rebase from './git/rebase';
 import * as stash from './git/stash';
 import * as files from './git/files';
-import * as identity from './git/identity';
-import * as auth from './git/auth';
 
 export { credentialSafeEnv };
 
@@ -58,27 +56,8 @@ export class GitService {
     return status.getStagedDiff(this.ctx, filePath);
   }
 
-  getAuthStatus(): Promise<auth.AuthStatus> {
-    return auth.getAuthStatus(this.ctx);
-  }
-  setCredentialHelper(value: string): Promise<string> {
-    return auth.setCredentialHelper(value);
-  }
-  allowedHelpers(): string[] {
-    return auth.allowedHelpers();
-  }
-
-  getEffectiveIdentity(): Promise<identity.EffectiveIdentity> {
-    return identity.getEffectiveIdentity(this.ctx);
-  }
-  setGlobalIdentity(name: string, email: string): Promise<identity.EffectiveIdentity> {
-    return identity.setGlobalIdentity(this.ctx, name, email);
-  }
-  setLocalIdentity(name: string, email: string): Promise<identity.EffectiveIdentity> {
-    return identity.setLocalIdentity(this.ctx, name, email);
-  }
-  clearLocalIdentity(): Promise<identity.EffectiveIdentity> {
-    return identity.clearLocalIdentity(this.ctx);
+  getRemoteUrl(): Promise<string | null> {
+    return remote.getRemoteUrl(this.ctx);
   }
 
   getBranches(): Promise<Branch[]> {

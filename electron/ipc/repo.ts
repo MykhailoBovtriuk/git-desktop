@@ -1,11 +1,9 @@
 import { ipcMain, dialog } from 'electron';
 import { GitService } from '../git-service';
-import {
-  assertString,
-  assertOptionalString,
-  assertBoundedLogLimit,
-  assertNonNegativeInteger,
-} from '../ipc-validators';
+import { resolveRemoteHost } from '../auth/remote-host';
+import { stripLegacyProfileKeys } from '../auth/legacy-cleanup';
+import { hasIdentity } from '../auth/identity-bootstrap';
+import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '../ipc-validators';
 import { wrap } from './wrap';
 
 export interface RepoHandlerOptions {
@@ -18,7 +16,11 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       assertString(dirPath, 'dirPath');
       const root = await git.openRepo(dirPath);
       options.onRepoOpened?.(root);
-      return root;
+      await stripLegacyProfileKeys(root);
+      // The host decides which account applies and whether to offer sign-in, so
+      // it travels with the repo rather than costing a second round trip.
+      const remoteUrl = await git.getRemoteUrl().catch(() => null);
+      return { root, remoteHost: await resolveRemoteHost(remoteUrl) };
     }),
   );
 
@@ -27,20 +29,6 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: 'Open Repository',
-      });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      return result.filePaths[0];
-    }),
-  );
-
-  // Used for picking an SSH key; showHiddenFiles matters because keys live in
-  // ~/.ssh, which the dialog hides by default.
-  ipcMain.handle('git:open-file-dialog', (_e, title: unknown) =>
-    wrap(async () => {
-      assertOptionalString(title, 'title');
-      const result = await dialog.showOpenDialog({
-        properties: ['openFile', 'showHiddenFiles'],
-        title: title || 'Select File',
       });
       if (result.canceled || result.filePaths.length === 0) return null;
       return result.filePaths[0];
@@ -58,4 +46,13 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
   ipcMain.handle('git:get-status', () => wrap(() => git.getStatus()));
 
   ipcMain.handle('git:get-repo-path', () => ({ data: git.getRepoPath() }));
+
+  // One boolean, not a resolved identity: the only thing the UI does with it is
+  // stop a commit that git would reject outright for having no author.
+  ipcMain.handle('git:has-identity', () =>
+    wrap(async () => {
+      const root = git.getRepoPath();
+      return root ? hasIdentity(root) : true;
+    }),
+  );
 }

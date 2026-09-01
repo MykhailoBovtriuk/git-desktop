@@ -8,7 +8,7 @@
   "failed": "{{op}} failed",
   "publishBranch": "Publish branch",
   "error": {
-    "auth": "Could not authenticate with the remote. Open Settings to see how this repository signs in and what is missing.",
+    "auth": "Could not authenticate with the remote. Sign in to continue.",
     "noUpstream": "This branch has no upstream yet. Publish it to push.",
     "conflict": "There are conflicts to resolve first.",
     "uncommitted": "You have uncommitted changes that would be overwritten. Commit or stash them first.",
@@ -17,15 +17,8 @@
     "hook": "A Git hook blocked the operation. See the hook output for details.",
     "unknown": ""
   },
-  "fixAuth": "Fix authentication",
-  "identity": {
-    "committingAs": "Committing as {{name}} <{{email}}> · {{scope}}",
-    "missing": "No identity set",
-    "scope": {
-      "local": "this repository",
-      "global": "global",
-      "included": "included file",
-      "none": "not set"
-    }
+  "signIn": "Sign in",
+  "account": {
+    "signedInAs": "Signed in as {{name}} on {{host}}"
   }
 }

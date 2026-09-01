@@ -1,4 +1,5 @@
 import { gitApi } from '../../api/git-api';
+import { useAccountStore } from '../account-store';
 import type { RepoState, RepoSlice } from './types';
 
 type LifecycleSlice = Pick<
@@ -6,6 +7,9 @@ type LifecycleSlice = Pick<
   | 'epoch'
   | 'busyCount'
   | 'repoPath'
+  | 'remoteHost'
+  | 'hasIdentity'
+  | 'loadIdentity'
   | 'recentRepos'
   | 'busyOperation'
   | 'lastRefreshError'
@@ -21,10 +25,41 @@ type LifecycleSlice = Pick<
 // there is a single store instance (equivalent to the former closure var).
 let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
 
+/**
+ * Offer to sign in the moment a repository that needs it is opened.
+ *
+ * This is the only place the prompt appears on its own: the alternative is
+ * letting the user work for a while and meet the question as a failed push,
+ * which is the dead end this whole feature exists to remove. Dismissing it is
+ * remembered for the session, so re-opening the same repo does not nag.
+ */
+async function promptSignInIfNeeded(root: string, remoteHost: string | null): Promise<void> {
+  if (!remoteHost) return;
+
+  // Wait for the account list rather than skipping when it is not in yet. On
+  // startup the store rehydrates and reopens the last repository immediately,
+  // which is well before the first `account:list` returns — bailing out here
+  // meant the prompt never appeared for the repo the user already had open,
+  // i.e. on every launch.
+  if (!useAccountStore.getState().loaded) {
+    await useAccountStore
+      .getState()
+      .loadAccounts()
+      .catch(() => {});
+  }
+
+  const account = useAccountStore.getState();
+  if (account.dismissedRepos.has(root)) return;
+  if (account.phase) return;
+  await account.resolveForRepo(root, remoteHost);
+}
+
 export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   epoch: 0,
   busyCount: 0,
   repoPath: null,
+  remoteHost: null,
+  hasIdentity: null,
   recentRepos: [],
   busyOperation: null,
   lastRefreshError: null,
@@ -46,14 +81,18 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   },
 
   openRepo: async path => {
-    const root = (await gitApi.openRepo(path)) || path;
+    const opened = await gitApi.openRepo(path);
+    const root = opened?.root || path;
     set(s => ({
       epoch: s.epoch + 1,
       repoPath: root,
+      remoteHost: opened?.remoteHost ?? null,
+      hasIdentity: null,
       mergeState: null,
       recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
+    void promptSignInIfNeeded(root, opened?.remoteHost ?? null);
     if (get().merging && !get().mergeState) {
       try {
         const conflicts = await gitApi.getMergeConflicts();
@@ -77,12 +116,24 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     if (path) await get().openRepo(path);
   },
 
+  loadIdentity: async () => {
+    const startedEpoch = get().epoch;
+    const hasIdentity = await gitApi.hasIdentity();
+    if (get().epoch !== startedEpoch) return;
+    set({ hasIdentity });
+  },
+
   removeRecentRepo: path => {
+    // Forget the account chosen for it too: leaving the binding behind meant a
+    // repository removed and added back silently reused an old answer.
+    void useAccountStore.getState().forgetRepo(path);
     set(s => ({
       recentRepos: s.recentRepos.filter(r => r && r !== path),
       // Dropping the repo that is currently open leaves nothing to show, so
       // close it too — Shell falls back to the welcome screen on a null path.
-      ...(s.repoPath === path ? { repoPath: null, mergeState: null, epoch: s.epoch + 1 } : {}),
+      ...(s.repoPath === path
+        ? { repoPath: null, remoteHost: null, mergeState: null, epoch: s.epoch + 1 }
+        : {}),
     }));
   },
 

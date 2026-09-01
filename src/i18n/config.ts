@@ -15,6 +15,7 @@ import enCheckout from './en/checkout.json';
 import enRepo from './en/repo.json';
 import enSettings from './en/settings.json';
 import enAbout from './en/about.json';
+import enAccount from './en/account.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -29,6 +30,7 @@ import ukCheckout from './uk/checkout.json';
 import ukRepo from './uk/repo.json';
 import ukSettings from './uk/settings.json';
 import ukAbout from './uk/about.json';
+import ukAccount from './uk/account.json';
 
 i18n
   .use(LanguageDetector)
@@ -51,6 +53,7 @@ i18n
         repo: enRepo,
         settings: enSettings,
         about: enAbout,
+        account: enAccount,
       },
       uk: {
         common: ukCommon,
@@ -66,6 +69,7 @@ i18n
         repo: ukRepo,
         settings: ukSettings,
         about: ukAbout,
+        account: ukAccount,
       },
     },
     detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },

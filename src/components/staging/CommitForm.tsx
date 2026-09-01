@@ -11,12 +11,17 @@ export function CommitForm() {
   const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { commit, status, merging, identity } = useRepoStore(
+  const {
+    commit,
+    status,
+    merging,
+    hasIdentity: identityKnown,
+  } = useRepoStore(
     useShallow(s => ({
       commit: s.commit,
       status: s.status,
       merging: s.merging,
-      identity: s.identity,
+      hasIdentity: s.hasIdentity,
     })),
   );
   const { addToast, openOverlayView } = useUiStore(
@@ -39,11 +44,9 @@ export function CommitForm() {
   const hasStaged = status.staged.length > 0;
   // git refuses outright when neither the repository nor the global config
   // names an author. Catching it here beats letting the user type a message and
-  // discover it only after pressing Commit. Note this is about git having no
-  // identity at all — the common case of "no local override" is perfectly fine.
-  // Unknown identity (not loaded yet) must never block: only a definite
-  // 'none' from git means committing would actually fail.
-  const hasIdentity = !identity || identity.scope !== 'none';
+  // discover it only after pressing Commit. Unknown (not loaded yet) must never
+  // block: only a definite "no" from git means committing would actually fail.
+  const hasIdentity = identityKnown !== false;
   const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading && hasIdentity;
 
   const handleCommit = async () => {

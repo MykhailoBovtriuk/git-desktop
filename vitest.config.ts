@@ -15,11 +15,11 @@ export default defineConfig({
       exclude: ['src/main.tsx', 'src/vite-env.d.ts', 'electron/main.ts', 'electron/preload.ts'],
       thresholds: {
         // Ratchet: set just under current coverage — raise as it grows,
-        // never lower. (As of 2026-07: L 61.6 / S 58.9 / B 57.6 / F 42.3.)
-        lines: 60,
-        statements: 57,
-        branches: 55,
-        functions: 40,
+        // never lower. (As of 2026-09: L 66.3 / S 63.2 / B 61.0 / F 51.3.)
+        lines: 65,
+        statements: 62,
+        branches: 60,
+        functions: 50,
       },
     },
   },

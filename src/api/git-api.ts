@@ -1,35 +1,12 @@
-import type {
-  Commit,
-  Branch,
-  GitStatus,
-  StashEntry,
-  EffectiveIdentity,
-  AuthStatus,
-} from '../types';
+import type { Commit, Branch, GitStatus, StashEntry } from '../types';
+import { invoke } from './invoke';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
-async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
-  const result = await window.electronAPI.invoke(channel, ...args);
-  if (result && typeof result === 'object' && 'error' in result) {
-    throw new Error((result as { error: string }).error);
-  }
-  return (result as { data: T }).data;
-}
-
 export const gitApi = {
-  openRepo: (path: string) => invoke<string>('git:open-repo', path),
+  openRepo: (path: string) =>
+    invoke<{ root: string; remoteHost: string | null }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
-  openFileDialog: (title?: string) => invoke<string | null>('git:open-file-dialog', title),
-  getIdentity: () => invoke<EffectiveIdentity>('git:get-identity'),
-  setIdentity: (name: string, email: string) =>
-    invoke<EffectiveIdentity>('git:set-identity', name, email),
-  setGlobalIdentity: (name: string, email: string) =>
-    invoke<EffectiveIdentity>('git:set-global-identity', name, email),
-  clearIdentity: () => invoke<EffectiveIdentity>('git:clear-identity'),
-  getAuthStatus: () => invoke<AuthStatus>('git:get-auth-status'),
-  setCredentialHelper: (value: string) => invoke<string>('git:set-credential-helper', value),
-  getAllowedHelpers: () => invoke<string[]>('git:get-allowed-helpers'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
   getStatus: () => invoke<StatusResult>('git:get-status'),
@@ -68,6 +45,7 @@ export const gitApi = {
   getMergeMessage: () => invoke<string>('git:get-merge-message'),
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
+  hasIdentity: () => invoke<boolean>('git:has-identity'),
   readFile: (p: string) => invoke<string>('git:read-file', p),
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
   getConflictSides: (p: string) =>

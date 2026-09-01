@@ -368,6 +368,80 @@ type ActiveView = 'changes' | 'history' | 'graph' | 'merge-editor';
 
 ---
 
+
+## 8b. Authentication
+
+Before this existed, `electron/git/context.ts` set `GIT_TERMINAL_PROMPT=0` and
+`GIT_ASKPASS=echo` so a GUI with no TTY would fail fast instead of hanging on an
+invisible password prompt — and nothing ever supplied the password. The advice
+that fell out of that was "push once from the terminal first", which is not an
+answer a desktop client can give.
+
+Both variables are still set, and must stay set. What changed is that something
+now fills the credential store.
+
+### The registry
+
+`electron/auth/providers/` holds one file per hosting service, each exporting a
+`ProviderDefinition`: its known hosts, its endpoints, its scopes, whether it can
+use PKCE, and the one function that turns a token into a `ProviderAccount`.
+`registry.ts` is the only place that knows the full list.
+
+Everything else — the authorize URL, the code exchange, the refresh, the storage
+— is provider-agnostic. Adding a ninth service is a new file plus one line in
+the registry, not an edit spread across the flow.
+
+| Provider | PKCE | Notes |
+|---|---|---|
+| `github` / `github-enterprise` | no | Needs a client secret; the enterprise API lives at `/api/v3` on the instance |
+| `gitlab` / `gitlab-self` | yes | Commits use `commit_email`, which is not always the account email |
+| `azure-devops` | yes | Microsoft Entra ID, not the retiring Azure DevOps OAuth service; git ignores the username and reads the token as the password |
+| `bitbucket` | no | Needs a client secret; tokens live two hours |
+| `gitea` | yes | Also covers Forgejo and Codeberg |
+| `token` | — | No OAuth at all: the account is built from a pasted token, which is the only thing that can work for an arbitrary self-hosted server |
+
+### The round trip
+
+1. `openRepo` returns the remote's host alongside the repository root, so the
+   renderer can decide immediately whether to offer a sign-in.
+2. `oauth-flow.beginSignIn` mints a single-use `state` (10-minute TTL, compared
+   with `timingSafeEqual`) and, for PKCE providers, a verifier. Without the
+   `state` check anything able to open a `git-desktop-auth://` URL could hand
+   the app an account and have it stored as the user's own.
+3. `shell.openExternal` sends the user to the provider.
+4. The redirect comes back through `auth/deep-link.ts`, which is where the three
+   platforms disagree: macOS fires `open-url` (possibly *before* `app.ready`, so
+   it is buffered), Windows and Linux relaunch the binary with the URL in argv
+   and rely on the single-instance lock to forward it.
+5. `completeSignIn` exchanges the code. The body is inspected rather than the
+   status: GitHub answers HTTP 200 with `{"error": …}`, and trusting the status
+   alone turns a failed sign-in into an apparently successful one.
+
+### Where the token lives
+
+`auth/token-store.ts` keys credentials by **host**, so github.com, a work GitLab
+and Azure DevOps are all active at once and signing out of one leaves the rest
+alone. Tokens are encrypted with `safeStorage`; when the OS offers no keychain
+nothing is written to disk at all and the UI says the session is all there is.
+
+`auth/git-credentials.ts` then hands the token to `git credential approve` over
+**stdin** — an argv entry is readable by any process via `ps` — after making
+sure a credential helper is configured, since `approve` without one is a silent
+no-op. From that point ordinary `git push` authenticates by itself.
+
+Providers whose tokens expire are refreshed by `getFreshToken`, called from
+`electron/git/remote.ts` before every fetch/pull/push, which also rewrites the
+system credential. Skipping that is how a session starts working and quietly
+stops two hours later.
+
+### Identity
+
+`auth/identity-bootstrap.ts` writes `user.name` / `user.email` from the account
+— but only where git has none. Overwriting an address the user chose would
+misattribute their commits invisibly.
+
+---
+
 ## 9. Edge cases the codebase actively handles
 
 These are non-obvious cases where naive code would fail. The handling is deliberate.
@@ -500,15 +574,18 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 - **`preload.ts`** — Exposes exactly one thing: `window.electronAPI.invoke(channel, ...args)`.
 - **`ipc-handlers.ts`** — Registers all `git:*` channels. Each handler wraps the `GitService` call in `wrap()`, which converts thrown errors to `{ error, code }` and successes to `{ data }`. This is the renderer ↔ main contract.
 - **`git-service.ts`** — Stateful service. Owns the `simpleGit` instance and the open repo path. All methods assume `openRepo` was called first. Beyond standard ops, also handles: root-commit diff fallback, untracked diff synthesis, conflict sides via `git show :N:path`, raw file read/write.
+- **`auth/`** — Everything about signing in to a Git host. See §8b.
 
 ### `src/api/`
 
-- **`git-api.ts`** — One typed wrapper per IPC channel. The `invoke<T>` helper unwraps `{ data }` → `T` or throws if `error` is present. This is the only file in `src/` that touches `window.electronAPI`.
+- **`invoke.ts`** — The one place `{ data }` is unwrapped and `{ error }` becomes a thrown `Error`. Every api module goes through it, so they cannot drift apart on how a failure surfaces.
+- **`git-api.ts`**, **`app-api.ts`**, **`account-api.ts`** — One typed wrapper per IPC channel. Together they are the only files in `src/` that touch `window.electronAPI`.
 
 ### `src/stores/`
 
 - **`repo-store.ts`** — All Git state and async actions. Wrapped with Zustand `persist` (localStorage backend, partializes only `repoPath` + `recentRepos`).
 - **`ui-store.ts`** — Ephemeral UI state. View routing, selection state, toasts.
+- **`account-store.ts`** — Signed-in accounts and the sign-in dialog's state. Deliberately not persisted: the main process owns the accounts because it owns the tokens, and a stale copy here would show a user as connected to a service they can no longer reach.
 
 ### `src/hooks/`
 
@@ -565,10 +642,9 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 - **`Accordion.tsx`** — Reusable expandable section. Active state: `bg-surface0` + 2px blue left border + `text-text`. Inactive: transparent + `text-subtext`. Used in the Changes section of the sidebar.
 - **`Toast.tsx`** — Fixed-position toast container under the titlebar (`top-12`). Each toast auto-dismisses after 5 seconds. Variant colors: success=green, error=red, info=blue.
 
-### `src/components/modals/`
+### `src/components/account/`
 
-- **`CheckoutModal.tsx`** — "You have uncommitted changes — force switch?" modal. **Currently orphaned** (defined but not rendered anywhere). Wire-in candidate: when `checkout` fails because of uncommitted changes, show this.
-- **`CredentialModal.tsx`** — Username/password prompt for HTTPS remotes. **Currently orphaned** too. Wire-in candidate: when push/pull fails with an auth error.
+- **`SignInModal.tsx`** — The whole sign-in conversation in one dialog, in four states: `choose` (which service is this server), `browser` (hand off to the browser), `waiting` (the redirect has not come back yet), `token` (paste a personal access token). Rendered from `Shell` in both the repo and welcome layouts, because Settings is reachable from both.
 
 ### `src/i18n/`
 
@@ -581,6 +657,7 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 The shared type definitions. Imported by both renderer and main (the main process imports from `'../src/types'`). Defines:
 
 - Git data shapes: `Commit`, `Branch`, `FileStatus`, `GitStatus`, `AheadBehind`, `MergeState`
+- Account shapes: `ProviderId`, `ProviderAccount`, `ProviderOption`, `SignInPhase` — note `ProviderAccount` carries no token, by design
 - Diff shapes: `DiffHunk`, `DiffLine`, `FileDiff`
 - IPC shapes: `IpcError`, `IpcResult<T>`
 - UI types: `ActiveView`, `Toast`, `ToastVariant`

@@ -38,3 +38,10 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 coverage
+
+# OAuth client keys baked in at build time.
+# oauth-keys.json is normally generated inside dist-electron/, which is already
+# ignored — but it is listed bare as well, so a copy landing anywhere in the
+# tree can never be committed with the client secret in it.
+.env.local
+oauth-keys.json

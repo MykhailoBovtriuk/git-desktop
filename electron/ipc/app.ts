@@ -12,7 +12,6 @@ import { assertString } from '../ipc-validators';
 const EXTERNAL_PREFIXES = [
   'https://github.com/MykhailoBovtriuk/git-desktop',
   'https://github.com/sponsors/MykhailoBovtriuk',
-  'https://docs.github.com/en/authentication',
 ];
 
 const ALLOWED_ORIGINS = new Set(EXTERNAL_PREFIXES.map(p => new URL(p).origin));

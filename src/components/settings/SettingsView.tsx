@@ -10,7 +10,8 @@ import {
 } from '../../stores/settings-store';
 import { PageHeader } from '../layout/PageHeader';
 import { SettingsSection } from './SettingsSection';
-import { ListItem, SegmentedControl } from '../../shared/ui';
+import { AccountsSection } from './AccountsSection';
+import { SegmentedControl } from '../../shared/ui';
 import type { ThemePreference } from '../../types';
 
 const THEMES: ThemePreference[] = ['light', 'dark', 'system'];
@@ -19,7 +20,6 @@ export function SettingsView() {
   const { t, i18n } = useTranslation('settings');
   const closeOverlayView = useUiStore(s => s.closeOverlayView);
   const overlayBack = useUiStore(s => s.overlayBack);
-  const openOverlayView = useUiStore(s => s.openOverlayView);
   const { theme, setTheme, autoRefreshMs, setAutoRefreshMs } = useSettingsStore(
     useShallow(s => ({
       theme: s.theme,
@@ -73,18 +73,7 @@ export function SettingsView() {
             />
           </SettingsSection>
 
-          {/* Identity and authentication are one topic and the largest part of
-              this page, so they live on their own screen. */}
-          <ListItem
-            onClick={() => openOverlayView('settings-account')}
-            className="rounded px-3 py-3 mt-2 flex items-center justify-between gap-4"
-          >
-            <div className="min-w-0">
-              <p className="text-text text-sm">{t('account.title')}</p>
-              <p className="text-subtext text-xs mt-0.5">{t('account.hint')}</p>
-            </div>
-            <span className="text-subtext shrink-0">›</span>
-          </ListItem>
+          <AccountsSection />
         </div>
       </div>
     </div>

@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { classifyGitError } from '../../src/lib/git-error-mapper';
 
 describe('classifyGitError', () => {
-  it('classifies HTTPS authentication failure as auth with a credential-help action', () => {
+  it('classifies HTTPS authentication failure as auth with a sign-in action', () => {
     const r = classifyGitError("fatal: Authentication failed for 'https://github.com/x/y.git'");
     expect(r.kind).toBe('auth');
-    expect(r.action).toBe('credentialHelp');
+    expect(r.action).toBe('signIn');
   });
 
   it('classifies a missing username prompt as auth', () => {
@@ -89,7 +89,7 @@ describe('classifyGitError', () => {
       'error: Enter passphrase for "/home/j/.ssh/id_ed25519": Load key: incorrect passphrase supplied to decrypt private key?\nfatal: failed to write commit object',
     );
     expect(r.kind).toBe('auth');
-    expect(r.action).toBe('credentialHelp');
+    expect(r.action).toBe('signIn');
   });
 
   it('does not mistake unrelated failures for auth problems', () => {
@@ -106,7 +106,7 @@ describe('classifyGitError', () => {
       "error: Couldn't load public key /home/j/.ssh/id_ed25519.pub: No such file or directory?\nfatal: failed to write commit object",
     );
     expect(r.kind).toBe('auth');
-    expect(r.action).toBe('credentialHelp');
+    expect(r.action).toBe('signIn');
   });
 
   it('treats a missing ssh identity file as an auth problem', () => {

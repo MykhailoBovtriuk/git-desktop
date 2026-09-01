@@ -1,13 +1,5 @@
 import type { StoreApi } from 'zustand';
-import type {
-  Commit,
-  Branch,
-  GitStatus,
-  AheadBehind,
-  MergeState,
-  StashEntry,
-  EffectiveIdentity,
-} from '../../types';
+import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
 
@@ -42,15 +34,16 @@ export interface RepoState {
   stashPop: (index: number) => Promise<void>;
   stashDrop: (index: number) => Promise<void>;
   openRepo: (path: string) => Promise<void>;
+  /** Host of the open repository's remote, or null for a local-only repo. */
+  remoteHost: string | null;
+  /**
+   * Whether git has an author to commit as. Null until known — an unknown
+   * answer must never block a commit, only a definite "no" does.
+   */
+  hasIdentity: boolean | null;
+  loadIdentity: () => Promise<void>;
   openDialog: () => Promise<void>;
   removeRecentRepo: (path: string) => void;
-  // Who the open repository commits as, as resolved by git itself — including
-  // values inherited from the global config or an includeIf file.
-  identity: EffectiveIdentity | null;
-  loadIdentity: () => Promise<void>;
-  setIdentity: (name: string, email: string) => Promise<void>;
-  setGlobalIdentity: (name: string, email: string) => Promise<void>;
-  clearIdentity: () => Promise<void>;
   loadLog: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;

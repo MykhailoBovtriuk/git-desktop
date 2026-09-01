@@ -16,7 +16,6 @@ export function Titlebar() {
       mergeState: s.mergeState,
       refresh: s.refresh,
       lastRefreshError: s.lastRefreshError,
-      identity: s.identity,
     })),
   );
   const [branchOpen, setBranchOpen] = useState(false);

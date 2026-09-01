@@ -11,7 +11,6 @@ import { createCheckoutSlice } from './repo/checkout.slice';
 import { createMergeSlice } from './repo/merge.slice';
 import { createRebaseSlice } from './repo/rebase.slice';
 import { createStashSlice } from './repo/stash.slice';
-import { createIdentitySlice } from './repo/identity.slice';
 
 export { LOG_PAGE_SIZE } from './repo/types';
 export { CheckoutConflictError } from './repo/checkout.slice';
@@ -29,7 +28,6 @@ export const useRepoStore = create<RepoState>()(
       ...createMergeSlice(set, get),
       ...createRebaseSlice(set, get),
       ...createStashSlice(set, get),
-      ...createIdentitySlice(set, get),
     }),
     {
       name: 'git-desktop-repo',

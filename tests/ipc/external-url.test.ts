@@ -18,7 +18,6 @@ describe('isAllowedExternalUrl', () => {
       'https://github.com/MykhailoBovtriuk/git-desktop/issues',
       'https://github.com/MykhailoBovtriuk/git-desktop/releases',
       'https://github.com/sponsors/MykhailoBovtriuk',
-      'https://docs.github.com/en/authentication/connecting-to-github-with-ssh',
     ]) {
       expect(isAllowedExternalUrl(url), url).toBe(true);
     }
@@ -28,7 +27,6 @@ describe('isAllowedExternalUrl', () => {
   // pin the lookalikes down.
   it('rejects lookalike hosts that merely start with an allowed one', () => {
     for (const url of [
-      'https://docs.github.com.evil.com/en/authentication',
       'https://github.com.evil.com/MykhailoBovtriuk/git-desktop',
       'https://evil.com/https://github.com/MykhailoBovtriuk/git-desktop',
     ]) {
@@ -40,12 +38,10 @@ describe('isAllowedExternalUrl', () => {
     expect(isAllowedExternalUrl('https://github.com/MykhailoBovtriuk/git-desktop-evil')).toBe(
       false,
     );
-    expect(isAllowedExternalUrl('https://docs.github.com/en/authentication-evil')).toBe(false);
   });
 
   it('rejects other paths on an allowed origin', () => {
     expect(isAllowedExternalUrl('https://github.com/someone-else/repo')).toBe(false);
-    expect(isAllowedExternalUrl('https://docs.github.com/en/billing')).toBe(false);
   });
 
   it('rejects non-https schemes and junk', () => {

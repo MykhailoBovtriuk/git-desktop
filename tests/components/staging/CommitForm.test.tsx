@@ -19,11 +19,11 @@ vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 function setupMocks({
   staged = ['file.ts'],
   commitImpl = vi.fn().mockResolvedValue(undefined),
-  scope = 'global' as 'global' | 'none',
+  hasIdentity = true as boolean | null,
 }: {
   staged?: string[];
   commitImpl?: ReturnType<typeof vi.fn>;
-  scope?: 'global' | 'none';
+  hasIdentity?: boolean | null;
 } = {}) {
   const mockCommit = commitImpl;
   const mockAddToast = vi.fn();
@@ -33,14 +33,8 @@ function setupMocks({
     commit: mockCommit,
     status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
     merging: false,
-    identity: {
-      name: 'J',
-      email: 'j@x.com',
-      origin: null,
-      scope,
-      signingKey: null,
-      signCommits: false,
-    },
+    remoteHost: null,
+    hasIdentity,
   };
   const uiState = { addToast: mockAddToast, openOverlayView: vi.fn() };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
@@ -158,7 +152,7 @@ describe('CommitForm', () => {
   // Committing is impossible when neither the repository nor the global config
   // names an author — git refuses outright, so the button must say so first.
   it('blocks committing when git has no identity anywhere', () => {
-    setupMocks({ scope: 'none' });
+    setupMocks({ hasIdentity: false });
     render(<CommitForm />);
     fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
       target: { value: 'my commit' },
@@ -167,13 +161,24 @@ describe('CommitForm', () => {
     expect(screen.getByText('noIdentity')).toBeInTheDocument();
   });
 
-  it('does not block when the identity merely comes from the global config', () => {
-    setupMocks({ scope: 'global' });
+  it('does not block when git does have an author', () => {
+    setupMocks({ hasIdentity: true });
     render(<CommitForm />);
     fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
       target: { value: 'my commit' },
     });
     expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
     expect(screen.queryByText('noIdentity')).toBeNull();
+  });
+
+  // The answer arrives one IPC round trip after the form renders. Blocking on
+  // "not known yet" would grey out the button on every repository open.
+  it('does not block while the answer is still unknown', () => {
+    setupMocks({ hasIdentity: null });
+    render(<CommitForm />);
+    fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
+      target: { value: 'my commit' },
+    });
+    expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
   });
 });

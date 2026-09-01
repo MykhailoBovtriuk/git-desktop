@@ -3,17 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useAccountStore } from '../../stores/account-store';
 import { classifyGitError } from '../../lib/git-error-mapper';
 import { Button, UserIcon } from '../../shared/ui';
 import { AppMenuButtons } from './AppMenuButtons';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, identity, commits, aheadBehind, fetch, pull, push, publishBranch } =
+  const { currentBranch, remoteHost, commits, aheadBehind, fetch, pull, push, publishBranch } =
     useRepoStore(
       useShallow(s => ({
         currentBranch: s.currentBranch,
-        identity: s.identity,
+        remoteHost: s.remoteHost,
         commits: s.commits,
         aheadBehind: s.aheadBehind,
         fetch: s.fetch,
@@ -25,6 +26,14 @@ export function Footer() {
   const { addToast, openOverlayView } = useUiStore(
     useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
   );
+  const { account, openSignIn, changeAccountForRepo } = useAccountStore(
+    useShallow(s => ({
+      account: s.current,
+      openSignIn: s.openSignIn,
+      changeAccountForRepo: s.changeAccountForRepo,
+    })),
+  );
+  const repoPath = useRepoStore(s => s.repoPath);
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
 
   const handlePublish = () => {
@@ -64,8 +73,8 @@ export function Footer() {
         action:
           errAction === 'publishBranch' && currentBranch
             ? { label: t('publishBranch'), onClick: handlePublish }
-            : errAction === 'credentialHelp'
-              ? { label: t('fixAuth'), onClick: () => openOverlayView('settings-account', 'auth') }
+            : errAction === 'signIn' && remoteHost
+              ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
               : undefined,
       });
     } finally {
@@ -75,17 +84,11 @@ export function Footer() {
 
   const hash = commits[0]?.abbreviatedHash ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
-  const noIdentity = identity?.scope === 'none';
-  // The scope is what tells a repository-level override apart from the global
-  // identity, and there is no room for it beside the name — so it rides along
-  // in the tooltip.
-  const identityLabel = noIdentity
-    ? t('identity.missing')
-    : t('identity.committingAs', {
-        name: identity?.name ?? '',
-        email: identity?.email ?? '',
-        scope: t(`identity.scope.${identity?.scope ?? 'none'}`),
-      });
+  // The tooltip has to say it is clickable for a reason: the visible name is
+  // the account this repository commits as, and that is changeable.
+  const accountLabel = account
+    ? t('account.signedInAs', { name: account.name || account.login, host: account.host })
+    : '';
 
   return (
     <div className="relative h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0 select-none">
@@ -98,24 +101,39 @@ export function Footer() {
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs max-w-[45%]">
         <span className="text-blue shrink-0">●</span>
         <span className="text-subtext font-mono shrink-0">{hash}</span>
-        {identity && (
+        {account && (
           <>
             <span className="text-surface2 shrink-0">|</span>
             <button
-              onClick={() => openOverlayView('settings-account')}
-              title={identityLabel}
-              aria-label={identityLabel}
+              onClick={() =>
+                repoPath && remoteHost
+                  ? void changeAccountForRepo(repoPath, remoteHost)
+                  : openOverlayView('settings')
+              }
+              title={accountLabel}
+              aria-label={accountLabel}
+              className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
+            >
+              {account.avatarDataUrl ? (
+                <img src={account.avatarDataUrl} alt="" className="w-4 h-4 rounded-full shrink-0" />
+              ) : (
+                <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />
+              )}
+              <span className="text-text truncate">@{account.login}</span>
+            </button>
+          </>
+        )}
+        {/* No account but a remote to reach: the one thing worth offering here
+            is the way to fix that, before a push fails and explains it. */}
+        {!account && remoteHost && (
+          <>
+            <span className="text-surface2 shrink-0">|</span>
+            <button
+              onClick={() => void openSignIn(remoteHost)}
               className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
             >
               <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />
-              {noIdentity ? (
-                <span className="text-yellow truncate">{t('identity.missing')}</span>
-              ) : (
-                <>
-                  <span className="text-text truncate">{identity.name}</span>
-                  <span className="text-subtext truncate">&lt;{identity.email}&gt;</span>
-                </>
-              )}
+              <span className="text-blue truncate">{t('signIn')}</span>
             </button>
           </>
         )}

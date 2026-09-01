@@ -10,7 +10,8 @@ vi.mock('react-i18next', () => ({
 
 import { useGitAction } from '../../src/hooks/use-git-action';
 import { useUiStore } from '../../src/stores/ui-store';
-import { CheckoutConflictError } from '../../src/stores/repo-store';
+import { useAccountStore } from '../../src/stores/account-store';
+import { CheckoutConflictError, useRepoStore } from '../../src/stores/repo-store';
 
 const lastToast = () => {
   const { toasts } = useUiStore.getState();
@@ -20,6 +21,7 @@ const lastToast = () => {
 describe('useGitAction', () => {
   beforeEach(() => {
     useUiStore.setState({ toasts: [] });
+    useRepoStore.setState({ remoteHost: null });
   });
 
   it('returns true on success and shows the success toast when given one', async () => {
@@ -72,12 +74,9 @@ describe('useGitAction', () => {
   // The hook used to take only `kind` from classifyGitError and drop `action`,
   // so an auth failure reached the user as a dead end with nowhere to go.
   it('offers a way out of an authentication failure', async () => {
-    useUiStore.setState({
-      activeView: 'changes',
-      previousView: 'changes',
-      overlayStack: [],
-      settingsFocus: null,
-    });
+    useRepoStore.setState({ remoteHost: 'github.com' });
+    const openSignIn = vi.fn().mockResolvedValue(undefined);
+    useAccountStore.setState({ openSignIn });
     const { result } = renderHook(() => useGitAction());
 
     await result.current(() => Promise.reject(new Error('Authentication failed')), {
@@ -89,10 +88,19 @@ describe('useGitAction', () => {
     expect(toast.action).toBeDefined();
 
     toast.action!.onClick();
-    // Straight to the account screen: the settings list has nothing to say
-    // about a failed push.
-    expect(useUiStore.getState().activeView).toBe('settings-account');
-    expect(useUiStore.getState().settingsFocus).toBe('auth');
+    // Aimed at the server that refused, not at a settings page the user would
+    // then have to navigate.
+    expect(openSignIn).toHaveBeenCalledWith('github.com');
+  });
+
+  // Nothing to sign in to: a button that opened an empty dialog would be worse
+  // than no button.
+  it('omits the action when the repository has no remote', async () => {
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.reject(new Error('Authentication failed')), {
+      title: 'Push',
+    });
+    expect(lastToast().action).toBeUndefined();
   });
 
   it('leaves other failures without an action button', async () => {

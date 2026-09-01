@@ -1,0 +1,47 @@
+{
+  "signIn": "Sign in",
+  "browser": {
+    "title": "Sign in Using Your Browser",
+    "body": "Your browser will redirect you back to Git Desktop once you've signed in. If your browser asks for your permission to launch Git Desktop, please allow it.",
+    "continue": "Continue With Browser",
+    "reopen": "Open Browser Again",
+    "waiting": "Waiting for you to authorize in the browser…",
+    "hostPlaceholder": "git.example.com",
+    "clientIdPlaceholder": "Application (client) ID",
+    "clientSecretPlaceholder": "Client secret",
+    "selfHostedHint": "Register an OAuth application on your server with the callback URL git-desktop-auth://oauth, then paste its client ID here."
+  },
+  "choose": {
+    "title": "Sign in to {{host}}",
+    "hint": "Git Desktop does not recognise this server. Pick what it runs.",
+    "continue": "Continue"
+  },
+  "token": {
+    "title": "Sign in to {{host}}",
+    "hint": "Paste a personal access token with permission to read and write repositories.",
+    "usernamePlaceholder": "Username",
+    "tokenPlaceholder": "Personal access token",
+    "where": "Where do I get a token?",
+    "submit": "Sign In"
+  },
+  "error": {
+    "title": "Sign-in failed",
+    "useToken": "Use a token instead"
+  },
+  "section": {
+    "title": "Accounts",
+    "hint": "The servers you are signed in to. Each one authenticates its own repositories.",
+    "empty": "Not signed in to any server yet.",
+    "signOut": "Sign Out",
+    "add": "Add account",
+    "hostPlaceholder": "github.com",
+    "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting."
+  },
+  "signedInAs": "Signed in as {{name}} on {{host}}",
+  "pick": {
+    "title": "Which account for this repository?",
+    "hint": "You are signed in to more than one account on {{host}}.",
+    "use": "Use this account",
+    "another": "Sign in to another account…"
+  }
+}

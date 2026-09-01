@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../src/api/git-api', () => ({
   gitApi: {
-    openRepo: vi.fn((p: string) => Promise.resolve(p)),
+    openRepo: vi.fn((p: string) => Promise.resolve({ root: p, remoteHost: null })),
     openDialog: vi.fn().mockResolvedValue('/tmp/test-repo'),
     getLog: vi.fn().mockResolvedValue([]),
     getBranches: vi.fn().mockResolvedValue([{ name: 'main', current: true, remote: false }]),
@@ -28,27 +28,7 @@ vi.mock('../../src/api/git-api', () => ({
     applyPatch: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
-    getIdentity: vi.fn().mockResolvedValue({
-      name: null,
-      email: null,
-      sshKeyPath: null,
-      signingKey: null,
-      signCommits: false,
-    }),
-    applyProfile: vi.fn().mockResolvedValue({
-      name: 'Jane',
-      email: 'jane@example.com',
-      sshKeyPath: null,
-      signingKey: null,
-      signCommits: false,
-    }),
-    clearProfile: vi.fn().mockResolvedValue({
-      name: null,
-      email: null,
-      sshKeyPath: null,
-      signingKey: null,
-      signCommits: false,
-    }),
+    hasIdentity: vi.fn().mockResolvedValue(true),
     getStashList: vi.fn().mockResolvedValue([]),
     getStashTop: vi.fn().mockResolvedValue(null),
     stashSave: vi.fn().mockResolvedValue(null),
@@ -57,6 +37,23 @@ vi.mock('../../src/api/git-api', () => ({
     stashDrop: vi.fn().mockResolvedValue(null),
     getStashDiff: vi.fn().mockResolvedValue(''),
   },
+}));
+
+const accountState = {
+  loaded: false,
+  phase: null as string | null,
+  dismissedRepos: new Set<string>(),
+  accounts: [] as unknown[],
+  accountFor: () => null,
+  loadAccounts: vi.fn(async () => {
+    accountState.loaded = true;
+  }),
+  resolveForRepo: vi.fn(async () => {}),
+  forgetRepo: vi.fn(async () => {}),
+  openSignIn: vi.fn(async () => {}),
+};
+vi.mock('../../src/stores/account-store', () => ({
+  useAccountStore: { getState: () => accountState },
 }));
 
 const { useRepoStore, LOG_PAGE_SIZE } = await import('../../src/stores/repo-store');
@@ -618,5 +615,55 @@ describe('repo-store state consistency', () => {
   it('openRepo leaves mergeState null when not merging', async () => {
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     expect(useRepoStore.getState().mergeState).toBeNull();
+  });
+});
+
+describe('sign-in prompt on opening a repository', () => {
+  beforeEach(async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.openRepo as any).mockResolvedValue({ root: '/tmp/r', remoteHost: 'github.com' });
+    accountState.loaded = false;
+    accountState.phase = null;
+    accountState.dismissedRepos = new Set();
+    accountState.loadAccounts.mockClear();
+    accountState.resolveForRepo.mockClear();
+    accountState.forgetRepo.mockClear();
+    accountState.openSignIn.mockClear();
+  });
+
+  // Regression: the store rehydrates and reopens the last repository well
+  // before the first account:list returns. Giving up when the list was not in
+  // yet meant the prompt never appeared for the repo already open — that is,
+  // on every single launch.
+  it('waits for the account list instead of skipping the prompt', async () => {
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(accountState.loadAccounts).toHaveBeenCalled();
+    expect(accountState.resolveForRepo).toHaveBeenCalledWith('/tmp/r', 'github.com');
+  });
+
+  it('forgets the chosen account when a repository leaves the list', () => {
+    useRepoStore.setState({ recentRepos: ['/tmp/r'] });
+    useRepoStore.getState().removeRecentRepo('/tmp/r');
+    expect(accountState.forgetRepo).toHaveBeenCalledWith('/tmp/r');
+  });
+
+  it('says nothing for a repository with no remote', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.openRepo as any).mockResolvedValue({ root: '/tmp/r', remoteHost: null });
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(accountState.resolveForRepo).not.toHaveBeenCalled();
+  });
+
+  it('does not nag about a repository the user already dismissed', async () => {
+    accountState.loaded = true;
+    accountState.dismissedRepos = new Set(['/tmp/r']);
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(accountState.resolveForRepo).not.toHaveBeenCalled();
   });
 });

@@ -42,17 +42,20 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:get-stash-diff',
   'git:get-stash-top',
   'git:get-repo-path',
+  'git:has-identity',
   'git:read-file',
   'git:write-file',
   'git:get-conflict-sides',
-  'git:get-identity',
-  'git:set-identity',
-  'git:set-global-identity',
-  'git:clear-identity',
-  'git:get-auth-status',
-  'git:set-credential-helper',
-  'git:get-allowed-helpers',
-  'git:open-file-dialog',
+  'account:list',
+  'account:providers',
+  'account:for-repo',
+  'account:bind',
+  'account:unbind',
+  'account:sign-in',
+  'account:sign-in-token',
+  'account:open-token-help',
+  'account:cancel-sign-in',
+  'account:sign-out',
   'app:get-version',
   'shell:open-external',
   'window:set-titlebar-overlay',
@@ -69,6 +72,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = () => cb();
     ipcRenderer.on('repo:changed', listener);
     return () => ipcRenderer.removeListener('repo:changed', listener);
+  },
+  // Sign-in finishes in the main process, minutes after the renderer asked for
+  // it and via a browser round trip — so the answer has to be pushed, not polled.
+  onAccountChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('account:changed', listener);
+    return () => ipcRenderer.removeListener('account:changed', listener);
   },
   platform: process.platform,
 });

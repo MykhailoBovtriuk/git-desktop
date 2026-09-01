@@ -147,9 +147,9 @@ describe('overlay views', () => {
   it('keeps the original origin when moving to a sub-screen', () => {
     useUiStore.getState().setActiveView('graph');
     useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('settings-account');
+    useUiStore.getState().openOverlayView('about');
 
-    expect(useUiStore.getState().activeView).toBe('settings-account');
+    expect(useUiStore.getState().activeView).toBe('about');
     useUiStore.getState().closeOverlayView();
     expect(useUiStore.getState().activeView).toBe('graph');
   });
@@ -157,7 +157,7 @@ describe('overlay views', () => {
   it('goes back one screen at a time', () => {
     useUiStore.getState().setActiveView('graph');
     useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('settings-account');
+    useUiStore.getState().openOverlayView('about');
 
     useUiStore.getState().overlayBack();
     expect(useUiStore.getState().activeView).toBe('settings');
@@ -179,7 +179,7 @@ describe('overlay views', () => {
   it('unwinds to a screen already below the current one', () => {
     useUiStore.getState().setActiveView('changes');
     useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('settings-account');
+    useUiStore.getState().openOverlayView('about');
     useUiStore.getState().openOverlayView('settings');
 
     expect(useUiStore.getState().overlayStack).toEqual([]);
@@ -190,19 +190,10 @@ describe('overlay views', () => {
   it('closes out of a sub-screen in one step', () => {
     useUiStore.getState().setActiveView('graph');
     useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('settings-account');
+    useUiStore.getState().openOverlayView('about');
 
     useUiStore.getState().closeOverlayView();
     expect(useUiStore.getState().activeView).toBe('graph');
     expect(useUiStore.getState().overlayStack).toEqual([]);
-  });
-
-  it('carries the focus hint into the sub-screen', () => {
-    useUiStore.getState().setActiveView('changes');
-    useUiStore.getState().openOverlayView('settings-account', 'auth');
-
-    expect(useUiStore.getState().consumeSettingsFocus()).toBe('auth');
-    // Consumed once, so a later visit does not re-expand anything.
-    expect(useUiStore.getState().consumeSettingsFocus()).toBeNull();
   });
 });

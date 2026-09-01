@@ -9,8 +9,7 @@ import { registerRebaseHandlers } from './ipc/rebase';
 import { registerStashHandlers } from './ipc/stash';
 import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
-import { registerIdentityHandlers } from './ipc/identity';
-import { registerAuthHandlers } from './ipc/auth';
+import { registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
 
 export { wrap };
@@ -33,7 +32,6 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   registerStashHandlers(gitService);
   registerDiffHandlers(gitService);
   registerFileHandlers(gitService);
-  registerIdentityHandlers(gitService);
-  registerAuthHandlers(gitService);
+  registerAccountHandlers(options);
   registerAppHandlers(options);
 }
