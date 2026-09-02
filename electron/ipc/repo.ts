@@ -45,6 +45,8 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
 
   ipcMain.handle('git:get-status', () => wrap(() => git.getStatus()));
 
+  ipcMain.handle('git:get-head-commit', () => wrap(() => git.getHeadCommit()));
+
   ipcMain.handle('git:get-repo-path', () => ({ data: git.getRepoPath() }));
 
   // One boolean, not a resolved identity: the only thing the UI does with it is

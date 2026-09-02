@@ -13,7 +13,7 @@
     "sourceCode": "Вихідний код",
     "reportIssue": "Повідомити про ваду",
     "releases": "Релізи",
-    "license": "Ліцензія (MIT)"
+    "license": "Ліцензія (ISC)"
   },
   "credits": "Зроблено на Electron, React і simple-git. Палітра кольорів: Catppuccin. © 2026 Михайло Бовтрюк."
 }

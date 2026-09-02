@@ -10,12 +10,12 @@ import { AppMenuButtons } from './AppMenuButtons';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, remoteHost, commits, aheadBehind, fetch, pull, push, publishBranch } =
+  const { currentBranch, remoteHost, headCommit, aheadBehind, fetch, pull, push, publishBranch } =
     useRepoStore(
       useShallow(s => ({
         currentBranch: s.currentBranch,
         remoteHost: s.remoteHost,
-        commits: s.commits,
+        headCommit: s.headCommit,
         aheadBehind: s.aheadBehind,
         fetch: s.fetch,
         pull: s.pull,
@@ -36,6 +36,9 @@ export function Footer() {
   const repoPath = useRepoStore(s => s.repoPath);
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
 
+  // Through the same classifier as fetch/pull/push: publishing a new branch is
+  // the likeliest first meeting with authentication, so raw stderr here left
+  // the user with no way forward at exactly the wrong moment.
   const handlePublish = () => {
     void publishBranch()
       .then(() =>
@@ -45,13 +48,20 @@ export function Footer() {
           message: t('success', { op: t('push') }),
         }),
       )
-      .catch(e =>
+      .catch((err: unknown) => {
+        const raw = err instanceof Error ? err.message : String(err);
+        const { kind, action: errAction } = classifyGitError(err);
+        const friendly = t(`error.${kind}`);
         addToast({
           variant: 'error',
           title: t('publishBranch'),
-          message: e instanceof Error ? e.message : String(e),
-        }),
-      );
+          message: friendly || raw,
+          action:
+            errAction === 'signIn' && remoteHost
+              ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
+              : undefined,
+        });
+      });
   };
 
   const run = async (op: 'fetch' | 'pull' | 'push', action: () => Promise<unknown>) => {
@@ -82,7 +92,7 @@ export function Footer() {
     }
   };
 
-  const hash = commits[0]?.abbreviatedHash ?? '—';
+  const hash = headCommit ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
   // The tooltip has to say it is clickable for a reason: the visible name is
   // the account this repository commits as, and that is changeable.

@@ -13,7 +13,7 @@
     "sourceCode": "Source code",
     "reportIssue": "Report an issue",
     "releases": "Releases",
-    "license": "License (MIT)"
+    "license": "License (ISC)"
   },
   "credits": "Built with Electron, React and simple-git. Colour palette: Catppuccin. © 2026 Mykhailo Bovtriuk."
 }

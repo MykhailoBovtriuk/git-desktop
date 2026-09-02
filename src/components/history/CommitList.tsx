@@ -67,7 +67,7 @@ export function CommitList({ filter }: CommitListProps) {
 
   return (
     <div ref={parentRef} className="overflow-y-auto flex-1">
-      <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+      <div className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
         {virtualItems.map(virtualRow => {
           const commit = filtered[virtualRow.index];
           const isSelected = selectedCommit === commit.hash;

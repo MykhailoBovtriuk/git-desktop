@@ -8,6 +8,7 @@ export const gitApi = {
     invoke<{ root: string; remoteHost: string | null }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
+  getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
   getStatus: () => invoke<StatusResult>('git:get-status'),
   stageFiles: (paths: string[]) => invoke<null>('git:stage-files', paths),

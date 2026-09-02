@@ -159,11 +159,6 @@ export async function accountsForHost(host: string): Promise<ProviderAccount[]> 
   return [...memory.values()].filter(c => c.host === host).map(c => c.account);
 }
 
-export async function accountById(id: string): Promise<ProviderAccount | null> {
-  await load();
-  return memory.get(id)?.account ?? null;
-}
-
 /** Which account a repository commits and pushes as, if the user has said. */
 export async function boundAccount(repoPath: string): Promise<ProviderAccount | null> {
   await load();

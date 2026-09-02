@@ -13,6 +13,8 @@ export interface RepoState {
   repoPath: string | null;
   recentRepos: string[];
   commits: Commit[];
+  /** Abbreviated hash of HEAD — the user's own position, unlike commits[0]. */
+  headCommit: string | null;
   branches: Branch[];
   currentBranch: string;
   status: GitStatus;
@@ -45,6 +47,7 @@ export interface RepoState {
   openDialog: () => Promise<void>;
   removeRecentRepo: (path: string) => void;
   loadLog: () => Promise<void>;
+  loadHeadCommit: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;
   refresh: () => Promise<void>;

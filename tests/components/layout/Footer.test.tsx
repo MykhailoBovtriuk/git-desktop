@@ -36,7 +36,9 @@ function setup({
     currentBranch: 'feature/login',
     remoteHost,
     repoPath: '/tmp/repo',
-    commits: [{ abbreviatedHash: 'a1b2c3d' }],
+    // HEAD's own hash — deliberately not commits[0], which getLog sorts
+    // across every branch and so can belong to somebody else's branch.
+    headCommit: 'a1b2c3d',
     aheadBehind: { ahead: 0, behind: 0 },
     fetch: vi.fn(),
     pull: vi.fn(),

@@ -14,7 +14,7 @@
     "uk": "Українська"
   },
   "autoRefresh": "Auto refresh",
-  "autoRefreshHint": "How often to poll the repository. File changes are picked up instantly regardless.",
+  "autoRefreshHint": "How often to poll the repository. Git operations (commit, checkout, stash) are picked up instantly; edits to files are noticed on the next poll — with Off, only on manual refresh.",
   "off": "Off",
   "seconds_one": "{{count}}s",
   "seconds_other": "{{count}}s"

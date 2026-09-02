@@ -24,6 +24,9 @@ export class GitService {
   getLog(limit: number, offset: number): Promise<Commit[]> {
     return history.getLog(this.ctx, limit, offset);
   }
+  getHeadCommit(): Promise<string | null> {
+    return history.getHeadCommit(this.ctx);
+  }
   getCommitDiff(hash: string): Promise<{ path: string; status: string }[]> {
     return history.getCommitDiff(this.ctx, hash);
   }

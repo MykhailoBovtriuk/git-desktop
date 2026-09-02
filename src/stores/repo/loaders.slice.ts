@@ -5,6 +5,7 @@ import { LOG_PAGE_SIZE } from './types';
 type LoadersSlice = Pick<
   RepoState,
   | 'commits'
+  | 'headCommit'
   | 'branches'
   | 'currentBranch'
   | 'status'
@@ -15,6 +16,7 @@ type LoadersSlice = Pick<
   | 'hasMoreCommits'
   | 'loadingMoreCommits'
   | 'loadLog'
+  | 'loadHeadCommit'
   | 'loadMoreCommits'
   | 'loadBranches'
   | 'loadStatus'
@@ -23,6 +25,7 @@ type LoadersSlice = Pick<
 
 export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
   commits: [],
+  headCommit: null,
   branches: [],
   currentBranch: '',
   status: { staged: [], unstaged: [] },
@@ -41,6 +44,13 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
       commits: page.slice(0, LOG_PAGE_SIZE),
       hasMoreCommits: page.length > LOG_PAGE_SIZE,
     });
+  },
+
+  loadHeadCommit: async () => {
+    const startedEpoch = get().epoch;
+    const headCommit = await gitApi.getHeadCommit();
+    if (get().epoch !== startedEpoch) return;
+    set({ headCommit });
   },
 
   loadMoreCommits: async () => {
@@ -95,11 +105,9 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
 
   loadStashes: async () => {
     if (!get().repoPath) return;
-    try {
-      const list = await gitApi.getStashList();
-      set({ stashes: list });
-    } catch {
-      set({ stashes: [] });
-    }
+    const startedEpoch = get().epoch;
+    const stashes = await gitApi.getStashList();
+    if (get().epoch !== startedEpoch) return;
+    set({ stashes });
   },
 });

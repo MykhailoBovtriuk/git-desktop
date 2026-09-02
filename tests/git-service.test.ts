@@ -43,6 +43,35 @@ describe('GitService', () => {
     expect(log[0].abbreviatedHash).toHaveLength(7);
   });
 
+  it('getLog keeps refs/stash and its helper commits out of history', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'stash me');
+    execSync('git stash push -m "drawer"', { cwd: tmpDir });
+
+    const log = await git.getLog(10, 0);
+    // --all used to pull refs/stash in, showing the stash plus an
+    // "index on ..." commit that means nothing to the user.
+    expect(log.some(c => c.refs.some(r => r.includes('refs/stash')))).toBe(false);
+    expect(log.some(c => /^index on /.test(c.message))).toBe(false);
+    expect(log.some(c => c.message.includes('drawer'))).toBe(false);
+  });
+
+  it('getHeadCommit returns HEAD even when another branch has newer commits', async () => {
+    await git.openRepo(tmpDir);
+    execSync('git checkout -b feature', { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, 'feat.txt'), 'x');
+    execSync('git add . && git commit -m "newer elsewhere"', { cwd: tmpDir });
+    execSync('git checkout -', { cwd: tmpDir });
+
+    const expected = execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim();
+    expect(await git.getHeadCommit()).toBe(expected);
+    // The regression: the footer used commits[0] from a log sorted across all
+    // branches, which is the feature commit here — not where the user stands.
+    const log = await git.getLog(10, 0);
+    expect(log[0].message).toBe('newer elsewhere');
+    expect(log[0].abbreviatedHash).not.toBe(expected);
+  });
+
   it('getBranches returns current branch', async () => {
     await git.openRepo(tmpDir);
     const branches = await git.getBranches();

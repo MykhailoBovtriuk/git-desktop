@@ -38,10 +38,6 @@ export function resetPendingFlow(): void {
   pending = null;
 }
 
-export function hasPendingFlow(): boolean {
-  return pending !== null;
-}
-
 export function cancelSignIn(): void {
   pending = null;
 }

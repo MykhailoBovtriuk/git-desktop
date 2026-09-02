@@ -4,6 +4,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:open-repo',
   'git:open-dialog',
   'git:get-log',
+  'git:get-head-commit',
   'git:get-branches',
   'git:get-status',
   'git:stage-files',

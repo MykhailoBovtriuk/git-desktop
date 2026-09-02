@@ -12,6 +12,7 @@ vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
   // useGitAction imports this; provide a real class so instanceof checks work.
   CheckoutConflictError: class CheckoutConflictError extends Error {},
+  MergeConflictError: class MergeConflictError extends Error {},
 }));
 
 import { RebaseBanner } from '../../../src/components/rebase/RebaseBanner';

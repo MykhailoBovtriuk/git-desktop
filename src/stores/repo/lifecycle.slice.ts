@@ -145,6 +145,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     const promise = (async () => {
       const results = await Promise.allSettled([
         get().loadLog(),
+        get().loadHeadCommit(),
         get().loadBranches(),
         get().loadStatus(),
         get().loadStashes(),

@@ -8,6 +8,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
   CheckoutConflictError: class CheckoutConflictError extends Error {},
+  MergeConflictError: class MergeConflictError extends Error {},
 }));
 
 import { CheckoutConflictModal } from '../../../src/components/checkout/CheckoutConflictModal';

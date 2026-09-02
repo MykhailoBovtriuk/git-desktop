@@ -63,7 +63,7 @@ export function isNetworkHost(host: string | null): host is string {
  */
 const aliasCache = new Map<string, string>();
 
-export async function resolveSshAlias(host: string): Promise<string> {
+async function resolveSshAlias(host: string): Promise<string> {
   const cached = aliasCache.get(host);
   if (cached !== undefined) return cached;
 

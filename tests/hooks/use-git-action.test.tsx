@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
 import { useGitAction } from '../../src/hooks/use-git-action';
 import { useUiStore } from '../../src/stores/ui-store';
 import { useAccountStore } from '../../src/stores/account-store';
-import { CheckoutConflictError, useRepoStore } from '../../src/stores/repo-store';
+import { CheckoutConflictError, MergeConflictError, useRepoStore } from '../../src/stores/repo-store';
 
 const lastToast = () => {
   const { toasts } = useUiStore.getState();
@@ -66,6 +66,17 @@ describe('useGitAction', () => {
     const { result } = renderHook(() => useGitAction());
     const ok = await result.current(() => Promise.reject(new CheckoutConflictError()), {
       title: 'Checkout',
+    });
+    expect(ok).toBe(false);
+    expect(useUiStore.getState().toasts).toHaveLength(0);
+  });
+
+  // merge() throws MergeConflictError after opening the conflict modal — the
+  // regression was a green "Merged" toast rendered next to that modal.
+  it('swallows MergeConflictError without a toast', async () => {
+    const { result } = renderHook(() => useGitAction());
+    const ok = await result.current(() => Promise.reject(new MergeConflictError()), {
+      title: 'Merge',
     });
     expect(ok).toBe(false);
     expect(useUiStore.getState().toasts).toHaveLength(0);

@@ -12,6 +12,7 @@ vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
   // useGitAction (pulled in for hunk staging) imports this.
   CheckoutConflictError: class CheckoutConflictError extends Error {},
+  MergeConflictError: class MergeConflictError extends Error {},
 }));
 vi.mock('../../../src/api/git-api', () => ({
   gitApi: {

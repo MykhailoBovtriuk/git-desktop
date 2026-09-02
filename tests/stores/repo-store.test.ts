@@ -5,6 +5,7 @@ vi.mock('../../src/api/git-api', () => ({
     openRepo: vi.fn((p: string) => Promise.resolve({ root: p, remoteHost: null })),
     openDialog: vi.fn().mockResolvedValue('/tmp/test-repo'),
     getLog: vi.fn().mockResolvedValue([]),
+    getHeadCommit: vi.fn().mockResolvedValue(null),
     getBranches: vi.fn().mockResolvedValue([{ name: 'main', current: true, remote: false }]),
     getStatus: vi.fn().mockResolvedValue({ staged: [], unstaged: [] }),
     stageFiles: vi.fn().mockResolvedValue(null),
@@ -111,11 +112,16 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().currentBranch).toBe('main');
   });
 
-  it('merge sets mergeState when conflicts exist', async () => {
+  it('merge with conflicts sets mergeState and throws MergeConflictError', async () => {
     const { gitApi } = await import('../../src/api/git-api');
+    const { MergeConflictError } = await import('../../src/stores/repo-store');
     vi.mocked(gitApi.merge).mockResolvedValueOnce({ success: false, conflicts: ['src/foo.ts'] });
     useRepoStore.setState({ currentBranch: 'main' });
-    await useRepoStore.getState().merge('feature');
+    // The throw is what stops callers from toasting "Merged" next to the
+    // conflict modal — the regression this test pins down.
+    await expect(useRepoStore.getState().merge('feature')).rejects.toBeInstanceOf(
+      MergeConflictError,
+    );
     expect(useRepoStore.getState().mergeState).not.toBeNull();
     expect(useRepoStore.getState().mergeState?.conflictingFiles).toContain('src/foo.ts');
   });
@@ -194,12 +200,15 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().stashes).toHaveLength(0);
   });
 
-  it('loadStashes handles errors gracefully', async () => {
+  it('loadStashes lets the error bubble so refresh() can report it', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     (gitApi.getStashList as any).mockRejectedValueOnce(new Error('boom'));
-    await useRepoStore.getState().loadStashes();
-    expect(useRepoStore.getState().stashes).toEqual([]);
+    await expect(useRepoStore.getState().loadStashes()).rejects.toThrow('boom');
+    // refresh() collects the failure into the ⚠ indicator instead of hiding it.
+    (gitApi.getStashList as any).mockRejectedValueOnce(new Error('boom'));
+    await useRepoStore.getState().refresh();
+    expect(useRepoStore.getState().lastRefreshError).toContain('boom');
   });
 
   it('stashSave calls gitApi.stashSave', async () => {
