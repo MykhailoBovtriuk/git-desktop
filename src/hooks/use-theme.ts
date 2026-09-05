@@ -3,10 +3,9 @@ import { useSettingsStore } from '../stores/settings-store';
 import { appApi } from '../api/app-api';
 import type { ResolvedTheme, ThemePreference } from '../types';
 
-// Kept in sync with :root / :root[data-theme='light'] in styles/globals.css.
-// The native titlebar strip on Windows/Linux is painted by the OS, so it needs
-// the literal colours rather than a CSS variable.
-const TITLEBAR: Record<ResolvedTheme, { color: string; symbolColor: string }> = {
+// The OS paints the native titlebar strip, so it needs literal colours; they
+// come from the CSS variables at apply time and this is only the fallback.
+const TITLEBAR_FALLBACK: Record<ResolvedTheme, { color: string; symbolColor: string }> = {
   dark: { color: '#181825', symbolColor: '#cdd6f4' },
   light: { color: '#e6e9ef', symbolColor: '#4c4f69' },
 };
@@ -26,8 +25,14 @@ export function useTheme() {
 
     const apply = () => {
       const resolved = resolveTheme(theme, media?.matches ?? true);
+      // Order matters: the dataset switch is what changes the CSS variables
+      // read next.
       document.documentElement.dataset.theme = resolved;
-      const { color, symbolColor } = TITLEBAR[resolved];
+      const styles = getComputedStyle(document.documentElement);
+      const color =
+        styles.getPropertyValue('--gd-mantle').trim() || TITLEBAR_FALLBACK[resolved].color;
+      const symbolColor =
+        styles.getPropertyValue('--gd-text').trim() || TITLEBAR_FALLBACK[resolved].symbolColor;
       // Rejected on macOS by design (no overlay there) — nothing to report.
       appApi.setTitlebarOverlay(color, symbolColor).catch(() => {});
     };

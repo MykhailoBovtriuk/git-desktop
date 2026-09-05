@@ -7,6 +7,7 @@ import { useAccountStore } from '../../stores/account-store';
 import { classifyGitError } from '../../lib/git-error-mapper';
 import { Button, UserIcon } from '../../shared/ui';
 import { AppMenuButtons } from './AppMenuButtons';
+import { errorMessage } from '../../lib/error-message';
 
 export function Footer() {
   const { t } = useTranslation('footer');
@@ -49,7 +50,7 @@ export function Footer() {
         }),
       )
       .catch((err: unknown) => {
-        const raw = err instanceof Error ? err.message : String(err);
+        const raw = errorMessage(err);
         const { kind, action: errAction } = classifyGitError(err);
         const friendly = t(`error.${kind}`);
         addToast({
@@ -73,7 +74,7 @@ export function Footer() {
         op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
       addToast({ variant: 'success', title: label, message: msg });
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : String(err);
+      const raw = errorMessage(err);
       const { kind, action: errAction } = classifyGitError(err);
       const friendly = t(`error.${kind}`);
       addToast({

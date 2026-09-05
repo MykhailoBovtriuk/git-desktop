@@ -4,6 +4,7 @@ import { useUiStore } from '../../stores/ui-store';
 import { appApi } from '../../api/app-api';
 import { PageHeader } from '../layout/PageHeader';
 import { Badge, Button } from '../../shared/ui';
+import { errorMessage } from '../../lib/error-message';
 
 const REPO_URL = 'https://github.com/MykhailoBovtriuk/git-desktop';
 
@@ -45,7 +46,7 @@ export function AboutView() {
       addToast({
         variant: 'error',
         title: t('title'),
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage(err),
       });
     });
   };

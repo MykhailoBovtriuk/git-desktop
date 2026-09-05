@@ -154,17 +154,17 @@ describe('StashSection', () => {
     });
     mockState(useUiStore)(baseUi);
     render(<StashSection />);
-    expect(screen.getByText('staging:unstaged')).toBeInTheDocument();
-    expect(screen.getByText('staging:stageAll')).toBeInTheDocument();
-    expect(screen.getByText('staging:staged')).toBeInTheDocument();
-    expect(screen.getByText('staging:unstageAll')).toBeInTheDocument();
+    expect(screen.getByText('unstaged')).toBeInTheDocument();
+    expect(screen.getByText('stageAll')).toBeInTheDocument();
+    expect(screen.getByText('staged')).toBeInTheDocument();
+    expect(screen.getByText('unstageAll')).toBeInTheDocument();
   });
 
   it('uses a translated empty-state message', () => {
     mockState(useRepoStore)(baseRepo);
     mockState(useUiStore)(baseUi);
     render(<StashSection />);
-    expect(screen.getByText('staging:noChanges')).toBeInTheDocument();
+    expect(screen.getByText('noChanges')).toBeInTheDocument();
   });
 
   it('calls addToast with error on stashSave failure', async () => {

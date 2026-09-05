@@ -76,6 +76,8 @@ function createWindow() {
       ? { titleBarStyle: 'hiddenInset' }
       : {
           titleBarStyle: 'hidden',
+          // Startup colours only — the first render replaces them with the
+          // palette read from CSS variables (see src/hooks/use-theme.ts).
           titleBarOverlay: { color: '#181825', symbolColor: '#cdd6f4', height: 40 },
           autoHideMenuBar: true,
         };

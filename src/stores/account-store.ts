@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { accountApi } from '../api/account-api';
 import type { ProviderAccount, ProviderId, ProviderOption, SignInPhase } from '../types';
+import { errorMessage } from '../lib/error-message';
 
 /**
  * Signed-in accounts, and the sign-in conversation.
@@ -160,7 +161,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         target: { host, providerId: info.providerId, options: info.options, repoPath, candidates },
       });
     } catch (err: unknown) {
-      set({ phase: 'error', error: message(err) });
+      set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
@@ -178,7 +179,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         current: get().accounts.find(a => a.id === accountId) ?? null,
       });
     } catch (err: unknown) {
-      set({ phase: 'error', error: message(err) });
+      set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
@@ -201,7 +202,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         phase: info.providerId ? 'browser' : 'choose',
       });
     } catch (err: unknown) {
-      set({ phase: 'error', error: message(err) });
+      set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
@@ -231,7 +232,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
       // 'account:changed', which is why this is a state and not an await.
       set({ phase: 'waiting' });
     } catch (err: unknown) {
-      set({ phase: 'error', error: message(err) });
+      set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
@@ -246,7 +247,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
       set({ phase: null, target: null });
       await get().loadAccounts();
     } catch (err: unknown) {
-      set({ phase: 'error', error: message(err) });
+      set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
@@ -280,6 +281,3 @@ function hasHost(snapshot: { accounts: ProviderAccount[] }, target: SignInTarget
   return !!target && snapshot.accounts.some(a => a.host === target.host);
 }
 
-function message(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
+import { errorMessage } from '../../lib/error-message';
 
 export function useBranchActions(onClose: () => void) {
   const { t } = useTranslation('branches');
@@ -39,7 +40,7 @@ export function useBranchActions(onClose: () => void) {
       await deleteBranch(name);
       addToast({ variant: 'success', title: t('common:done'), message: t('deleted', { name }) });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       if (/not fully merged/i.test(msg)) {
         const force = await requestConfirm({
           title: t('deleteBranch'),

@@ -8,6 +8,7 @@ import { useGitAction } from '../../hooks/use-git-action';
 import { parseDiff } from './parse-diff';
 import { buildHunkPatch } from '../../lib/build-patch';
 import type { FileDiff } from '../../types';
+import { errorMessage } from '../../lib/error-message';
 
 export function useFileDiff() {
   const { t } = useTranslation('diff');
@@ -81,7 +82,7 @@ export function useFileDiff() {
         if (!cancelled) {
           setDiffs([]);
           setRaw('');
-          setError(err instanceof Error ? err.message : String(err));
+          setError(errorMessage(err));
         }
       } finally {
         if (!cancelled) setLoading(false);

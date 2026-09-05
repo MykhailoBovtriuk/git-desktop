@@ -126,11 +126,12 @@ npm test              # one-shot vitest run
 npm run test:watch    # watch mode
 ```
 
-Tests cover:
-- `GitService` with a real Git repo (creates a temp dir + actual `git init`)
-- Diff parser
-- Commit graph layout
-- Zustand stores
+The suite (690+ tests) covers:
+- `GitService` against a real Git repo (temp dir + actual `git init`)
+- The auth stack: OAuth flow, token store, provider registry, deep links
+- Diff parser, patch builder, commit graph layout
+- Zustand stores and the shared UI components
+- i18n parity between English and Ukrainian resources
 
 ---
 
@@ -207,30 +208,37 @@ latest release from the GitHub API, so it needs no changes when you ship.
 ```
 git-desktop/
 ├── electron/                    # Main process (Node.js + Electron APIs)
-│   ├── main.ts                  # App entry, window creation
-│   ├── preload.ts               # Secure IPC bridge to renderer
-│   ├── ipc-handlers.ts          # All git:* and account:* IPC channels
-│   ├── repo-watcher.ts          # fs.watch on the repo → emits git-changed events
-│   ├── git-service.ts           # simple-git wrapper, owns repo state
-│   └── auth/                    # Sign-in: provider registry, OAuth flow, token store
-│       └── providers/           # One file per hosting service (GitHub, GitLab, …)
+│   ├── main.ts                  # App entry, window creation, app:// protocol, CSP
+│   ├── preload.ts               # Secure IPC bridge — allowlist of channels
+│   ├── ipc-handlers.ts          # Registers the ipc/* modules, nothing more
+│   ├── ipc/                     # One file per IPC domain (repo, staging, merge, account, …)
+│   ├── git/                     # Git operations around a shared GitContext
+│   │                            #   (history, status, branches, remote, merge, rebase, stash, files)
+│   ├── git-service.ts           # Thin facade the IPC layer calls into
+│   ├── repo-watcher.ts          # fs.watch on .git → pushes repo:changed to the renderer
+│   └── auth/                    # Sign-in: OAuth engine, token store, deep links, git credentials
+│       └── providers/           # One file per hosting service (GitHub, GitLab, Azure, …)
 ├── src/                         # Renderer process (React + browser APIs)
 │   ├── main.tsx                 # React root
-│   ├── App.tsx                  # Auto-refresh + auto-reopen last repo
+│   ├── App.tsx                  # Theme + auto-refresh hooks, account-change subscription
 │   ├── types.ts                 # Shared types (used by main + renderer)
-│   ├── api/                     # Typed IPC wrappers (git, app, account)
-│   ├── stores/                  # Zustand state (repo-store, ui-store)
-│   ├── hooks/                   # use-auto-refresh
-│   ├── lib/                     # relative-time util
-│   ├── i18n/                    # i18next setup (EN, UK) — active
-│   ├── styles/globals.css       # Tailwind v4 @theme tokens
-│   └── components/              # All React UI
+│   ├── api/                     # Typed IPC wrappers (git, app, account) over one invoke()
+│   ├── stores/                  # Zustand state
+│   │   ├── repo/                # repo-store slices (lifecycle, loaders, staging, merge, …)
+│   │   └── …                    # repo-store, ui-store, settings-store, account-store
+│   ├── hooks/                   # use-auto-refresh, use-git-action, use-theme
+│   ├── lib/                     # Small pure helpers (diff patches, git error mapper, …)
+│   ├── i18n/                    # i18next setup + en/ and uk/ resource files
+│   ├── styles/globals.css       # Tailwind v4 @theme tokens (light + dark palettes)
+│   ├── shared/ui/               # Design system: Button, Modal, ListItem, ContextMenu, … (20+ components)
+│   └── components/              # Feature UI
 │       ├── layout/              # Shell, Titlebar, Sidebar, Footer
 │       ├── account/             # Sign-in dialog
 │       ├── settings/            # Settings screen, accounts list
+│       ├── about/               # About screen
 │       ├── welcome/             # First-launch screen
 │       ├── staging/             # File list, commit form, hunk staging
-│       ├── diff/                # Diff viewer, unified-diff parser, Shiki highlighter
+│       ├── diff/                # Virtualized diff viewer, unified-diff parser, Shiki highlighter
 │       ├── history/             # Virtualized commit list, commit details
 │       ├── graph/               # SVG commit graph + lane layout
 │       ├── merge/               # 3-panel merge editor, conflict modal
@@ -238,8 +246,9 @@ git-desktop/
 │       ├── rebase/              # Rebase conflict banner
 │       ├── stash/               # Stash list, form, section, diff preview
 │       ├── dropdowns/           # Branch picker, repo picker
-│       └── common/              # Accordion, Toast
-├── tests/                       # Vitest test suite
+│       └── common/              # Toast, ConfirmDialog
+├── tests/                       # Vitest suite, mirrors the source layout
+├── scripts/                     # Build helpers (clean output, bake OAuth client ids)
 ├── site/                        # Download page (GitHub Pages, static HTML)
 ├── build/                       # App icon assets (svg / png / icns)
 ├── dist/                        # Vite renderer build output (auto-gen)
@@ -263,6 +272,10 @@ git-desktop/
 | `npm run build:electron` | Run `build`, then package via electron-builder |
 | `npm test` | Run all tests once |
 | `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Tests with a V8 coverage report |
+| `npm run typecheck` | Type-check both TS projects (renderer + main), no emit |
+| `npm run lint` | ESLint over the whole repo |
+| `npm run format` / `format:check` | Prettier write / verify |
 
 ---
 
@@ -278,9 +291,17 @@ git-desktop/
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
 - **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — see [Authentication](#-authentication)
 - **Localization** — English and Ukrainian, auto-detected from the browser and remembered across restarts
-- **Auto-refresh** — event-driven via `fs.watch` (debounced 300 ms), so external `git` activity shows up almost instantly; a 60-second poll acts as a safety-net fallback
+- **Auto-refresh** — event-driven via `fs.watch` on `.git` (debounced 300 ms), so external `git` activity shows up almost instantly; a configurable poll (off / 10 s / 30 s / 60 s) picks up plain file edits
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
-- **Catppuccin Mocha** dark palette out of the box
+- **Settings screen** — theme, interface language, auto-refresh interval, signed-in accounts
+- **Light and dark themes** — Catppuccin Latte / Mocha, with a "System" mode that follows the OS
+
+### Current limitations
+
+Git Desktop opens **existing local repositories** — there is no `git init` or
+`git clone` in the app yet. Create or clone the repository from a terminal (or
+another tool) first, then open its folder. Also not covered yet: interactive
+rebase, cherry-pick, and tag management.
 
 ---
 
@@ -321,6 +342,7 @@ session only rather than written to disk unencrypted; the app says so.
 
 ## 📚 Deeper documentation
 
+- **[HOW_TO_USE.md](./HOW_TO_USE.md)** — User guide: first launch, signing in, the everyday commit/push cycle, branches, conflicts, stash, and what the app deliberately leaves to the terminal.
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Full architectural breakdown: process model, layered renderer, IPC contract, design system, edge cases handled, build workflow.
 
 ---

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { Button, Badge } from '../../shared/ui';
+import { basenameFromPath } from '../../lib/basename';
 import { AppMenuButtons } from '../layout/AppMenuButtons';
 
 export function WelcomeScreen() {
@@ -43,9 +44,11 @@ export function WelcomeScreen() {
               <button
                 key={repo}
                 onClick={() => handleOpen(repo)}
-                className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface1 transition-colors border-b border-surface0 last:border-0 truncate"
+                title={repo}
+                className="w-full text-left px-3 py-2 hover:bg-surface1 transition-colors border-b border-surface0 last:border-0 min-w-0"
               >
-                {repo}
+                <span className="block text-sm text-text truncate">{basenameFromPath(repo)}</span>
+                <span className="block text-xs text-subtext truncate">{repo}</span>
               </button>
             ))}
           </div>

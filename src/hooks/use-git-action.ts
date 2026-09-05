@@ -3,6 +3,7 @@ import { useUiStore } from '../stores/ui-store';
 import { useAccountStore } from '../stores/account-store';
 import { CheckoutConflictError, MergeConflictError, useRepoStore } from '../stores/repo-store';
 import { classifyGitError } from '../lib/git-error-mapper';
+import { errorMessage } from '../lib/error-message';
 
 interface GitActionOptions {
   title: string;
@@ -26,7 +27,7 @@ export function useGitAction() {
       // Both conflict errors mean a dedicated modal is already on screen:
       // neither a success nor an error toast belongs next to it.
       if (err instanceof CheckoutConflictError || err instanceof MergeConflictError) return false;
-      const raw = err instanceof Error ? err.message : String(err);
+      const raw = errorMessage(err);
       const { kind, action } = classifyGitError(err);
       const friendly = t(`error.${kind}`);
       addToast({

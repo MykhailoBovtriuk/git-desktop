@@ -1,5 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import type { RepoState, RepoSlice } from './types';
+import { errorMessage } from '../../lib/error-message';
 
 export class CheckoutConflictError extends Error {
   constructor() {
@@ -29,7 +30,7 @@ export const createCheckoutSlice: RepoSlice<CheckoutSlice> = (set, get) => ({
         await gitApi.checkout(target);
         await get().refresh();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = errorMessage(err);
         if (/overwritten by checkout|commit your changes or stash/i.test(msg)) {
           set({ checkoutConflict: { branch: target } });
           throw new CheckoutConflictError();

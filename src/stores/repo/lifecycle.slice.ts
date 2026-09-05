@@ -1,6 +1,7 @@
 import { gitApi } from '../../api/git-api';
 import { useAccountStore } from '../account-store';
 import type { RepoState, RepoSlice } from './types';
+import { errorMessage } from '../../lib/error-message';
 
 type LifecycleSlice = Pick<
   RepoState,
@@ -154,7 +155,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
       if (get().epoch !== epoch) return;
       const errors = results
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+        .map(r => errorMessage(r.reason));
       set({ lastRefreshError: errors.length ? errors.join('; ') : null });
     })();
     refreshInFlight = { epoch, promise };

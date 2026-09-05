@@ -1,7 +1,6 @@
-import { useState, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MenuItem } from '../../shared/ui';
+import { ContextMenu, MenuItem } from '../../shared/ui';
 
 interface RepoItemProps {
   name: string;
@@ -22,28 +21,6 @@ export function RepoItem({
 }: RepoItemProps) {
   const { t } = useTranslation('repo');
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!contextOpen || !btnRef.current) {
-      setPos(null);
-      return;
-    }
-    const r = btnRef.current.getBoundingClientRect();
-    const MENU_W = 176;
-    const MENU_H = 44;
-    // Anchor on the dropdown panel, not the button: this panel is right-aligned
-    // to the titlebar, so a menu measured from the button lands on top of the
-    // repo list it belongs to. Open to the panel's left, flip right only if
-    // there is no room there.
-    const panel = btnRef.current.closest('[data-dropdown-panel]')?.getBoundingClientRect() ?? r;
-    let left = panel.left - MENU_W - 4;
-    if (left < 8) left = panel.right + 4;
-    if (left + MENU_W > window.innerWidth) left = window.innerWidth - MENU_W - 8;
-    let top = r.top;
-    if (top + MENU_H > window.innerHeight) top = window.innerHeight - MENU_H - 8;
-    setPos({ top, left });
-  }, [contextOpen]);
 
   return (
     <div className="relative">
@@ -65,20 +42,13 @@ export function RepoItem({
         </button>
       </div>
 
-      {contextOpen &&
-        pos &&
-        createPortal(
-          <div
-            onMouseDown={e => e.stopPropagation()}
-            className="fixed bg-surface1 rounded-lg shadow-xl z-[60] py-1 w-44"
-            style={{ top: pos.top, left: pos.left }}
-          >
-            <MenuItem tone="danger" onClick={onRemove}>
-              {t('removeFromList')}
-            </MenuItem>
-          </div>,
-          document.body,
-        )}
+      {/* anchor="panel": this dropdown is right-aligned to the titlebar, so a
+          button-anchored menu would land on top of the repo list it belongs to. */}
+      <ContextMenu open={contextOpen} anchorRef={btnRef} anchor="panel" height={44}>
+        <MenuItem tone="danger" onClick={onRemove}>
+          {t('removeFromList')}
+        </MenuItem>
+      </ContextMenu>
     </div>
   );
 }
