@@ -6,7 +6,8 @@ import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
 import { CommitList } from './CommitList';
 import { DiffViewer } from '../diff/DiffViewer';
-import { TextInput } from '../../shared/ui';
+import { FilePathList, TextInput } from '../../shared/ui';
+import { errorMessage } from '../../lib/error-message';
 
 export function HistoryView() {
   const { t } = useTranslation();
@@ -47,7 +48,7 @@ export function HistoryView() {
           addToast({
             variant: 'error',
             title: t('error'),
-            message: err instanceof Error ? err.message : String(err),
+            message: errorMessage(err),
           });
         }
       } finally {
@@ -90,24 +91,15 @@ export function HistoryView() {
               </p>
             </div>
             <div className="flex h-full overflow-hidden">
-              <div className="w-48 border-r border-surface0 overflow-y-auto shrink-0">
+              <FilePathList
+                files={changedFiles}
+                selected={selectedFile}
+                onSelect={path => setSelectedFile(path, 'commit')}
+              >
                 {loadingFiles && changedFiles.length === 0 && (
                   <p className="px-3 py-2 text-subtext text-xs">{t('loading')}</p>
                 )}
-                {changedFiles.map(f => (
-                  <button
-                    key={f.path}
-                    onClick={() => setSelectedFile(f.path, 'commit')}
-                    className={`w-full text-left px-3 py-1.5 text-xs border-l-2 transition-colors truncate ${
-                      selectedFile === f.path
-                        ? 'bg-surface1 border-blue text-text'
-                        : 'border-transparent hover:bg-surface0 text-subtext'
-                    }`}
-                  >
-                    {f.path.split('/').pop()}
-                  </button>
-                ))}
-              </div>
+              </FilePathList>
               <div className="flex-1 overflow-hidden">
                 <DiffViewer />
               </div>

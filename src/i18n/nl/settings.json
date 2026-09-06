@@ -1,0 +1,22 @@
+{
+  "title": "Instellingen",
+  "theme": "Thema",
+  "themeHint": "Systeem volgt het uiterlijk van je besturingssysteem.",
+  "themes": {
+    "light": "Licht",
+    "dark": "Donker",
+    "system": "Systeem"
+  },
+  "language": "Taal",
+  "languageHint": "Taal van de interface.",
+  "languages": {
+    "en": "English",
+    "uk": "Українська",
+    "nl": "Nederlands"
+  },
+  "autoRefresh": "Automatisch vernieuwen",
+  "autoRefreshHint": "Hoe vaak de repository wordt gepolld. Git-bewerkingen (commit, checkout, stash) worden direct opgepikt; bewerkingen in bestanden pas bij de volgende poll — met Uit alleen bij handmatig vernieuwen.",
+  "off": "Uit",
+  "seconds_one": "{{count}}s",
+  "seconds_other": "{{count}}s"
+}

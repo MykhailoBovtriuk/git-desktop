@@ -3,6 +3,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { Button, Badge } from '../../shared/ui';
+import { basenameFromPath } from '../../lib/basename';
+import { AppMenuButtons } from '../layout/AppMenuButtons';
 
 export function WelcomeScreen() {
   const { t } = useTranslation('repo');
@@ -20,7 +22,11 @@ export function WelcomeScreen() {
   const handleDialog = () => runAction(() => openDialog(), { title: t('open') });
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-base gap-4">
+    <div className="relative h-screen flex flex-col items-center justify-center bg-base gap-4">
+      <div className="absolute bottom-3 left-3">
+        <AppMenuButtons />
+      </div>
+
       <h1 className="text-2xl text-text font-bold flex items-center gap-2">
         Git Desktop
         <Badge variant="beta">Beta</Badge>
@@ -38,9 +44,11 @@ export function WelcomeScreen() {
               <button
                 key={repo}
                 onClick={() => handleOpen(repo)}
-                className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface1 transition-colors border-b border-surface0 last:border-0 truncate"
+                title={repo}
+                className="w-full text-left px-3 py-2 hover:bg-surface1 transition-colors border-b border-surface0 last:border-0 min-w-0"
               >
-                {repo}
+                <span className="block text-sm text-text truncate">{basenameFromPath(repo)}</span>
+                <span className="block text-xs text-subtext truncate">{repo}</span>
               </button>
             ))}
           </div>

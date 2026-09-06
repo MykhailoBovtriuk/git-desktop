@@ -1,0 +1,24 @@
+{
+  "title": "Налаштування",
+  "theme": "Тема",
+  "themeHint": "«Системна» слідує за оформленням операційної системи.",
+  "themes": {
+    "light": "Світла",
+    "dark": "Темна",
+    "system": "Системна"
+  },
+  "language": "Мова",
+  "languageHint": "Мова інтерфейсу.",
+  "languages": {
+    "en": "English",
+    "uk": "Українська",
+    "nl": "Nederlands"
+  },
+  "autoRefresh": "Автооновлення",
+  "autoRefreshHint": "Як часто опитувати репозиторій. Операції git (коміт, checkout, stash) підхоплюються миттєво; зміни у файлах — на наступному опитуванні, а з «Вимк.» — лише при ручному оновленні.",
+  "off": "Вимк.",
+  "seconds_one": "{{count}} с",
+  "seconds_few": "{{count}} с",
+  "seconds_many": "{{count}} с",
+  "seconds_other": "{{count}} с"
+}

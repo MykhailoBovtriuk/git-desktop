@@ -1,0 +1,22 @@
+{
+  "title": "Settings",
+  "theme": "Theme",
+  "themeHint": "System follows your operating system's appearance.",
+  "themes": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": "Language",
+  "languageHint": "Interface language.",
+  "languages": {
+    "en": "English",
+    "uk": "Українська",
+    "nl": "Nederlands"
+  },
+  "autoRefresh": "Auto refresh",
+  "autoRefreshHint": "How often to poll the repository. Git operations (commit, checkout, stash) are picked up instantly; edits to files are noticed on the next poll — with Off, only on manual refresh.",
+  "off": "Off",
+  "seconds_one": "{{count}}s",
+  "seconds_other": "{{count}}s"
+}

@@ -3,6 +3,7 @@
 A cross-platform desktop Git client built with Electron, React, and TypeScript. Designed for visual Git workflows — commit graph visualization, side-by-side conflict resolution, hunk-level staging, branch management — for developers who want a richer UI than the CLI but lighter weight than GitKraken or Tower.
 
 This document explains:
+
 - The technology choices and why each was made
 - How the two Electron processes (main + renderer) communicate
 - The layered architecture inside the renderer
@@ -34,20 +35,20 @@ The app remembers the last-opened repository and recent repos list across restar
 
 ## 2. Technology stack and rationale
 
-| Layer | Choice | Why |
-|---|---|---|
-| Runtime shell | **Electron 41** | Cross-platform desktop (macOS / Windows / Linux) with one codebase. Mature, well-documented. Brings full Node.js APIs to the main process (needed for filesystem and child-process access for Git). |
-| Renderer framework | **React 19** | Mainstream component model with the largest ecosystem. Concurrent rendering, automatic batching, and `useTransition` help keep large file lists / graphs responsive. |
-| Build tooling | **Vite 8** + `@vitejs/plugin-react` | Sub-second HMR for the renderer. ESM-native, zero config for TypeScript and JSX. Smaller bundle than Webpack with no plugin gymnastics. |
-| Renderer language | **TypeScript 6** (strict) | Catches IPC contract mismatches at compile time. Shared types between `electron/` and `src/` ensure renderer and main agree on data shapes. |
-| State management | **Zustand 5** with `persist` middleware | Tiny (1 KB), no boilerplate, no provider trees. Selectors prevent unnecessary re-renders. `persist` middleware syncs the slice we want (recent repos + last-open path) to `localStorage`. |
-| Git backend | **simple-git 3** | Wraps the user's installed `git` CLI. Simpler than a native libgit2 binding, and respects the user's existing git config (credentials, hooks, SSH keys, etc.). Trade-off: requires the user to have Git installed. |
-| Graph rendering | **SVG + D3 utilities** (custom layout) | SVG paths render Bezier curves between commits with crisp lines at any zoom. CSS-styleable. No canvas/WebGL setup. The lane layout is custom (see `src/components/graph/graph-layout.ts`) — D3 isn't actually invoked at runtime; only its types are pulled in. |
-| Styling | **Tailwind v4** + custom `@theme` tokens | Utility-first keeps style colocated with markup. v4 generates colors from `@theme` directives in CSS — no JS config needed. Custom palette via `--color-*` tokens (see §6). |
-| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN and UK with namespaced JSON resources. All user-facing components call `useTranslation`; language is detected from the browser and cached in localStorage. |
-| Diff parsing | Custom parser in `src/components/diff/parse-diff.ts` | The output of `git diff` is well-specified (unified diff format) but standalone NPM parsers add weight. The custom parser handles `--- /dev/null` (new file), `+++ /dev/null` (deletion), `Binary files differ`, and multi-file diffs. |
-| Testing | **Vitest 4** + `@testing-library/react` + `jsdom` | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for `GitService` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior. |
-| Packaging | **electron-builder** | Standard for shipping cross-platform Electron apps. Configured via `electron-builder.yml`. |
+| Layer                | Choice                                                             | Why                                                                                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime shell        | **Electron 41**                                                    | Cross-platform desktop (macOS / Windows / Linux) with one codebase. Mature, well-documented. Brings full Node.js APIs to the main process (needed for filesystem and child-process access for Git).                                                             |
+| Renderer framework   | **React 19**                                                       | Mainstream component model with the largest ecosystem. Concurrent rendering, automatic batching, and `useTransition` help keep large file lists / graphs responsive.                                                                                            |
+| Build tooling        | **Vite 8** + `@vitejs/plugin-react`                                | Sub-second HMR for the renderer. ESM-native, zero config for TypeScript and JSX. Smaller bundle than Webpack with no plugin gymnastics.                                                                                                                         |
+| Renderer language    | **TypeScript 6** (strict)                                          | Catches IPC contract mismatches at compile time. Shared types between `electron/` and `src/` ensure renderer and main agree on data shapes.                                                                                                                     |
+| State management     | **Zustand 5** with `persist` middleware                            | Tiny (1 KB), no boilerplate, no provider trees. Selectors prevent unnecessary re-renders. `persist` middleware syncs the slice we want (recent repos + last-open path) to `localStorage`.                                                                       |
+| Git backend          | **simple-git 3**                                                   | Wraps the user's installed `git` CLI. Simpler than a native libgit2 binding, and respects the user's existing git config (credentials, hooks, SSH keys, etc.). Trade-off: requires the user to have Git installed.                                              |
+| Graph rendering      | **SVG + D3 utilities** (custom layout)                             | SVG paths render Bezier curves between commits with crisp lines at any zoom. CSS-styleable. No canvas/WebGL setup. The lane layout is custom (see `src/components/graph/graph-layout.ts`) — D3 isn't actually invoked at runtime; only its types are pulled in. |
+| Styling              | **Tailwind v4** + custom `@theme` tokens                           | Utility-first keeps style colocated with markup. v4 generates colors from `@theme` directives in CSS — no JS config needed. Custom palette via `--color-*` tokens (see §6).                                                                                     |
+| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN and UK with namespaced JSON resources. All user-facing components call `useTranslation`; language is detected from the browser and cached in localStorage.                                                                                        |
+| Diff parsing         | Custom parser in `src/components/diff/parse-diff.ts`               | The output of `git diff` is well-specified (unified diff format) but standalone NPM parsers add weight. The custom parser handles `--- /dev/null` (new file), `+++ /dev/null` (deletion), `Binary files differ`, and multi-file diffs.                          |
+| Testing              | **Vitest 4** + `@testing-library/react` + `jsdom`                  | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for `GitService` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior.                                       |
+| Packaging            | **electron-builder**                                               | Standard for shipping cross-platform Electron apps. Configured via `electron-builder.yml`.                                                                                                                                                                      |
 
 ### Why this stack instead of alternatives
 
@@ -156,6 +157,7 @@ Only the generic `invoke` is exposed — not the channel list, not `ipcRenderer`
 ```
 
 **Why this layering matters:**
+
 - Components never `await window.electronAPI.invoke(...)` directly — they call a store action.
 - Stores never split work between IPC and DOM; they own the data flow.
 - The `gitApi` module is the single place where IPC errors become JavaScript `Error` objects.
@@ -215,9 +217,12 @@ Only `repoPath` and `recentRepos` survive a restart. `commits`, `branches`, `sta
 ```ts
 useEffect(() => {
   if (repoPath) {
-    useRepoStore.getState().openRepo(repoPath).catch(() => {
-      useRepoStore.setState({ repoPath: null });
-    });
+    useRepoStore
+      .getState()
+      .openRepo(repoPath)
+      .catch(() => {
+        useRepoStore.setState({ repoPath: null });
+      });
   }
 }, []);
 ```
@@ -262,18 +267,18 @@ Defined as CSS custom properties in `src/styles/globals.css` via Tailwind v4's `
 
 ```css
 @theme {
-  --color-base: #1e1e2e;       /* app background */
-  --color-mantle: #181825;     /* surfaces (sidebar, footer) */
-  --color-surface0: #313244;   /* hover backgrounds */
-  --color-surface1: #45475a;   /* selected backgrounds */
-  --color-surface2: #585b70;   /* borders */
-  --color-text: #cdd6f4;       /* foreground */
-  --color-subtext: #a6adc8;    /* secondary text */
-  --color-blue: #89b4fa;       /* primary accent */
-  --color-green: #a6e3a1;      /* additions, success */
-  --color-yellow: #f9e2af;     /* modifications */
-  --color-red: #f38ba8;        /* deletions, errors */
-  --color-peach: #fab387;      /* copies, warnings */
+  --color-base: #1e1e2e; /* app background */
+  --color-mantle: #181825; /* surfaces (sidebar, footer) */
+  --color-surface0: #313244; /* hover backgrounds */
+  --color-surface1: #45475a; /* selected backgrounds */
+  --color-surface2: #585b70; /* borders */
+  --color-text: #cdd6f4; /* foreground */
+  --color-subtext: #a6adc8; /* secondary text */
+  --color-blue: #89b4fa; /* primary accent */
+  --color-green: #a6e3a1; /* additions, success */
+  --color-yellow: #f9e2af; /* modifications */
+  --color-red: #f38ba8; /* deletions, errors */
+  --color-peach: #fab387; /* copies, warnings */
 }
 ```
 
@@ -281,7 +286,7 @@ Tailwind v4 auto-generates utilities from these tokens: `bg-base`, `text-text`, 
 
 **Why these names?** They map to the Catppuccin Mocha theme's semantic role names. "Base" is the deepest layer, "mantle" wraps it, "surface0/1/2" are progressively brighter contrast layers. This naming is easier to reason about than raw color values when designing new components.
 
-**Watch out for the `text-base` collision:** Tailwind v4's default theme defines `.text-base` as `font-size: 1rem`. Because we also define `--color-base`, v4 *would* generate a color utility of the same name — but they collide. The codebase resolves this by using `text-mantle` (`#181825`) for "dark text on blue button" instead of `text-base`. If you add a new button on a blue background, use `text-mantle`.
+**Watch out for the `text-base` collision:** Tailwind v4's default theme defines `.text-base` as `font-size: 1rem`. Because we also define `--color-base`, v4 _would_ generate a color utility of the same name — but they collide. The codebase resolves this by using `text-mantle` (`#181825`) for "dark text on blue button" instead of `text-base`. If you add a new button on a blue background, use `text-mantle`.
 
 ### Layout primitives
 
@@ -310,6 +315,7 @@ The chrome is composed in `src/components/layout/Shell.tsx`:
 ```
 
 **Sidebar composition** (current design): two visual blocks.
+
 - **Top block** — Changes accordion. Click toggles open/close. When open, shows the file list and commit form inline.
 - **Bottom block** — History + Graph nav buttons. Pinned to the bottom via a `flex-1` spacer. No accordion triangle — they're tab-like buttons. Active button has a 2px blue left border and `bg-surface0`.
 
@@ -331,6 +337,7 @@ type ActiveView = 'changes' | 'history' | 'graph' | 'merge-editor';
 `Shell.tsx`'s `MainContent` component is a `switch` statement over `activeView`. The sidebar buttons just call `setActiveView('history' | 'graph' | 'changes')`. A merge conflict programmatically sets `activeView` to `'merge-editor'` when the user clicks "Resolve Conflicts" in the `MergeConflictModal`.
 
 **Selection state is shared across views but contextualized:**
+
 - `selectedCommit` is set when clicking in `CommitList` (history view) or `CommitGraph`.
 - `selectedFile` is set when clicking a file row in `ChangesSection` (changes view) or in the commit's changed-files list (history view).
 - The `DiffViewer` uses both, but **only treats `selectedCommit` as authoritative when `activeView === 'history' || 'graph'`**. In `'changes'` view, it always falls back to working/staged diff. This prevents a stale commit selection from corrupting the changes view (a bug class fixed in this codebase).
@@ -339,32 +346,105 @@ type ActiveView = 'changes' | 'history' | 'graph' | 'merge-editor';
 
 ## 8. Git operations reference
 
-| User intent | Component | Store action | `gitApi` call | IPC channel | `GitService` method | `simple-git` op |
-|---|---|---|---|---|---|---|
-| Open repo dialog | `WelcomeScreen` / `RepoDropdown` | `openDialog` | `openDialog()` | `git:open-dialog` | `openRepo(picked)` | (filesystem dialog + new `simpleGit(path)`) |
-| List branches | `Titlebar` (on mount) | `loadBranches` | `getBranches()` | `git:get-branches` | `getBranches()` | `git.branch(['-a'])` |
-| Read log | `Sidebar` / `HistoryView` | `loadLog` | `getLog(200, 0)` | `git:get-log` | `getLog(limit, offset)` | `git.raw(['log', '--all', '--topo-order', ...])` with `%H%x00%s%x00...` format |
-| Get status | All | `loadStatus` | `getStatus()` | `git:get-status` | `getStatus()` | `git.status()` — returns staged, unstaged, **ahead, behind** in one call |
-| Stage file | `FileList` `+` button | `stageFiles([path])` | `stageFiles(paths)` | `git:stage-files` | `stageFiles(paths)` | `git.add(paths)` |
-| Unstage file | `FileList` `−` button | `unstageFiles([path])` | `unstageFiles(paths)` | `git:unstage-files` | `unstageFiles(paths)` | `git.reset(['HEAD', '--', ...paths])` |
-| Discard | `FileList` `×` button | `discardChanges([path])` | `discardChanges(paths)` | `git:discard-changes` | `discardChanges(paths)` | `git.checkout(['--', ...paths])` |
-| Commit | `CommitForm` | `commit(msg)` | `commit(msg)` | `git:commit` | `commit(msg)` | `git.commit(msg)` |
-| Fetch | `Footer` | `fetch` | `fetch()` | `git:fetch` | `fetch()` | `git.fetch()` |
-| Pull | `Footer` | `pull` | `pull()` | `git:pull` | `pull()` | `git.pull()` (with `'Already up to date'` fallback) |
-| Push | `Footer` | `push` | `push()` | `git:push` | `push()` | `git.push()` |
-| Checkout | `BranchDropdown` | `checkout(name)` | `checkout(name)` | `git:checkout` | `checkout(name)` | `git.checkout(name)` |
-| Merge | `BranchDropdown` | `merge(name)` | `merge(name)` | `git:merge` | `merge(name)` | `git.merge([name])` — returns `{ success, conflicts[] }` |
-| Rebase | `BranchDropdown` | `rebase(name)` | `rebase(name)` | `git:rebase` | `rebase(name)` | `git.rebase([name])` |
-| Delete branch | `BranchDropdown` | `deleteBranch(name)` | `deleteBranch(name)` | `git:delete-branch` | `deleteBranch(name)` | `git.deleteLocalBranch(name, true)` |
-| Commit diff | `HistoryView` | (effect) | `getCommitDiff(hash)` | `git:get-commit-diff` | `getCommitDiff(hash)` | `git.diffSummary([hash^, hash])` or `[EMPTY_TREE, hash]` for root commit |
-| File diff in commit | `DiffViewer` (history mode) | (effect) | `getFileDiff(hash, p)` | `git:get-file-diff` | `getFileDiff(hash, p)` | `git.diff([hash^, hash, '--', p])` or empty-tree fallback |
-| Working diff | `DiffViewer` (changes mode) | (effect) | `getWorkingDiff(p)` | `git:get-working-diff` | `getWorkingDiff(p)` | `git.diff(['--', p])` or **synthesized untracked diff** (see §9) |
-| Staged diff | `DiffViewer` (changes mode, staged) | (effect) | `getStagedDiff(p)` | `git:get-staged-diff` | `getStagedDiff(p)` | `git.diff(['--cached', '--', p])` |
-| Conflict sides | `MergeEditor` | (effect) | `getConflictSides(p)` | `git:get-conflict-sides` | `getConflictSides(p)` | `git.show([':2:p'])` (ours), `:3:p` (theirs), `:1:p` (base) |
-| Read file | `MergeEditor` | (effect) | `readFile(p)` | `git:read-file` | `readFile(p)` | `fs.readFile(path.join(repo, p))` |
-| Write file | `MergeEditor` (save) | (effect) | `writeFile(p, c)` | `git:write-file` | `writeFile(p, c)` | `fs.writeFile(path.join(repo, p), c)` |
-| Mark resolved | `MergeEditor` | — | `markResolved(p)` | `git:mark-resolved` | `markResolved(p)` | `git.add([p])` |
-| Abort merge | `MergeConflictModal` / `MergeEditor` | `abortMerge` | `abortMerge()` | `git:abort-merge` | `abortMerge()` | `git.merge(['--abort'])` |
+| User intent         | Component                            | Store action             | `gitApi` call           | IPC channel              | `GitService` method     | `simple-git` op                                                                |
+| ------------------- | ------------------------------------ | ------------------------ | ----------------------- | ------------------------ | ----------------------- | ------------------------------------------------------------------------------ |
+| Open repo dialog    | `WelcomeScreen` / `RepoDropdown`     | `openDialog`             | `openDialog()`          | `git:open-dialog`        | `openRepo(picked)`      | (filesystem dialog + new `simpleGit(path)`)                                    |
+| List branches       | `Titlebar` (on mount)                | `loadBranches`           | `getBranches()`         | `git:get-branches`       | `getBranches()`         | `git.branch(['-a'])`                                                           |
+| Read log            | `Sidebar` / `HistoryView`            | `loadLog`                | `getLog(200, 0)`        | `git:get-log`            | `getLog(limit, offset)` | `git.raw(['log', '--all', '--topo-order', ...])` with `%H%x00%s%x00...` format |
+| Get status          | All                                  | `loadStatus`             | `getStatus()`           | `git:get-status`         | `getStatus()`           | `git.status()` — returns staged, unstaged, **ahead, behind** in one call       |
+| Stage file          | `FileList` `+` button                | `stageFiles([path])`     | `stageFiles(paths)`     | `git:stage-files`        | `stageFiles(paths)`     | `git.add(paths)`                                                               |
+| Unstage file        | `FileList` `−` button                | `unstageFiles([path])`   | `unstageFiles(paths)`   | `git:unstage-files`      | `unstageFiles(paths)`   | `git.reset(['HEAD', '--', ...paths])`                                          |
+| Discard             | `FileList` `×` button                | `discardChanges([path])` | `discardChanges(paths)` | `git:discard-changes`    | `discardChanges(paths)` | `git.checkout(['--', ...paths])`                                               |
+| Commit              | `CommitForm`                         | `commit(msg)`            | `commit(msg)`           | `git:commit`             | `commit(msg)`           | `git.commit(msg)`                                                              |
+| Fetch               | `Footer`                             | `fetch`                  | `fetch()`               | `git:fetch`              | `fetch()`               | `git.fetch()`                                                                  |
+| Pull                | `Footer`                             | `pull`                   | `pull()`                | `git:pull`               | `pull()`                | `git.pull()` (with `'Already up to date'` fallback)                            |
+| Push                | `Footer`                             | `push`                   | `push()`                | `git:push`               | `push()`                | `git.push()`                                                                   |
+| Checkout            | `BranchDropdown`                     | `checkout(name)`         | `checkout(name)`        | `git:checkout`           | `checkout(name)`        | `git.checkout(name)`                                                           |
+| Merge               | `BranchDropdown`                     | `merge(name)`            | `merge(name)`           | `git:merge`              | `merge(name)`           | `git.merge([name])` — returns `{ success, conflicts[] }`                       |
+| Rebase              | `BranchDropdown`                     | `rebase(name)`           | `rebase(name)`          | `git:rebase`             | `rebase(name)`          | `git.rebase([name])`                                                           |
+| Delete branch       | `BranchDropdown`                     | `deleteBranch(name)`     | `deleteBranch(name)`    | `git:delete-branch`      | `deleteBranch(name)`    | `git.deleteLocalBranch(name, true)`                                            |
+| Commit diff         | `HistoryView`                        | (effect)                 | `getCommitDiff(hash)`   | `git:get-commit-diff`    | `getCommitDiff(hash)`   | `git.diffSummary([hash^, hash])` or `[EMPTY_TREE, hash]` for root commit       |
+| File diff in commit | `DiffViewer` (history mode)          | (effect)                 | `getFileDiff(hash, p)`  | `git:get-file-diff`      | `getFileDiff(hash, p)`  | `git.diff([hash^, hash, '--', p])` or empty-tree fallback                      |
+| Working diff        | `DiffViewer` (changes mode)          | (effect)                 | `getWorkingDiff(p)`     | `git:get-working-diff`   | `getWorkingDiff(p)`     | `git.diff(['--', p])` or **synthesized untracked diff** (see §9)               |
+| Staged diff         | `DiffViewer` (changes mode, staged)  | (effect)                 | `getStagedDiff(p)`      | `git:get-staged-diff`    | `getStagedDiff(p)`      | `git.diff(['--cached', '--', p])`                                              |
+| Conflict sides      | `MergeEditor`                        | (effect)                 | `getConflictSides(p)`   | `git:get-conflict-sides` | `getConflictSides(p)`   | `git.show([':2:p'])` (ours), `:3:p` (theirs), `:1:p` (base)                    |
+| Read file           | `MergeEditor`                        | (effect)                 | `readFile(p)`           | `git:read-file`          | `readFile(p)`           | `fs.readFile(path.join(repo, p))`                                              |
+| Write file          | `MergeEditor` (save)                 | (effect)                 | `writeFile(p, c)`       | `git:write-file`         | `writeFile(p, c)`       | `fs.writeFile(path.join(repo, p), c)`                                          |
+| Mark resolved       | `MergeEditor`                        | —                        | `markResolved(p)`       | `git:mark-resolved`      | `markResolved(p)`       | `git.add([p])`                                                                 |
+| Abort merge         | `MergeConflictModal` / `MergeEditor` | `abortMerge`             | `abortMerge()`          | `git:abort-merge`        | `abortMerge()`          | `git.merge(['--abort'])`                                                       |
+
+---
+
+## 8b. Authentication
+
+Before this existed, `electron/git/context.ts` set `GIT_TERMINAL_PROMPT=0` and
+`GIT_ASKPASS=echo` so a GUI with no TTY would fail fast instead of hanging on an
+invisible password prompt — and nothing ever supplied the password. The advice
+that fell out of that was "push once from the terminal first", which is not an
+answer a desktop client can give.
+
+Both variables are still set, and must stay set. What changed is that something
+now fills the credential store.
+
+### The registry
+
+`electron/auth/providers/` holds one file per hosting service, each exporting a
+`ProviderDefinition`: its known hosts, its endpoints, its scopes, whether it can
+use PKCE, and the one function that turns a token into a `ProviderAccount`.
+`registry.ts` is the only place that knows the full list.
+
+Everything else — the authorize URL, the code exchange, the refresh, the storage
+— is provider-agnostic. Adding a ninth service is a new file plus one line in
+the registry, not an edit spread across the flow.
+
+| Provider                       | PKCE | Notes                                                                                                                                |
+| ------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `github` / `github-enterprise` | no   | Needs a client secret; the enterprise API lives at `/api/v3` on the instance                                                         |
+| `gitlab` / `gitlab-self`       | yes  | Commits use `commit_email`, which is not always the account email                                                                    |
+| `azure-devops`                 | yes  | Microsoft Entra ID, not the retiring Azure DevOps OAuth service; git ignores the username and reads the token as the password        |
+| `bitbucket`                    | no   | Needs a client secret; tokens live two hours                                                                                         |
+| `gitea`                        | yes  | Also covers Forgejo and Codeberg                                                                                                     |
+| `token`                        | —    | No OAuth at all: the account is built from a pasted token, which is the only thing that can work for an arbitrary self-hosted server |
+
+### The round trip
+
+1. `openRepo` returns the remote's host alongside the repository root, so the
+   renderer can decide immediately whether to offer a sign-in.
+2. `oauth-flow.beginSignIn` mints a single-use `state` (10-minute TTL, compared
+   with `timingSafeEqual`) and, for PKCE providers, a verifier. Without the
+   `state` check anything able to open a `git-desktop-auth://` URL could hand
+   the app an account and have it stored as the user's own.
+3. `shell.openExternal` sends the user to the provider.
+4. The redirect comes back through `auth/deep-link.ts`, which is where the three
+   platforms disagree: macOS fires `open-url` (possibly _before_ `app.ready`, so
+   it is buffered), Windows and Linux relaunch the binary with the URL in argv
+   and rely on the single-instance lock to forward it.
+5. `completeSignIn` exchanges the code. The body is inspected rather than the
+   status: GitHub answers HTTP 200 with `{"error": …}`, and trusting the status
+   alone turns a failed sign-in into an apparently successful one.
+
+### Where the token lives
+
+`auth/token-store.ts` keys credentials by **host**, so github.com, a work GitLab
+and Azure DevOps are all active at once and signing out of one leaves the rest
+alone. Tokens are encrypted with `safeStorage`; when the OS offers no keychain
+nothing is written to disk at all and the UI says the session is all there is.
+
+`auth/git-credentials.ts` then hands the token to `git credential approve` over
+**stdin** — an argv entry is readable by any process via `ps` — after making
+sure a credential helper is configured, since `approve` without one is a silent
+no-op. From that point ordinary `git push` authenticates by itself.
+
+Providers whose tokens expire are refreshed by `getFreshToken`, called from
+`electron/git/remote.ts` before every fetch/pull/push, which also rewrites the
+system credential. Skipping that is how a session starts working and quietly
+stops two hours later.
+
+### Identity
+
+`auth/identity-bootstrap.ts` writes `user.name` / `user.email` from the account
+— but only where git has none. Overwriting an address the user chose would
+misattribute their commits invisibly.
 
 ---
 
@@ -386,7 +466,7 @@ Simple-git reports unmerged files with index/working_dir = `U`. The default flow
 
 ### DiffViewer race conditions
 
-When the user clicks files rapidly, the diff for file A might complete *after* the diff for file B. Without protection, B's diff gets overwritten by A's stale response. Fix: the `useEffect` captures a `cancelled` boolean in its cleanup. Every async operation checks `if (!cancelled)` before calling `setState`. The boolean flips when the effect re-runs or the component unmounts.
+When the user clicks files rapidly, the diff for file A might complete _after_ the diff for file B. Without protection, B's diff gets overwritten by A's stale response. Fix: the `useEffect` captures a `cancelled` boolean in its cleanup. Every async operation checks `if (!cancelled)` before calling `setState`. The boolean flips when the effect re-runs or the component unmounts.
 
 ### Stale `selectedCommit` leaking into Changes view
 
@@ -398,11 +478,12 @@ If the user selects a commit in History, then clicks "Changes" and selects a fil
 
 ### `BranchItem` re-instantiation
 
-In the previous version, `BranchItem` was declared *inside* `BranchDropdown`'s render function. Each render created a new component identity → React unmounted and remounted every list item → context-menu state was lost on every keystroke in the search box. Fix: hoist to module scope, pass all needed props explicitly.
+In the previous version, `BranchItem` was declared _inside_ `BranchDropdown`'s render function. Each render created a new component identity → React unmounted and remounted every list item → context-menu state was lost on every keystroke in the search box. Fix: hoist to module scope, pass all needed props explicitly.
 
 ### Destructive actions
 
 `BranchDropdown`'s context menu has a "Delete branch" action. Previously triggered by `onMouseEnter` — trivially fires by mousing over the row. Now requires:
+
 1. Click the explicit `⋯` button.
 2. Click "Delete branch" in the menu.
 3. Confirm via `window.confirm()`.
@@ -421,7 +502,7 @@ Three clicks instead of accidental hover.
 
 ```json
 {
-  "dev": "vite",                                           // renderer only, no electron
+  "dev": "vite", // renderer only, no electron
   "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
   "build": "tsc && vite build && tsc -p tsconfig.node.json",
   "build:electron": "npm run build && electron-builder",
@@ -500,15 +581,18 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 - **`preload.ts`** — Exposes exactly one thing: `window.electronAPI.invoke(channel, ...args)`.
 - **`ipc-handlers.ts`** — Registers all `git:*` channels. Each handler wraps the `GitService` call in `wrap()`, which converts thrown errors to `{ error, code }` and successes to `{ data }`. This is the renderer ↔ main contract.
 - **`git-service.ts`** — Stateful service. Owns the `simpleGit` instance and the open repo path. All methods assume `openRepo` was called first. Beyond standard ops, also handles: root-commit diff fallback, untracked diff synthesis, conflict sides via `git show :N:path`, raw file read/write.
+- **`auth/`** — Everything about signing in to a Git host. See §8b.
 
 ### `src/api/`
 
-- **`git-api.ts`** — One typed wrapper per IPC channel. The `invoke<T>` helper unwraps `{ data }` → `T` or throws if `error` is present. This is the only file in `src/` that touches `window.electronAPI`.
+- **`invoke.ts`** — The one place `{ data }` is unwrapped and `{ error }` becomes a thrown `Error`. Every api module goes through it, so they cannot drift apart on how a failure surfaces.
+- **`git-api.ts`**, **`app-api.ts`**, **`account-api.ts`** — One typed wrapper per IPC channel. Together they are the only files in `src/` that touch `window.electronAPI`.
 
 ### `src/stores/`
 
 - **`repo-store.ts`** — All Git state and async actions. Wrapped with Zustand `persist` (localStorage backend, partializes only `repoPath` + `recentRepos`).
 - **`ui-store.ts`** — Ephemeral UI state. View routing, selection state, toasts.
+- **`account-store.ts`** — Signed-in accounts and the sign-in dialog's state. Deliberately not persisted: the main process owns the accounts because it owns the tokens, and a stale copy here would show a user as connected to a service they can no longer reach.
 
 ### `src/hooks/`
 
@@ -565,10 +649,9 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 - **`Accordion.tsx`** — Reusable expandable section. Active state: `bg-surface0` + 2px blue left border + `text-text`. Inactive: transparent + `text-subtext`. Used in the Changes section of the sidebar.
 - **`Toast.tsx`** — Fixed-position toast container under the titlebar (`top-12`). Each toast auto-dismisses after 5 seconds. Variant colors: success=green, error=red, info=blue.
 
-### `src/components/modals/`
+### `src/components/account/`
 
-- **`CheckoutModal.tsx`** — "You have uncommitted changes — force switch?" modal. **Currently orphaned** (defined but not rendered anywhere). Wire-in candidate: when `checkout` fails because of uncommitted changes, show this.
-- **`CredentialModal.tsx`** — Username/password prompt for HTTPS remotes. **Currently orphaned** too. Wire-in candidate: when push/pull fails with an auth error.
+- **`SignInModal.tsx`** — The whole sign-in conversation in one dialog, in four states: `choose` (which service is this server), `browser` (hand off to the browser), `waiting` (the redirect has not come back yet), `token` (paste a personal access token). Rendered from `Shell` in both the repo and welcome layouts, because Settings is reachable from both.
 
 ### `src/i18n/`
 
@@ -581,6 +664,7 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 The shared type definitions. Imported by both renderer and main (the main process imports from `'../src/types'`). Defines:
 
 - Git data shapes: `Commit`, `Branch`, `FileStatus`, `GitStatus`, `AheadBehind`, `MergeState`
+- Account shapes: `ProviderId`, `ProviderAccount`, `ProviderOption`, `SignInPhase` — note `ProviderAccount` carries no token, by design
 - Diff shapes: `DiffHunk`, `DiffLine`, `FileDiff`
 - IPC shapes: `IpcError`, `IpcResult<T>`
 - UI types: `ActiveView`, `Toast`, `ToastVariant`

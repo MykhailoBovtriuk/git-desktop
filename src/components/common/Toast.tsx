@@ -6,9 +6,12 @@ import type { Toast as ToastType } from '../../types';
 function ToastItem({ toast }: { toast: ToastType }) {
   const removeToast = useUiStore(s => s.removeToast);
   useEffect(() => {
+    // A toast carrying an action ("Fix authentication", "Publish branch") must
+    // outlive the 5-second window: auto-dismissing it takes the action with it.
+    if (toast.action) return;
     const id = setTimeout(() => removeToast(toast.id), 5000);
     return () => clearTimeout(id);
-  }, [toast.id, removeToast]);
+  }, [toast.id, toast.action, removeToast]);
 
   return (
     <ToastCard

@@ -14,6 +14,7 @@ import { createStashSlice } from './repo/stash.slice';
 
 export { LOG_PAGE_SIZE } from './repo/types';
 export { CheckoutConflictError } from './repo/checkout.slice';
+export { MergeConflictError } from './repo/merge.slice';
 export type { RepoState } from './repo/types';
 
 export const useRepoStore = create<RepoState>()(

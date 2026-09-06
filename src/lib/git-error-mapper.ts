@@ -1,7 +1,7 @@
 export type GitErrorKind =
   'auth' | 'noUpstream' | 'conflict' | 'uncommitted' | 'notRepo' | 'network' | 'hook' | 'unknown';
 
-export type GitErrorAction = 'publishBranch' | 'credentialHelp';
+export type GitErrorAction = 'publishBranch' | 'signIn';
 
 export interface ClassifiedGitError {
   kind: GitErrorKind;
@@ -12,8 +12,12 @@ const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> 
   { kind: 'notRepo', re: /not a git repository/i },
   {
     kind: 'auth',
-    action: 'credentialHelp',
-    re: /authentication failed|could not read (username|password)|permission denied \(publickey\)|invalid username or password|remote: (invalid|forbidden)|returned error: 40[13]|terminal prompts disabled/i,
+    action: 'signIn',
+    // The passphrase and key-file clauses cover a locked or deleted SSH key.
+    // Both surface on fetch/push and, because commits are signed with the same
+    // key, on commit as well — a deleted signing key stops commits outright.
+    // Without these a user whose key vanished gets an error with no way forward.
+    re: /authentication failed|could not read (username|password)|permission denied \(publickey\)|invalid username or password|remote: (invalid|forbidden)|returned error: 40[13]|terminal prompts disabled|enter passphrase for|incorrect passphrase|couldn't load public key|identity file .* not accessible/i,
   },
   {
     kind: 'noUpstream',

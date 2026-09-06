@@ -1,7 +1,10 @@
 import { create } from 'zustand';
-import type { ActiveView, Toast, ToastVariant } from '../types';
+import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
 export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
+
+const OVERLAY_VIEWS = new Set<ActiveView>(['settings', 'about']);
+export const isOverlayView = (view: ActiveView): boolean => OVERLAY_VIEWS.has(view);
 
 export interface ConfirmOptions {
   title: string;
@@ -12,6 +15,9 @@ export interface ConfirmOptions {
 
 interface UiState {
   activeView: ActiveView;
+  previousView: ActiveView;
+  /** Overlay screens sitting below the current one, oldest first. */
+  overlayStack: OverlayView[];
   selectedCommit: string | null;
   selectedFile: string | null;
   selectedFileArea: SelectedFileArea | null;
@@ -19,6 +25,9 @@ interface UiState {
   toasts: Toast[];
   selectedStash: number | null;
   setActiveView: (view: ActiveView) => void;
+  openOverlayView: (view: OverlayView) => void;
+  overlayBack: () => void;
+  closeOverlayView: () => void;
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null, area?: SelectedFileArea) => void;
   setActiveMergeFile: (path: string | null) => void;
@@ -37,6 +46,8 @@ interface UiState {
 
 export const useUiStore = create<UiState>()((set, get) => ({
   activeView: 'changes',
+  previousView: 'changes',
+  overlayStack: [],
   selectedCommit: null,
   selectedFile: null,
   selectedFileArea: null,
@@ -45,6 +56,35 @@ export const useUiStore = create<UiState>()((set, get) => ({
   selectedStash: null,
 
   setActiveView: view => set({ activeView: view }),
+  // Settings/About cover the whole content area, so leaving them has to restore
+  // whatever the user was looking at rather than dumping them on 'changes'.
+  openOverlayView: view =>
+    set(s => {
+      if (!isOverlayView(s.activeView)) {
+        return { activeView: view, previousView: s.activeView, overlayStack: [] };
+      }
+      const current = s.activeView as OverlayView;
+      // Navigating to a screen already below us (a breadcrumb, a link back up)
+      // has to unwind the stack to it — pushing would make "back" loop between
+      // the two screens forever.
+      const depth = s.overlayStack.indexOf(view);
+      const overlayStack =
+        depth >= 0
+          ? s.overlayStack.slice(0, depth)
+          : view === current
+            ? s.overlayStack
+            : [...s.overlayStack, current];
+      return { activeView: view, overlayStack };
+    }),
+  // One level up: to the overlay screen underneath, or out to the work view
+  // when this is the top-level one.
+  overlayBack: () =>
+    set(s => {
+      const stack = s.overlayStack;
+      if (stack.length === 0) return { activeView: s.previousView, overlayStack: [] };
+      return { activeView: stack[stack.length - 1], overlayStack: stack.slice(0, -1) };
+    }),
+  closeOverlayView: () => set(s => ({ activeView: s.previousView, overlayStack: [] })),
   setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
     set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),

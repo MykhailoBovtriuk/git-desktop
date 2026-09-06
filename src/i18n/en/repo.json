@@ -5,5 +5,9 @@
   "addRepository": "Add Repository...",
   "noBranch": "no branch",
   "checkForChanges": "Check for changes",
-  "refreshError": "Last background refresh failed"
+  "refreshError": "Last background refresh failed",
+  "moreActions": "More actions",
+  "removeFromList": "Remove from list",
+  "removeCurrentTitle": "Remove open repository?",
+  "removeCurrentMessage": "\"{{name}}\" is currently open. Removing it from the list will also close it. The folder on disk is not touched."
 }

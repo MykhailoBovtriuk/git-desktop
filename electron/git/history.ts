@@ -7,7 +7,11 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
   try {
     result = await git.raw([
       'log',
-      '--all',
+      // Not --all: that includes refs/stash (plus its "index on ..." helper
+      // commits), which are a drawer, not part of the project's history.
+      '--branches',
+      '--remotes',
+      '--tags',
       '--topo-order',
       `--max-count=${limit}`,
       `--skip=${offset}`,
@@ -39,6 +43,17 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
           : [],
       };
     });
+}
+
+/**
+ * The commit HEAD actually points at, for UI that answers "where am I?".
+ * getLog cannot serve that: it is sorted across every branch, so its first
+ * entry is whichever branch was touched last, not the user's own position.
+ */
+export async function getHeadCommit(ctx: GitContext): Promise<string | null> {
+  if (!(await ctx.hasHead())) return null;
+  const out = await ctx.ensureRepo().raw(['rev-parse', '--short', 'HEAD']);
+  return out.trim() || null;
 }
 
 async function commitRange(ctx: GitContext, hash: string): Promise<[string, string]> {

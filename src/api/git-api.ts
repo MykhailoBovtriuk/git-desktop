@@ -1,19 +1,14 @@
 import type { Commit, Branch, GitStatus, StashEntry } from '../types';
+import { invoke } from './invoke';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
-async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
-  const result = await window.electronAPI.invoke(channel, ...args);
-  if (result && typeof result === 'object' && 'error' in result) {
-    throw new Error((result as { error: string }).error);
-  }
-  return (result as { data: T }).data;
-}
-
 export const gitApi = {
-  openRepo: (path: string) => invoke<string>('git:open-repo', path),
+  openRepo: (path: string) =>
+    invoke<{ root: string; remoteHost: string | null }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
+  getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
   getStatus: () => invoke<StatusResult>('git:get-status'),
   stageFiles: (paths: string[]) => invoke<null>('git:stage-files', paths),
@@ -51,6 +46,7 @@ export const gitApi = {
   getMergeMessage: () => invoke<string>('git:get-merge-message'),
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
+  hasIdentity: () => invoke<boolean>('git:has-identity'),
   readFile: (p: string) => invoke<string>('git:read-file', p),
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
   getConflictSides: (p: string) =>

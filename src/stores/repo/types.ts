@@ -13,6 +13,8 @@ export interface RepoState {
   repoPath: string | null;
   recentRepos: string[];
   commits: Commit[];
+  /** Abbreviated hash of HEAD — the user's own position, unlike commits[0]. */
+  headCommit: string | null;
   branches: Branch[];
   currentBranch: string;
   status: GitStatus;
@@ -34,8 +36,18 @@ export interface RepoState {
   stashPop: (index: number) => Promise<void>;
   stashDrop: (index: number) => Promise<void>;
   openRepo: (path: string) => Promise<void>;
+  /** Host of the open repository's remote, or null for a local-only repo. */
+  remoteHost: string | null;
+  /**
+   * Whether git has an author to commit as. Null until known — an unknown
+   * answer must never block a commit, only a definite "no" does.
+   */
+  hasIdentity: boolean | null;
+  loadIdentity: () => Promise<void>;
   openDialog: () => Promise<void>;
+  removeRecentRepo: (path: string) => void;
   loadLog: () => Promise<void>;
+  loadHeadCommit: () => Promise<void>;
   loadBranches: () => Promise<void>;
   loadStatus: () => Promise<void>;
   refresh: () => Promise<void>;

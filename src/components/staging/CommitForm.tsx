@@ -11,10 +11,22 @@ export function CommitForm() {
   const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { commit, status, merging } = useRepoStore(
-    useShallow(s => ({ commit: s.commit, status: s.status, merging: s.merging })),
+  const {
+    commit,
+    status,
+    merging,
+    hasIdentity: identityKnown,
+  } = useRepoStore(
+    useShallow(s => ({
+      commit: s.commit,
+      status: s.status,
+      merging: s.merging,
+      hasIdentity: s.hasIdentity,
+    })),
   );
-  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
+  const { addToast, openOverlayView } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
+  );
   const runAction = useGitAction();
 
   useEffect(() => {
@@ -30,8 +42,12 @@ export function CommitForm() {
   }, [merging]);
 
   const hasStaged = status.staged.length > 0;
-  const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading;
-  const overLimit = message.length > 100;
+  // git refuses outright when neither the repository nor the global config
+  // names an author. Catching it here beats letting the user type a message and
+  // discover it only after pressing Commit. Unknown (not loaded yet) must never
+  // block: only a definite "no" from git means committing would actually fail.
+  const hasIdentity = identityKnown !== false;
+  const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading && hasIdentity;
 
   const handleCommit = async () => {
     if (!canCommit) return;
@@ -64,12 +80,21 @@ export function CommitForm() {
           placeholder={t('commitMessage')}
           rows={3}
         />
-        <span
-          className={`absolute bottom-2 right-2 text-xs ${overLimit ? 'text-red' : 'text-subtext'}`}
-        >
-          {message.length}/100
-        </span>
+        {/* Length is informational only — git imposes no limit, and neither do
+            we, so this never turns into a warning. */}
+        <span className="absolute bottom-2 right-2 text-xs text-subtext">{message.length}</span>
       </div>
+      {!hasIdentity && (
+        <div className="flex flex-col gap-1 rounded bg-yellow/10 p-2">
+          <p className="text-yellow text-xs">{t('noIdentity')}</p>
+          <button
+            onClick={() => openOverlayView('settings')}
+            className="text-blue text-xs hover:underline self-start"
+          >
+            {t('noIdentityAction')}
+          </button>
+        </div>
+      )}
       <Button
         variant="primary"
         size="sm"

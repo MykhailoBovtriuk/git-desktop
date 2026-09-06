@@ -1,0 +1,13 @@
+{
+  "tagline": "Open een repository om te beginnen",
+  "open": "Repository openen",
+  "recent": "Recent",
+  "addRepository": "Repository toevoegen...",
+  "noBranch": "geen branch",
+  "checkForChanges": "Controleren op wijzigingen",
+  "refreshError": "De laatste achtergrondvernieuwing is mislukt",
+  "moreActions": "Meer acties",
+  "removeFromList": "Uit de lijst verwijderen",
+  "removeCurrentTitle": "Geopende repository verwijderen?",
+  "removeCurrentMessage": "\"{{name}}\" is nu geopend. Als je hem uit de lijst verwijdert, wordt hij ook gesloten. De map op schijf blijft ongemoeid."
+}

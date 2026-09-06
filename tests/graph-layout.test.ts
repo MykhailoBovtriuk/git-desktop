@@ -38,7 +38,9 @@ describe('computeLayout', () => {
   it('all commits have a color', () => {
     const commits = [makeCommit('a', []), makeCommit('b', [])];
     const layout = computeLayout(commits);
-    expect(layout.every(l => typeof l.color === 'string' && l.color.startsWith('#'))).toBe(true);
+    expect(
+      layout.every(l => typeof l.color === 'string' && l.color.startsWith('var(--gd-graph-')),
+    ).toBe(true);
   });
 
   it('initial commit (no parents) has no edges', () => {

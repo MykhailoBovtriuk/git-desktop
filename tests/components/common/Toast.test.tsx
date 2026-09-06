@@ -70,6 +70,29 @@ describe('Toast', () => {
     vi.useRealTimers();
   });
 
+  // "Fix authentication" / "Publish branch" arrive as toast actions; a timer
+  // that dismisses them takes the only way forward with it.
+  it('a toast carrying an action never auto-dismisses', () => {
+    vi.useFakeTimers();
+    const { mockRemoveToast } = setupMocks({
+      toasts: [
+        {
+          id: 'act-1',
+          variant: 'error',
+          title: 'Push failed',
+          message: 'auth',
+          action: { label: 'Fix', onClick: vi.fn() },
+        } as any,
+      ],
+    });
+    render(<Toast />);
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(mockRemoveToast).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it('renders multiple toasts', () => {
     setupMocks({
       toasts: [

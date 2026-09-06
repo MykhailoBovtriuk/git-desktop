@@ -12,6 +12,17 @@ vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
   // useGitAction (pulled in for hunk staging) imports this.
   CheckoutConflictError: class CheckoutConflictError extends Error {},
+  MergeConflictError: class MergeConflictError extends Error {},
+}));
+// Render every row: jsdom has no layout, so the real virtualizer sees a
+// zero-height viewport and renders nothing. These tests cover hunk slicing and
+// line rendering, not virtualization.
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 16,
+    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ index, start: index * 16 })),
+    measureElement: () => {},
+  }),
 }));
 vi.mock('../../../src/api/git-api', () => ({
   gitApi: {

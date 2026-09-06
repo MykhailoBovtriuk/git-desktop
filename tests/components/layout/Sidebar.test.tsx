@@ -104,4 +104,31 @@ describe('Sidebar', () => {
     fireEvent.click(stashHeader.querySelector('button')!);
     expect(setActiveView).toHaveBeenCalledWith('diff');
   });
+
+  // Inside the panel the handle covered the file lists' scrollbar, which then
+  // could not be grabbed at all.
+  it('renders the resize handle outside the panel', () => {
+    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
+    const { container } = render(<Sidebar />);
+    const handle = screen.getByRole('separator');
+    const panel = container.firstElementChild!;
+    expect(panel).not.toBe(handle);
+    expect(panel.contains(handle)).toBe(false);
+  });
+
+  it('dragging the handle resizes by the travelled distance and persists it', () => {
+    localStorage.clear();
+    vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
+    vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);
+    const { container } = render(<Sidebar />);
+    const panel = container.firstElementChild as HTMLElement;
+
+    fireEvent.mouseDown(screen.getByRole('separator'), { clientX: 300 });
+    fireEvent.mouseMove(document, { clientX: 350 });
+    fireEvent.mouseUp(document);
+
+    expect(panel.style.width).toBe('274px');
+    expect(localStorage.getItem('sidebar-width')).toBe('274');
+  });
 });

@@ -2,16 +2,22 @@ appId: com.gitdesktop.app
 productName: Git Desktop
 # No ${version} in artifact names: keeps /releases/latest/download/<name> URLs
 # valid forever, so the download page never needs editing on a new release.
-artifactName: "Git-Desktop-${arch}.${ext}"
+artifactName: 'Git-Desktop-${arch}.${ext}'
 directories:
   output: release
   buildResources: build
+# The OAuth redirect target. Without this the OS has nothing to hand
+
+# "git-desktop-auth://oauth" to and the browser flow dead-ends after Authorize.
+protocols:
+  - name: Git Desktop Auth
+    schemes: [git-desktop-auth]
 files:
   - dist/**/*
-  - "!dist/*.dmg"
-  - "!dist/*.zip"
-  - "!dist/*.blockmap"
-  - "!dist/*.yml"
+  - '!dist/*.dmg'
+  - '!dist/*.zip'
+  - '!dist/*.blockmap'
+  - '!dist/*.yml'
   - dist-electron/**/*
 mac:
   target:
@@ -31,7 +37,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Git Desktop
-  artifactName: "Git-Desktop-Setup-${arch}.${ext}"
+  artifactName: 'Git-Desktop-Setup-${arch}.${ext}'
   deleteAppDataOnUninstall: false
 linux:
   target:
@@ -45,4 +51,4 @@ linux:
   # Required for .deb: electron-builder falls back to package.json `author`,
   # which is empty here, and the build fails without an email.
   maintainer: Mykhailo Bovtriuk <mykhailobovtriuk@gmail.com>
-  artifactName: "git-desktop-${arch}.${ext}"
+  artifactName: 'git-desktop-${arch}.${ext}'

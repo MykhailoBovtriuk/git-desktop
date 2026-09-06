@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
 import { useGitAction } from '../../hooks/use-git-action';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
+import { getLocalStorage } from '../../lib/storage';
 
 export function useMergeEditor() {
   const { t } = useTranslation('merge');
@@ -33,13 +34,13 @@ export function useMergeEditor() {
   const [saving, setSaving] = useState(false);
   const runAction = useGitAction();
   const [autoCommit, setAutoCommit] = useState(
-    () => localStorage.getItem('merge-auto-commit') !== 'false',
+    () => getLocalStorage().getItem('merge-auto-commit') !== 'false',
   );
 
   const toggleAutoCommit = () => {
     const next = !autoCommit;
     setAutoCommit(next);
-    localStorage.setItem('merge-auto-commit', String(next));
+    getLocalStorage().setItem('merge-auto-commit', String(next));
   };
 
   useEffect(() => {

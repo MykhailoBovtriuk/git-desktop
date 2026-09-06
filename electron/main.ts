@@ -4,6 +4,8 @@ import fs from 'fs/promises';
 import { registerIpcHandlers } from './ipc-handlers';
 import { resolveAppAssetPath } from './app-asset-path';
 import { RepoWatcher } from './repo-watcher';
+import { initDeepLinks, registerProtocol } from './auth/deep-link';
+import { handleAuthCallback } from './ipc/account';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -42,6 +44,26 @@ const iconPath = path.join(__dirname, '../../build/icon.png');
 
 let mainWindow: BrowserWindow | null = null;
 
+// Both must happen before app.ready: the protocol registration writes the
+// registry entry Windows consults, and losing the single-instance race means
+// this process exists only to forward its arguments to the running copy.
+registerProtocol();
+
+const isPrimaryInstance = initDeepLinks(url => {
+  void handleAuthCallback(url).then(() => {
+    // The user is looking at a browser tab right now; the result is in here.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+});
+
+if (!isPrimaryInstance) {
+  app.quit();
+}
+
 const repoWatcher = new RepoWatcher(() => {
   mainWindow?.webContents.send('repo:changed');
 });
@@ -54,6 +76,8 @@ function createWindow() {
       ? { titleBarStyle: 'hiddenInset' }
       : {
           titleBarStyle: 'hidden',
+          // Startup colours only — the first render replaces them with the
+          // palette read from CSS variables (see src/hooks/use-theme.ts).
           titleBarOverlay: { color: '#181825', symbolColor: '#cdd6f4', height: 40 },
           autoHideMenuBar: true,
         };
@@ -108,6 +132,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
+
   app.setAboutPanelOptions({
     applicationName: 'Git Desktop',
     applicationVersion: app.getVersion(),
@@ -166,7 +192,10 @@ app.whenReady().then(() => {
     });
   }
 
-  registerIpcHandlers({ onRepoOpened: root => repoWatcher.watch(root) });
+  registerIpcHandlers({
+    onRepoOpened: root => repoWatcher.watch(root),
+    getWindow: () => mainWindow,
+  });
   createWindow();
 });
 

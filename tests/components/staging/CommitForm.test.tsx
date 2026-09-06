@@ -13,15 +13,18 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
   CheckoutConflictError: class CheckoutConflictError extends Error {},
+  MergeConflictError: class MergeConflictError extends Error {},
 }));
 vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 
 function setupMocks({
   staged = ['file.ts'],
   commitImpl = vi.fn().mockResolvedValue(undefined),
+  hasIdentity = true as boolean | null,
 }: {
   staged?: string[];
   commitImpl?: ReturnType<typeof vi.fn>;
+  hasIdentity?: boolean | null;
 } = {}) {
   const mockCommit = commitImpl;
   const mockAddToast = vi.fn();
@@ -31,8 +34,10 @@ function setupMocks({
     commit: mockCommit,
     status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
     merging: false,
+    remoteHost: null,
+    hasIdentity,
   };
-  const uiState = { addToast: mockAddToast };
+  const uiState = { addToast: mockAddToast, openOverlayView: vi.fn() };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 
@@ -66,10 +71,10 @@ describe('CommitForm', () => {
     expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
   });
 
-  it('counter shows "0/100" initially', () => {
+  it('counter starts at zero', () => {
     setupMocks();
     render(<CommitForm />);
-    expect(screen.getByText('0/100')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('counter shows correct count after typing', () => {
@@ -77,27 +82,22 @@ describe('CommitForm', () => {
     render(<CommitForm />);
     const textarea = screen.getByPlaceholderText('commitMessage');
     fireEvent.change(textarea, { target: { value: 'hello' } });
-    expect(screen.getByText('5/100')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  it('counter has text-subtext class when at or below 100 chars', () => {
-    setupMocks();
+  // There is no maximum: git does not impose one, and neither does the commit
+  // handler. The counter must stay purely informational however long the
+  // message gets — never a warning, never a block.
+  it('counter keeps counting past any threshold and never turns into a warning', () => {
+    setupMocks({ staged: ['file.ts'] });
     render(<CommitForm />);
     const textarea = screen.getByPlaceholderText('commitMessage');
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(100) } });
-    const counter = screen.getByText('100/100');
+    fireEvent.change(textarea, { target: { value: 'a'.repeat(500) } });
+
+    const counter = screen.getByText('500');
     expect(counter).toHaveClass('text-subtext');
     expect(counter).not.toHaveClass('text-red');
-  });
-
-  it('counter has text-red class when over 100 chars', () => {
-    setupMocks();
-    render(<CommitForm />);
-    const textarea = screen.getByPlaceholderText('commitMessage');
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(101) } });
-    const counter = screen.getByText('101/100');
-    expect(counter).toHaveClass('text-red');
-    expect(counter).not.toHaveClass('text-subtext');
+    expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
   });
 
   it('Ctrl+Enter triggers commit', async () => {
@@ -148,5 +148,38 @@ describe('CommitForm', () => {
         expect.objectContaining({ variant: 'error', message: 'commit failed' }),
       ),
     );
+  });
+
+  // Committing is impossible when neither the repository nor the global config
+  // names an author — git refuses outright, so the button must say so first.
+  it('blocks committing when git has no identity anywhere', () => {
+    setupMocks({ hasIdentity: false });
+    render(<CommitForm />);
+    fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
+      target: { value: 'my commit' },
+    });
+    expect(screen.getByRole('button', { name: 'commitButton' })).toBeDisabled();
+    expect(screen.getByText('noIdentity')).toBeInTheDocument();
+  });
+
+  it('does not block when git does have an author', () => {
+    setupMocks({ hasIdentity: true });
+    render(<CommitForm />);
+    fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
+      target: { value: 'my commit' },
+    });
+    expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
+    expect(screen.queryByText('noIdentity')).toBeNull();
+  });
+
+  // The answer arrives one IPC round trip after the form renders. Blocking on
+  // "not known yet" would grey out the button on every repository open.
+  it('does not block while the answer is still unknown', () => {
+    setupMocks({ hasIdentity: null });
+    render(<CommitForm />);
+    fireEvent.change(screen.getByPlaceholderText('commitMessage'), {
+      target: { value: 'my commit' },
+    });
+    expect(screen.getByRole('button', { name: 'commitButton' })).not.toBeDisabled();
   });
 });

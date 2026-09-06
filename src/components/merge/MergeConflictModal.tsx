@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { Button, Modal } from '../../shared/ui';
+import { errorMessage } from '../../lib/error-message';
 
 export function MergeConflictModal() {
   const { t } = useTranslation('merge');
@@ -28,7 +29,7 @@ export function MergeConflictModal() {
       addToast({
         variant: 'error',
         title: t('abortFailed'),
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage(err),
       });
     }
   };

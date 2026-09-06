@@ -1,7 +1,6 @@
-import { useState, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MenuItem } from '../../shared/ui';
+import { ContextMenu, MenuItem } from '../../shared/ui';
 
 interface BranchItemProps {
   name: string;
@@ -28,22 +27,6 @@ export function BranchItem({
 }: BranchItemProps) {
   const { t } = useTranslation('branches');
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!contextOpen || !btnRef.current) {
-      setPos(null);
-      return;
-    }
-    const r = btnRef.current.getBoundingClientRect();
-    const MENU_W = 176;
-    const MENU_H = 152;
-    let left = r.right + 4;
-    if (left + MENU_W > window.innerWidth) left = r.left - MENU_W - 4;
-    let top = r.top;
-    if (top + MENU_H > window.innerHeight) top = window.innerHeight - MENU_H - 8;
-    setPos({ top, left });
-  }, [contextOpen]);
 
   return (
     <div className="relative">
@@ -52,7 +35,9 @@ export function BranchItem({
           onClick={() => !current && onCheckout()}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
         >
-          <span className={isRemote ? 'text-subtext' : 'text-blue'}>{isRemote ? '○' : '●'}</span>
+          {/* Only the current branch earns the accent — a blue dot on every
+              row was an indicator carrying no information. */}
+          <span className={current ? 'text-blue' : 'text-subtext'}>{isRemote ? '○' : '●'}</span>
           <span className="text-text truncate max-w-40">{name}</span>
         </button>
         {current && <span className="text-blue text-xs">✓</span>}
@@ -69,28 +54,19 @@ export function BranchItem({
         </button>
       </div>
 
-      {contextOpen &&
-        pos &&
-        createPortal(
-          <div
-            onMouseDown={e => e.stopPropagation()}
-            className="fixed bg-surface1 rounded-lg shadow-xl z-[60] py-1 w-44"
-            style={{ top: pos.top, left: pos.left }}
-          >
-            <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
-            <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
-            <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
-            {!current && (
-              <>
-                <div className="border-t border-surface2 my-1" />
-                <MenuItem tone="danger" onClick={onDelete}>
-                  {isRemote ? t('deleteRemoteBranch') : t('deleteBranch')}
-                </MenuItem>
-              </>
-            )}
-          </div>,
-          document.body,
+      <ContextMenu open={contextOpen} anchorRef={btnRef} height={152}>
+        <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
+        <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
+        <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
+        {!current && (
+          <>
+            <div className="border-t border-surface2 my-1" />
+            <MenuItem tone="danger" onClick={onDelete}>
+              {isRemote ? t('deleteRemoteBranch') : t('deleteBranch')}
+            </MenuItem>
+          </>
         )}
+      </ContextMenu>
     </div>
   );
 }

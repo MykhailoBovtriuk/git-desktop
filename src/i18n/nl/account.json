@@ -1,0 +1,47 @@
+{
+  "signIn": "Inloggen",
+  "browser": {
+    "title": "Inloggen via je browser",
+    "body": "Je browser stuurt je terug naar Git Desktop zodra je bent ingelogd. Als je browser toestemming vraagt om Git Desktop te openen, geef die dan.",
+    "continue": "Doorgaan met browser",
+    "reopen": "Browser opnieuw openen",
+    "waiting": "Wachten tot je autoriseert in de browser…",
+    "hostPlaceholder": "git.example.com",
+    "clientIdPlaceholder": "Toepassings-ID (client)",
+    "clientSecretPlaceholder": "Clientgeheim",
+    "selfHostedHint": "Registreer een OAuth-toepassing op je server met de callback-URL git-desktop-auth://oauth en plak hier de client-ID."
+  },
+  "choose": {
+    "title": "Inloggen bij {{host}}",
+    "hint": "Git Desktop herkent deze server niet. Kies wat erop draait.",
+    "continue": "Doorgaan"
+  },
+  "token": {
+    "title": "Inloggen bij {{host}}",
+    "hint": "Plak een persoonlijk toegangstoken met rechten om repositories te lezen en te schrijven.",
+    "usernamePlaceholder": "Gebruikersnaam",
+    "tokenPlaceholder": "Persoonlijk toegangstoken",
+    "where": "Waar vind ik een token?",
+    "submit": "Inloggen"
+  },
+  "error": {
+    "title": "Inloggen mislukt",
+    "useToken": "Gebruik in plaats daarvan een token"
+  },
+  "section": {
+    "title": "Accounts",
+    "hint": "De servers waarop je bent ingelogd. Elke server authenticeert zijn eigen repositories.",
+    "empty": "Nog op geen enkele server ingelogd.",
+    "signOut": "Uitloggen",
+    "add": "Account toevoegen",
+    "hostPlaceholder": "github.com",
+    "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen."
+  },
+  "signedInAs": "Ingelogd als {{name}} op {{host}}",
+  "pick": {
+    "title": "Welk account voor deze repository?",
+    "hint": "Je bent op {{host}} ingelogd met meer dan één account.",
+    "use": "Dit account gebruiken",
+    "another": "Inloggen op een ander account…"
+  }
+}

@@ -1,6 +1,19 @@
 import { gitApi } from '../../api/git-api';
 import type { RepoState, RepoSlice } from './types';
 
+/**
+ * Thrown when a merge stops on conflicts. Same pattern as
+ * CheckoutConflictError: the conflict modal is already on screen, so callers
+ * must treat this as "handled elsewhere" — not as success, which put a green
+ * "Merged" toast next to a red "Merge Conflict" dialog.
+ */
+export class MergeConflictError extends Error {
+  constructor() {
+    super('Merge stopped on conflicts');
+    this.name = 'MergeConflictError';
+  }
+}
+
 type MergeSlice = Pick<
   RepoState,
   'mergeState' | 'merge' | 'abortMerge' | 'clearMergeState' | 'concludeMerge'
@@ -20,6 +33,7 @@ export const createMergeSlice: RepoSlice<MergeSlice> = (set, get) => ({
             conflictingFiles: result.conflicts,
           },
         });
+        throw new MergeConflictError();
       } else {
         set({ mergeState: null });
         await get().refresh();

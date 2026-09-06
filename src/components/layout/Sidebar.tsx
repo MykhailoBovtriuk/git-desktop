@@ -29,8 +29,10 @@ export function Sidebar() {
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = width;
     const onMove = (ev: MouseEvent) =>
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX)));
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + ev.clientX - startX)));
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
@@ -50,74 +52,83 @@ export function Sidebar() {
   const listMode = activeView === 'stash';
 
   return (
-    <div
-      className="relative bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
-      style={{ width }}
-    >
+    <>
       <div
-        className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}
+        className="bg-mantle border-r border-surface0 flex flex-col overflow-hidden shrink-0 select-none"
+        style={{ width }}
       >
-        <Accordion
-          title={t('staging:changes')}
-          badge={totalChanges}
-          open={activeView === 'changes'}
-          onToggle={() => setActiveView(activeView === 'changes' ? 'diff' : 'changes')}
+        <div
+          className={`flex flex-col min-h-0 overflow-hidden ${activeView === 'changes' ? 'flex-1' : 'shrink-0'}`}
         >
-          <ChangesSection />
-        </Accordion>
+          <Accordion
+            title={t('staging:changes')}
+            badge={totalChanges}
+            open={activeView === 'changes'}
+            onToggle={() => setActiveView(activeView === 'changes' ? 'diff' : 'changes')}
+          >
+            <ChangesSection />
+          </Accordion>
+        </div>
+
+        {/* Stash accordion — flex-1 when open */}
+        <div
+          className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}
+        >
+          <Accordion
+            title={t('stash:title')}
+            badge={
+              !stashOpen && stashes.length > 0
+                ? `${t('stash:list')} · ${stashes.length}`
+                : undefined
+            }
+            open={stashOpen}
+            indicateOpen={stashOpen && !listMode}
+            onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
+            action={
+              listMode ? (
+                <Switch
+                  checked
+                  onToggle={() => setActiveView('stash-create')}
+                  label={t('stash:list')}
+                  className="px-1 py-0.5"
+                />
+              ) : undefined
+            }
+          >
+            <StashSection />
+          </Accordion>
+        </div>
+
+        <div className="border-t-2 border-surface1 shrink-0" />
+
+        {/* History + Graph */}
+        <div className="flex flex-col shrink-0 mt-auto">
+          <button
+            onClick={() => setActiveView('history')}
+            className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'history' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
+          >
+            {t('history')}
+          </button>
+          <div className="border-t border-surface0" />
+          <button
+            onClick={() => setActiveView('graph')}
+            className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'graph' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
+          >
+            {t('graph')}
+          </button>
+        </div>
       </div>
 
-      {/* Stash accordion — flex-1 when open */}
+      {/* Its own column, not an overlay on the panel's edge: at right-0 it sat
+          on top of the 8px scrollbar of the file lists, so the scrollbar could
+          not be grabbed. */}
       <div
-        className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}
-      >
-        <Accordion
-          title={t('stash:title')}
-          badge={
-            !stashOpen && stashes.length > 0 ? `${t('stash:list')} · ${stashes.length}` : undefined
-          }
-          open={stashOpen}
-          indicateOpen={stashOpen && !listMode}
-          onToggle={() => setActiveView(stashOpen ? 'diff' : 'stash-create')}
-          action={
-            listMode ? (
-              <Switch
-                checked
-                onToggle={() => setActiveView('stash-create')}
-                label={t('stash:list')}
-                className="px-1 py-0.5"
-              />
-            ) : undefined
-          }
-        >
-          <StashSection />
-        </Accordion>
-      </div>
-
-      <div className="border-t-2 border-surface1 shrink-0" />
-
-      {/* History + Graph */}
-      <div className="flex flex-col shrink-0 mt-auto">
-        <button
-          onClick={() => setActiveView('history')}
-          className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'history' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
-        >
-          {t('history')}
-        </button>
-        <div className="border-t border-surface0" />
-        <button
-          onClick={() => setActiveView('graph')}
-          className={`flex items-center w-full px-3 py-2 text-left border-l-2 transition-colors text-xs font-semibold uppercase tracking-wide ${activeView === 'graph' ? 'bg-surface0 border-blue text-text' : 'border-transparent hover:bg-surface0 text-subtext hover:text-text'}`}
-        >
-          {t('graph')}
-        </button>
-      </div>
-
-      {/* Drag handle to resize the sidebar */}
-      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t('resizeSidebar')}
         onMouseDown={startResize}
-        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-blue/40 active:bg-blue/60 transition-colors z-10"
+        className="w-1.5 shrink-0 cursor-col-resize hover:bg-blue/40 active:bg-blue/60 transition-colors"
       />
-    </div>
+    </>
   );
 }

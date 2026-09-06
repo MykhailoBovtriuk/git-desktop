@@ -1,5 +1,6 @@
+import type { ActiveView } from '../../types';
 import { useRepoStore } from '../../stores/repo-store';
-import { useUiStore } from '../../stores/ui-store';
+import { useUiStore, isOverlayView } from '../../stores/ui-store';
 import { Titlebar } from './Titlebar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
@@ -14,6 +15,14 @@ import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
+import { SettingsView } from '../settings/SettingsView';
+import { AboutView } from '../about/AboutView';
+import { SignInModal } from '../account/SignInModal';
+
+function OverlayContent({ activeView }: { activeView: ActiveView }) {
+  if (activeView === 'settings') return <SettingsView />;
+  return <AboutView />;
+}
 
 function MainContent() {
   const activeView = useUiStore(s => s.activeView);
@@ -34,13 +43,25 @@ function MainContent() {
 
 export function Shell() {
   const repoPath = useRepoStore(s => s.repoPath);
+  const activeView = useUiStore(s => s.activeView);
+  const showsOverlay = isOverlayView(activeView);
 
   if (!repoPath) {
+    // There is no footer without a repository, so the welcome screen carries
+    // its own entry points into Settings/About — otherwise they'd be
+    // unreachable for a first-run user.
     return (
       <>
-        <WelcomeScreen />
+        {showsOverlay ? (
+          <div className="h-screen flex flex-col bg-base overflow-hidden">
+            <OverlayContent activeView={activeView} />
+          </div>
+        ) : (
+          <WelcomeScreen />
+        )}
         <Toast />
         <ConfirmDialog />
+        <SignInModal />
       </>
     );
   }
@@ -50,16 +71,27 @@ export function Shell() {
       <Titlebar />
       <RebaseBanner />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden">
-          <MainContent />
-        </main>
+        {/* Settings and About take over the whole content area — the sidebar is
+            about the open repository and has nothing to offer there. */}
+        {showsOverlay ? (
+          <main className="flex-1 overflow-hidden">
+            <OverlayContent activeView={activeView} />
+          </main>
+        ) : (
+          <>
+            <Sidebar />
+            <main className="flex-1 overflow-hidden">
+              <MainContent />
+            </main>
+          </>
+        )}
       </div>
       <Footer />
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
       <ConfirmDialog />
+      <SignInModal />
     </div>
   );
 }

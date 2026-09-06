@@ -1,1 +1,24 @@
-{ "changes": "Changes", "staged": "Staged", "unstaged": "Unstaged", "stageAll": "Stage All", "unstageAll": "Unstage All", "commitMessage": "Commit message", "commitButton": "Commit", "discardChanges": "Discard Changes", "noChanges": "No changes", "charCounter": "{{count}}/100", "discardConfirm": "Discard changes to \"{{name}}\"? This cannot be undone.", "discardUntrackedConfirm": "Delete untracked \"{{name}}\"? The file will be permanently removed.", "untracked": "Untracked (new)", "committed": "Committed", "commitFailed": "Commit failed", "commitCreated": "Created commit: {{summary}}", "stage": "Stage", "unstage": "Unstage", "discard": "Discard", "deleteUntrackedFile": "Delete untracked file", "untrackedFile": "Untracked (new file)" }
+{
+  "changes": "Changes",
+  "staged": "Staged",
+  "unstaged": "Unstaged",
+  "stageAll": "Stage All",
+  "unstageAll": "Unstage All",
+  "commitMessage": "Commit message",
+  "commitButton": "Commit",
+  "discardChanges": "Discard Changes",
+  "noChanges": "No changes",
+  "discardConfirm": "Discard changes to \"{{name}}\"? This cannot be undone.",
+  "discardUntrackedConfirm": "Delete untracked \"{{name}}\"? The file will be permanently removed.",
+  "untracked": "Untracked (new)",
+  "committed": "Committed",
+  "commitFailed": "Commit failed",
+  "commitCreated": "Created commit: {{summary}}",
+  "stage": "Stage",
+  "unstage": "Unstage",
+  "discard": "Discard",
+  "deleteUntrackedFile": "Delete untracked file",
+  "untrackedFile": "Untracked (new file)",
+  "noIdentity": "Git does not know who you are, so commits are blocked.",
+  "noIdentityAction": "Set your name and email"
+}

@@ -120,3 +120,80 @@ describe('ui-store', () => {
     });
   });
 });
+
+describe('overlay views', () => {
+  beforeEach(() => {
+    useUiStore.setState({ activeView: 'changes', previousView: 'changes', overlayStack: [] });
+  });
+
+  it('returns to the view the user came from', () => {
+    useUiStore.getState().setActiveView('graph');
+    useUiStore.getState().openOverlayView('settings');
+    expect(useUiStore.getState().activeView).toBe('settings');
+
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('graph');
+  });
+
+  it('keeps the original origin when switching between overlays', () => {
+    useUiStore.getState().setActiveView('history');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('history');
+  });
+
+  it('keeps the original origin when moving to a sub-screen', () => {
+    useUiStore.getState().setActiveView('graph');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+
+    expect(useUiStore.getState().activeView).toBe('about');
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('graph');
+  });
+
+  it('goes back one screen at a time', () => {
+    useUiStore.getState().setActiveView('graph');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+
+    useUiStore.getState().overlayBack();
+    expect(useUiStore.getState().activeView).toBe('settings');
+
+    useUiStore.getState().overlayBack();
+    expect(useUiStore.getState().activeView).toBe('graph');
+  });
+
+  it('leaves the overlay when back is pressed on the top-level screen', () => {
+    useUiStore.getState().setActiveView('history');
+    useUiStore.getState().openOverlayView('settings');
+
+    useUiStore.getState().overlayBack();
+    expect(useUiStore.getState().activeView).toBe('history');
+  });
+
+  // A breadcrumb pointing at a screen we came through must unwind to it, or
+  // "back" would bounce between the two forever.
+  it('unwinds to a screen already below the current one', () => {
+    useUiStore.getState().setActiveView('changes');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+    useUiStore.getState().openOverlayView('settings');
+
+    expect(useUiStore.getState().overlayStack).toEqual([]);
+    useUiStore.getState().overlayBack();
+    expect(useUiStore.getState().activeView).toBe('changes');
+  });
+
+  it('closes out of a sub-screen in one step', () => {
+    useUiStore.getState().setActiveView('graph');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().openOverlayView('about');
+
+    useUiStore.getState().closeOverlayView();
+    expect(useUiStore.getState().activeView).toBe('graph');
+    expect(useUiStore.getState().overlayStack).toEqual([]);
+  });
+});

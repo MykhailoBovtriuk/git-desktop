@@ -30,7 +30,7 @@ export function Switch({ checked, onToggle, label, title, className }: SwitchPro
       >
         <span
           className={cn(
-            'inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform duration-200',
+            'inline-block h-2.5 w-2.5 rounded-full bg-base shadow-sm transition-transform duration-200',
             checked ? 'translate-x-3' : 'translate-x-0.5',
           )}
         />

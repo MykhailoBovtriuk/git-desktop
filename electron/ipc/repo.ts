@@ -1,5 +1,8 @@
 import { ipcMain, dialog } from 'electron';
 import { GitService } from '../git-service';
+import { resolveRemoteHost } from '../auth/remote-host';
+import { stripLegacyProfileKeys } from '../auth/legacy-cleanup';
+import { hasIdentity } from '../auth/identity-bootstrap';
 import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '../ipc-validators';
 import { wrap } from './wrap';
 
@@ -13,7 +16,11 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       assertString(dirPath, 'dirPath');
       const root = await git.openRepo(dirPath);
       options.onRepoOpened?.(root);
-      return root;
+      await stripLegacyProfileKeys(root);
+      // The host decides which account applies and whether to offer sign-in, so
+      // it travels with the repo rather than costing a second round trip.
+      const remoteUrl = await git.getRemoteUrl().catch(() => null);
+      return { root, remoteHost: await resolveRemoteHost(remoteUrl) };
     }),
   );
 
@@ -38,5 +45,16 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
 
   ipcMain.handle('git:get-status', () => wrap(() => git.getStatus()));
 
+  ipcMain.handle('git:get-head-commit', () => wrap(() => git.getHeadCommit()));
+
   ipcMain.handle('git:get-repo-path', () => ({ data: git.getRepoPath() }));
+
+  // One boolean, not a resolved identity: the only thing the UI does with it is
+  // stop a commit that git would reject outright for having no author.
+  ipcMain.handle('git:has-identity', () =>
+    wrap(async () => {
+      const root = git.getRepoPath();
+      return root ? hasIdentity(root) : true;
+    }),
+  );
 }
