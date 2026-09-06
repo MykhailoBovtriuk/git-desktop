@@ -58,7 +58,7 @@ Same steps as above, but download **`Git-Desktop-x64.dmg`** instead.
 
 > **⚠️ Windows SmartScreen warning on first launch**
 >
-> SmartScreen will say *"Windows protected your PC"* because the installer isn't code-signed.
+> SmartScreen will say _"Windows protected your PC"_ because the installer isn't code-signed.
 >
 > 1. Click **More info**.
 > 2. Click **Run anyway**.
@@ -112,6 +112,7 @@ npm run dev:electron
 ```
 
 This:
+
 - Starts Vite dev server on `http://localhost:5173` with **hot module reload** for the renderer
 - Compiles the Electron main process via `tsc`
 - Launches the Electron window
@@ -127,11 +128,12 @@ npm run test:watch    # watch mode
 ```
 
 The suite (690+ tests) covers:
+
 - `GitService` against a real Git repo (temp dir + actual `git init`)
 - The auth stack: OAuth flow, token store, provider registry, deep links
 - Diff parser, patch builder, commit graph layout
 - Zustand stores and the shared UI components
-- i18n parity between English and Ukrainian resources
+- i18n parity across the English, Ukrainian and Dutch resources
 
 ---
 
@@ -145,12 +147,12 @@ npm run build:electron
 
 Output goes to **`release/`**:
 
-| Platform | Output file | Size (approx) |
-|---|---|---|
-| macOS Apple Silicon | `release/Git-Desktop-arm64.dmg` | ~110 MB |
-| macOS Intel | `release/Git-Desktop-x64.dmg` | ~115 MB |
-| Windows | `release/Git-Desktop-Setup-x64.exe` | ~95 MB |
-| Linux | `release/git-desktop-x86_64.AppImage` | ~130 MB |
+| Platform            | Output file                           | Size (approx) |
+| ------------------- | ------------------------------------- | ------------- |
+| macOS Apple Silicon | `release/Git-Desktop-arm64.dmg`       | ~110 MB       |
+| macOS Intel         | `release/Git-Desktop-x64.dmg`         | ~115 MB       |
+| Windows             | `release/Git-Desktop-Setup-x64.exe`   | ~95 MB        |
+| Linux               | `release/git-desktop-x86_64.AppImage` | ~130 MB       |
 
 Artifact names deliberately carry **no version number** — that keeps
 `releases/latest/download/<name>` URLs valid across releases, so the download
@@ -264,18 +266,18 @@ git-desktop/
 
 ### Available npm scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Vite dev server only (no Electron — useful for renderer-only iteration in a browser) |
-| `npm run dev:electron` | Full dev — Vite + Electron with HMR + DevTools |
-| `npm run build` | Clean output, bake OAuth client ids, type-check + build renderer (Vite) + compile main process (tsc) |
-| `npm run build:electron` | Run `build`, then package via electron-builder |
-| `npm test` | Run all tests once |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Tests with a V8 coverage report |
-| `npm run typecheck` | Type-check both TS projects (renderer + main), no emit |
-| `npm run lint` | ESLint over the whole repo |
-| `npm run format` / `format:check` | Prettier write / verify |
+| Script                            | What it does                                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `npm run dev`                     | Vite dev server only (no Electron — useful for renderer-only iteration in a browser)                 |
+| `npm run dev:electron`            | Full dev — Vite + Electron with HMR + DevTools                                                       |
+| `npm run build`                   | Clean output, bake OAuth client ids, type-check + build renderer (Vite) + compile main process (tsc) |
+| `npm run build:electron`          | Run `build`, then package via electron-builder                                                       |
+| `npm test`                        | Run all tests once                                                                                   |
+| `npm run test:watch`              | Run tests in watch mode                                                                              |
+| `npm run test:coverage`           | Tests with a V8 coverage report                                                                      |
+| `npm run typecheck`               | Type-check both TS projects (renderer + main), no emit                                               |
+| `npm run lint`                    | ESLint over the whole repo                                                                           |
+| `npm run format` / `format:check` | Prettier write / verify                                                                              |
 
 ---
 
@@ -290,7 +292,7 @@ git-desktop/
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
 - **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — see [Authentication](#-authentication)
-- **Localization** — English and Ukrainian, auto-detected from the browser and remembered across restarts
+- **Localization** — English, Ukrainian and Dutch, switchable in Settings and remembered across restarts; new installs start in English
 - **Auto-refresh** — event-driven via `fs.watch` on `.git` (debounced 300 ms), so external `git` activity shows up almost instantly; a configurable poll (off / 10 s / 30 s / 60 s) picks up plain file edits
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
 - **Settings screen** — theme, interface language, auto-refresh interval, signed-in accounts
@@ -312,16 +314,16 @@ The browser handles it and redirects back through `git-desktop-auth://oauth`;
 the token is encrypted with the OS keychain and handed to `git credential`, so
 ordinary `git push` and `git pull` authenticate without any further setup.
 
-| Provider | Flow | Needs a client secret |
-|---|---|---|
-| GitHub.com | OAuth 2.0 authorization code | yes — GitHub has no desktop PKCE flow |
-| GitHub Enterprise Server | same, against your instance | yes — registered by your admin |
-| GitLab.com | OAuth 2.0 + PKCE | no |
-| GitLab self-managed | same, against your instance | no |
-| Azure DevOps | Microsoft Entra ID + PKCE | no |
-| Bitbucket Cloud | OAuth 2.0 authorization code | yes |
-| Gitea / Forgejo / Codeberg | OAuth 2.0 + PKCE | no |
-| Anything else | personal access token | — |
+| Provider                   | Flow                         | Needs a client secret                 |
+| -------------------------- | ---------------------------- | ------------------------------------- |
+| GitHub.com                 | OAuth 2.0 authorization code | yes — GitHub has no desktop PKCE flow |
+| GitHub Enterprise Server   | same, against your instance  | yes — registered by your admin        |
+| GitLab.com                 | OAuth 2.0 + PKCE             | no                                    |
+| GitLab self-managed        | same, against your instance  | no                                    |
+| Azure DevOps               | Microsoft Entra ID + PKCE    | no                                    |
+| Bitbucket Cloud            | OAuth 2.0 authorization code | yes                                   |
+| Gitea / Forgejo / Codeberg | OAuth 2.0 + PKCE             | no                                    |
+| Anything else              | personal access token        | —                                     |
 
 You are signed in **per host**, so GitHub, a work GitLab and Azure DevOps can be
 active at the same time; signing out of one leaves the others alone. Providers
