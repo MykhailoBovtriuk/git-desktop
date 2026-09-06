@@ -45,7 +45,7 @@ The app remembers the last-opened repository and recent repos list across restar
 | Git backend          | **simple-git 3**                                                   | Wraps the user's installed `git` CLI. Simpler than a native libgit2 binding, and respects the user's existing git config (credentials, hooks, SSH keys, etc.). Trade-off: requires the user to have Git installed.                                              |
 | Graph rendering      | **SVG + D3 utilities** (custom layout)                             | SVG paths render Bezier curves between commits with crisp lines at any zoom. CSS-styleable. No canvas/WebGL setup. The lane layout is custom (see `src/components/graph/graph-layout.ts`) — D3 isn't actually invoked at runtime; only its types are pulled in. |
 | Styling              | **Tailwind v4** + custom `@theme` tokens                           | Utility-first keeps style colocated with markup. v4 generates colors from `@theme` directives in CSS — no JS config needed. Custom palette via `--color-*` tokens (see §6).                                                                                     |
-| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN and UK with namespaced JSON resources. All user-facing components call `useTranslation`; language is detected from the browser and cached in localStorage.                                                                                        |
+| Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN, UK and NL with namespaced JSON resources. All user-facing components call `useTranslation`; the language is chosen in Settings and cached in localStorage, defaulting to English.                                                                |
 | Diff parsing         | Custom parser in `src/components/diff/parse-diff.ts`               | The output of `git diff` is well-specified (unified diff format) but standalone NPM parsers add weight. The custom parser handles `--- /dev/null` (new file), `+++ /dev/null` (deletion), `Binary files differ`, and multi-file diffs.                          |
 | Testing              | **Vitest 4** + `@testing-library/react` + `jsdom`                  | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for `GitService` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior.                                       |
 | Packaging            | **electron-builder**                                               | Standard for shipping cross-platform Electron apps. Configured via `electron-builder.yml`.                                                                                                                                                                      |
@@ -655,8 +655,8 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 
 ### `src/i18n/`
 
-- **`config.ts`** — Initializes i18next with EN and UK resources, browser language detection, localStorage caching of language choice.
-- **`en/*.json` + `uk/*.json`** — Namespaced translations: `common`, `staging`, `graph`, `diff`, `footer`, `branches`, `merge`, `stash`, `checkout`, `repo`.
+- **`config.ts`** — Initializes i18next with EN, UK and NL resources and localStorage caching of the language choice. Detection is localStorage-only on purpose: the app opens in English until the user picks a language in Settings, whatever the system locale says.
+- **`en/*.json` + `uk/*.json` + `nl/*.json`** — Namespaced translations: `common`, `staging`, `graph`, `diff`, `footer`, `branches`, `merge`, `stash`, `checkout`, `repo`.
 - **Status:** active — all user-facing components call `useTranslation`. Dynamic text uses interpolation (e.g. `t('merging', { source, target })`).
 
 ### `src/types.ts`
@@ -675,7 +675,7 @@ The shared type definitions. Imported by both renderer and main (the main proces
 ## 13. Notable trade-offs and known limitations
 
 - **Hard dependency on a system Git binary.** No bundled Git. Users without `git` on `PATH` will see "command not found" errors. Acceptable for a developer-targeted tool.
-- **i18n is active for EN and UK.** All user-facing components call `useTranslation`; language is browser-detected and cached in localStorage. There is no in-app language switcher yet — the choice follows the browser/`localStorage`.
+- **i18n is active for EN, UK and NL.** All user-facing components call `useTranslation`; the language is picked in Settings and cached in localStorage. A locale is a directory of JSON files plus one entry in `LANGUAGES` — but every string is hand-translated, so a fourth language is real work, not configuration.
 - **No hunk-level / line-level staging yet.** The current "Stage" button stages the whole file via `git add`. Hunk-level staging would require parsing the diff into hunks (we already do) and using `git apply --cached`.
 - **The 3-panel merge editor is not PhpStorm-grade.** It parses conflict regions and offers per-block "use current / use incoming / both / reset" controls plus auto-commit on full resolution, but it has no syntax highlighting, word-level diffing, or binary-conflict handling.
 - **Drag-and-drop merge/rebase/cherry-pick** is on the roadmap (Project memory) but not implemented.
@@ -710,9 +710,10 @@ git-desktop/
 │   ├── lib/
 │   │   └── relative-time.ts         # "5m ago" formatter
 │   ├── i18n/
-│   │   ├── config.ts                # i18next setup (active, EN/UK)
+│   │   ├── config.ts                # i18next setup (active, EN/UK/NL)
 │   │   ├── en/{common,staging,...}.json
-│   │   └── uk/{common,staging,...}.json
+│   │   ├── uk/{common,staging,...}.json
+│   │   └── nl/{common,staging,...}.json
 │   ├── styles/
 │   │   └── globals.css              # @theme tokens + body / scrollbar
 │   └── components/

@@ -128,9 +128,10 @@ Two mechanisms feed the UI:
 ## 9. Settings and appearance
 
 **Settings** (gear icon, bottom-left): theme (Light / Dark / System — Latte
-and Mocha from the Catppuccin palette), interface language (English /
-Українська), auto-refresh interval, and the signed-in accounts list. Language
-and theme persist across restarts.
+and Mocha from the Catppuccin palette), interface language (Українська /
+Nederlands / English), auto-refresh interval, and the signed-in accounts list.
+A fresh install starts in English regardless of your system language; your
+choice, like the theme, persists across restarts.
 
 ## 10. What is not there (yet)
 
