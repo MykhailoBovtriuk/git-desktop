@@ -1,0 +1,24 @@
+{
+  "fetch": "Fetch",
+  "pull": "Pull",
+  "push": "Push",
+  "ahead": "{{count}} voor",
+  "behind": "{{count}} achter",
+  "success": "{{op}} geslaagd",
+  "failed": "{{op}} mislukt",
+  "publishBranch": "Branch publiceren",
+  "error": {
+    "auth": "Kon niet authenticeren bij de remote. Log in om verder te gaan.",
+    "noUpstream": "Deze branch heeft nog geen upstream. Publiceer hem om te pushen.",
+    "conflict": "Er zijn eerst conflicten op te lossen.",
+    "uncommitted": "Je hebt niet-gecommitte wijzigingen die zouden worden overschreven. Commit of stash ze eerst.",
+    "notRepo": "Deze map is geen Git-repository.",
+    "network": "Kon de remote niet bereiken. Controleer je netwerkverbinding.",
+    "hook": "Een Git-hook heeft de bewerking geblokkeerd. Zie de uitvoer van de hook voor details.",
+    "unknown": ""
+  },
+  "signIn": "Inloggen",
+  "account": {
+    "signedInAs": "Ingelogd als {{name}} op {{host}}"
+  }
+}

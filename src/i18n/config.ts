@@ -32,6 +32,21 @@ import ukSettings from './uk/settings.json';
 import ukAbout from './uk/about.json';
 import ukAccount from './uk/account.json';
 
+import nlCommon from './nl/common.json';
+import nlStaging from './nl/staging.json';
+import nlGraph from './nl/graph.json';
+import nlDiff from './nl/diff.json';
+import nlFooter from './nl/footer.json';
+import nlBranches from './nl/branches.json';
+import nlMerge from './nl/merge.json';
+import nlRebase from './nl/rebase.json';
+import nlStash from './nl/stash.json';
+import nlCheckout from './nl/checkout.json';
+import nlRepo from './nl/repo.json';
+import nlSettings from './nl/settings.json';
+import nlAbout from './nl/about.json';
+import nlAccount from './nl/account.json';
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -71,8 +86,25 @@ i18n
         about: ukAbout,
         account: ukAccount,
       },
+      nl: {
+        common: nlCommon,
+        staging: nlStaging,
+        graph: nlGraph,
+        diff: nlDiff,
+        footer: nlFooter,
+        branches: nlBranches,
+        merge: nlMerge,
+        rebase: nlRebase,
+        stash: nlStash,
+        checkout: nlCheckout,
+        repo: nlRepo,
+        settings: nlSettings,
+        about: nlAbout,
+        account: nlAccount,
+      },
     },
-    detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
+    // No 'navigator': English is the default until the user picks a language,
+    // regardless of the system locale.
+    detection: { order: ['localStorage'], caches: ['localStorage'] },
     interpolation: { escapeValue: false },
   });
-

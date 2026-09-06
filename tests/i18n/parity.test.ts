@@ -3,12 +3,12 @@ import fs from 'fs';
 import path from 'path';
 
 // Guards the two things that silently break localization:
-// 1. en/uk drifting apart (a key added to one language only),
+// 1. the locales drifting apart (a key added to one language only),
 // 2. Ukrainian plural keys missing _few/_many — i18next then falls back to
 //    English for counts like 2-4 and 5-20 even in the uk locale.
 
 const I18N_DIR = path.resolve(__dirname, '../../src/i18n');
-const LANGS = ['en', 'uk'] as const;
+const LANGS = ['en', 'uk', 'nl'] as const;
 
 const namespaces = fs
   .readdirSync(path.join(I18N_DIR, 'en'))
@@ -35,10 +35,11 @@ const pluralBase = (key: string): string | null => {
 const REQUIRED_PLURALS: Record<(typeof LANGS)[number], string[]> = {
   en: ['one', 'other'],
   uk: ['one', 'few', 'many', 'other'],
+  nl: ['one', 'other'],
 };
 
 describe('i18n parity', () => {
-  it('en and uk ship the same namespaces', () => {
+  it('every language ships the same namespaces', () => {
     for (const lang of LANGS) {
       const files = fs
         .readdirSync(path.join(I18N_DIR, lang))
@@ -49,13 +50,16 @@ describe('i18n parity', () => {
   });
 
   for (const ns of namespaces) {
-    it(`${ns}: en and uk have identical key sets (modulo plural forms)`, () => {
-      // Plural keys collapse to their base — uk legitimately has more forms.
-      const normalize = (keys: string[]) => [...new Set(keys.map(k => pluralBase(k) ?? k))].sort();
-      expect(normalize(flattenKeys(readNs('uk', ns)))).toEqual(
-        normalize(flattenKeys(readNs('en', ns))),
-      );
-    });
+    // Plural keys collapse to their base — uk legitimately has more forms.
+    const normalize = (keys: string[]) => [...new Set(keys.map(k => pluralBase(k) ?? k))].sort();
+
+    for (const lang of LANGS.filter(l => l !== 'en')) {
+      it(`${ns}: ${lang} and en have identical key sets (modulo plural forms)`, () => {
+        expect(normalize(flattenKeys(readNs(lang, ns)))).toEqual(
+          normalize(flattenKeys(readNs('en', ns))),
+        );
+      });
+    }
 
     for (const lang of LANGS) {
       it(`${ns}: ${lang} plural keys carry every required form`, () => {

@@ -7,7 +7,8 @@ import type { ThemePreference } from '../types';
 export const AUTO_REFRESH_OPTIONS = [0, 10_000, 30_000, 60_000] as const;
 export type AutoRefreshMs = (typeof AUTO_REFRESH_OPTIONS)[number];
 
-export const LANGUAGES = ['en', 'uk'] as const;
+/** Order drives the Settings dropdown; 'en' is the default (see i18n/config.ts). */
+export const LANGUAGES = ['uk', 'nl', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 // Language deliberately lives in i18next, not here: its LanguageDetector

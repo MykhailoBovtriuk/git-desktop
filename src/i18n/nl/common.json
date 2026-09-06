@@ -1,0 +1,22 @@
+{
+  "cancel": "Annuleren",
+  "confirm": "Bevestigen",
+  "back": "Terug",
+  "close": "Sluiten",
+  "error": "Fout",
+  "loading": "Laden...",
+  "retry": "Opnieuw proberen",
+  "done": "Klaar",
+  "history": "Geschiedenis",
+  "graph": "Graaf",
+  "filterCommits": "Commits filteren...",
+  "selectCommitHint": "Selecteer een commit om het verschil te bekijken",
+  "loadMore": "Meer laden",
+  "loadingMore": "Laden...",
+  "settings": "Instellingen",
+  "about": "Over",
+  "save": "Opslaan",
+  "edit": "Bewerken",
+  "delete": "Verwijderen",
+  "resizeSidebar": "Zijbalkbreedte aanpassen"
+}

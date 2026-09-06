@@ -1,0 +1,28 @@
+{
+  "title": "Stash",
+  "list": "Lijst",
+  "stashStaged": "Gestagede wijzigingen stashen",
+  "messagePlaceholder": "Stashbericht…",
+  "noStashes": "Geen stashes",
+  "stashed": "Gestasht",
+  "stashedMessage": "Gestagede wijzigingen opgeslagen in de stash",
+  "stashFailed": "Stashen mislukt",
+  "popped": "Stash gepopt",
+  "poppedMessage": "stash@{{index}} hersteld",
+  "popFailed": "Poppen mislukt",
+  "applied": "Stash toegepast",
+  "appliedMessage": "stash@{{index}} toegepast (stash behouden)",
+  "applyFailed": "Toepassen mislukt",
+  "dropped": "Stash verwijderd",
+  "droppedMessage": "stash@{{index}} verwijderd",
+  "dropFailed": "Verwijderen mislukt",
+  "dropConfirm": "stash@{{index}} verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "drop": "Verwijderen",
+  "selectStashHint": "Selecteer een stash voor een voorbeeld",
+  "noStashesYet": "Nog geen stashes",
+  "actions": {
+    "apply": "Toepassen (stash behouden)",
+    "pop": "Poppen (herstellen en verwijderen)",
+    "drop": "Verwijderen (zonder herstellen)"
+  }
+}

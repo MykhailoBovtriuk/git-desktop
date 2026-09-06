@@ -1,0 +1,19 @@
+{
+  "searchPlaceholder": "Branches zoeken...",
+  "local": "Lokaal",
+  "remote": "Remote",
+  "checkout": "Uitchecken",
+  "mergeIntoCurrent": "Samenvoegen in huidige",
+  "rebaseOntoCurrent": "Rebasen op huidige",
+  "deleteBranch": "Branch verwijderen",
+  "deleteRemoteBranch": "Remote branch verwijderen",
+  "moreActions": "Meer acties",
+  "deleteConfirm": "Branch \"{{name}}\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "forceDeleteConfirm": "Branch \"{{name}}\" is niet volledig samengevoegd. Geforceerd verwijderen? Niet-samengevoegde commits gaan verloren.",
+  "deleteRemoteConfirm": "Remote branch \"{{branch}}\" op \"{{remote}}\" verwijderen? Daarmee verdwijnt hij op de remote voor iedereen.",
+  "deleted": "{{name}} verwijderd",
+  "forceDeleted": "{{name}} geforceerd verwijderd",
+  "switchedTo": "Overgeschakeld naar {{name}}",
+  "merged": "{{name}} samengevoegd",
+  "rebasedOnto": "Gerebased op {{name}}"
+}

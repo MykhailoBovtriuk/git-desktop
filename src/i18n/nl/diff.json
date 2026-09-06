@@ -1,0 +1,9 @@
+{
+  "noDiff": "Selecteer een bestand om het verschil te bekijken",
+  "additions": "+{{count}}",
+  "deletions": "-{{count}}",
+  "noDiffToDisplay": "Geen verschil om te tonen",
+  "loadFailed": "Laden van het verschil is mislukt",
+  "stageHunk": "Hunk stagen",
+  "unstageHunk": "Hunk unstagen"
+}

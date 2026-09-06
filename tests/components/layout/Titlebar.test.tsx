@@ -66,4 +66,13 @@ describe('Titlebar', () => {
     render(<Titlebar />);
     expect(screen.queryByLabelText('refreshError')).not.toBeInTheDocument();
   });
+
+  // The translate on this wrapper traps the branch dropdown's z-50, so the
+  // stacking order depends on the wrapper's own z-index. jsdom cannot paint;
+  // the class is what guards it.
+  it('keeps the centred group above the content area', () => {
+    render(<Titlebar />);
+    const centred = screen.getByText('main').closest('.absolute');
+    expect(centred).toHaveClass('z-30');
+  });
 });

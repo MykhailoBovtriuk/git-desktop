@@ -61,7 +61,7 @@ export function Titlebar() {
           blocks. Those differ in width (app name on the left vs repo pill plus
           the room reserved for the OS window controls on the right), so a
           flex-centred group ended up visibly off-centre on Windows. */}
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 max-w-[42%]">
+      <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[42%]">
         <DragRegion draggable={false} ref={branchRef} className="relative min-w-0">
           <button
             onClick={() => !mergeState && setBranchOpen(o => !o)}

@@ -1,0 +1,14 @@
+{
+  "title": "Lokale wijzigingen zouden worden overschreven",
+  "subtitle": "Overschakelen naar {{branch}} zou je niet-gecommitte wijzigingen overschrijven. Kies hoe je verdergaat:",
+  "stashDesc": "Wijzigingen in een stash zetten en dan overschakelen.",
+  "stashAction": "Stashen en uitchecken",
+  "migrateDesc": "Je wijzigingen meenemen naar {{branch}} (kan conflicteren).",
+  "migrateAction": "Wijzigingen meenemen",
+  "forceDesc": "Je wijzigingen verwerpen en toch overschakelen.",
+  "forceAction": "Geforceerd uitchecken",
+  "stashedSwitched": "Wijzigingen gestasht, overgeschakeld naar {{branch}}",
+  "migrated": "Je wijzigingen naar {{branch}} meegenomen",
+  "forced": "Overgeschakeld naar {{branch}}, wijzigingen verworpen",
+  "checkoutFailed": "Uitchecken mislukt"
+}

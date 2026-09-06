@@ -11,7 +11,7 @@ you have used version control at least a little; for installation see the
 The welcome screen has one action: **Open Repository**. Point it at a folder
 that is already a Git repository (it contains a `.git` directory).
 
-- Opening a folder that is *not* a repository shows an error toast and nothing
+- Opening a folder that is _not_ a repository shows an error toast and nothing
   breaks — pick another folder.
 - The app does **not** create or clone repositories yet. Run `git init` or
   `git clone` in a terminal first, then open the folder.
@@ -21,6 +21,7 @@ that is already a Git repository (it contains a `.git` directory).
 
 ## 2. Who you commit as (identity)
 
+і
 Git refuses to commit without an author (`user.name` / `user.email`). The app
 checks this per repository and disables the **Commit** button with an
 explanation when identity is missing.
@@ -64,7 +65,7 @@ button aimed at the right server.
 ## 4. The everyday cycle
 
 1. Edit files. Changes appear in the **Changes** section (see [§8](#8-when-the-app-notices-changes)
-   for *when* they appear).
+   for _when_ they appear).
 2. Stage: hover a file for its stage/discard icons, use **Stage All**, or open
    the file's diff and stage individual **hunks** with the button in the hunk
    header.

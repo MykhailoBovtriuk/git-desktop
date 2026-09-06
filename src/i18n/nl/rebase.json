@@ -1,0 +1,10 @@
+{
+  "rebaseConflict": "Rebaseconflict",
+  "rebasing": "Er loopt een rebase — los de conflicten op en ga daarna verder",
+  "abortRebase": "Rebase afbreken",
+  "continueRebase": "Rebase voortzetten",
+  "conflictingFilesCount_one": "{{count}} conflicterend bestand:",
+  "conflictingFilesCount_other": "{{count}} conflicterende bestanden:",
+  "rebaseAborted": "Rebase afgebroken",
+  "rebaseContinued": "Rebase voortgezet"
+}

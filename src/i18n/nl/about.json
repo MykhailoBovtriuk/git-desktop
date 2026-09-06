@@ -1,0 +1,19 @@
+{
+  "title": "Over",
+  "tagline": "Een platformonafhankelijke Git-desktopclient met een visuele commitgraaf en conflictoplossing.",
+  "whatIsIt": "Wat is dit?",
+  "description": "Git Desktop is een gratis en opensource Git-client voor wie wil zien wat zijn repository werkelijk doet: een echte commitgraaf, staging op hunkniveau, een conflicteditor naast elkaar en stashbeheer — zonder abonnement en zonder account.",
+  "support": "Steun het project",
+  "supportHint": "Het wordt in de openbaarheid en in vrije tijd gebouwd. Een ster op de repository, een melding van een bug die je tegenkomt of een pull request helpen meer dan je denkt.",
+  "project": "Project",
+  "links": {
+    "star": "Ster geven op GitHub",
+    "sponsor": "Sponsoren",
+    "contribute": "Hoe je kunt bijdragen",
+    "sourceCode": "Broncode",
+    "reportIssue": "Probleem melden",
+    "releases": "Releases",
+    "license": "Licentie (ISC)"
+  },
+  "credits": "Gebouwd met Electron, React en simple-git. Kleurenpalet: Catppuccin. © 2026 Mykhailo Bovtriuk."
+}
