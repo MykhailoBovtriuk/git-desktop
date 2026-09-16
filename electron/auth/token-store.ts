@@ -8,13 +8,9 @@ import { approveCredentials, gitUsernameFor } from './git-credentials';
 import { accountIdFor } from './account-id';
 
 /**
- * Where signed-in accounts live, keyed by `host|login` — so a personal and a
- * work account on the same GitHub are two entries, not one overwriting the
- * other, and github.com, a work GitLab and Azure DevOps coexist as a matter of
- * course.
- *
- * A repository is bound to one of them; the binding lives here too, because it
- * is worthless without the account it points at and must disappear with it.
+ * Where signed-in accounts live, keyed by host — github.com, a work GitLab and
+ * Azure DevOps coexist as a matter of course, but one host holds one account,
+ * because that is all `git credential` can address (see `account-id`).
  *
  * Tokens are encrypted with the OS keychain via safeStorage. When that is
  * unavailable (a Linux box with no keyring), nothing is written to disk at all:
@@ -22,7 +18,7 @@ import { accountIdFor } from './account-id';
  * them to sign in again next launch.
  */
 export interface StoredCredential {
-  /** `host|login`. */
+  /** The host. */
   id: string;
   host: string;
   account: ProviderAccount;
@@ -49,10 +45,8 @@ interface PersistedEntry {
 /** Refresh a little early: a token that expires mid-push helps nobody. */
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
-/** Keyed by account id. */
+/** Keyed by account id, which is the host. */
 const memory = new Map<string, StoredCredential>();
-/** Repository path → account id. */
-const bindings = new Map<string, string>();
 let loaded = false;
 
 function storeFile(): string {
@@ -91,13 +85,16 @@ async function load(): Promise<void> {
     const raw = await fs.readFile(storeFile(), 'utf8');
     const parsed = JSON.parse(raw) as
       PersistedEntry[] | { accounts: PersistedEntry[]; bindings?: Record<string, string> };
-    // An older build wrote a bare array keyed by host; read it rather than
-    // silently signing the user out on upgrade.
+    // Two older formats: a bare array, and one with a `bindings` map back when
+    // a host could hold several accounts. Read both rather than silently
+    // signing the user out on upgrade; `host|login` ids collapse to the host,
+    // and the first entry for a host wins.
     const entries = Array.isArray(parsed) ? parsed : parsed.accounts;
     for (const entry of entries ?? []) {
       const accessToken = decrypt(entry.accessTokenEnc);
       if (!accessToken) continue;
-      const id = entry.id ?? accountIdFor(entry.host, entry.account.login);
+      const id = accountIdFor(entry.host);
+      if (memory.has(id)) continue;
       memory.set(id, {
         id,
         host: entry.host,
@@ -108,11 +105,6 @@ async function load(): Promise<void> {
         clientId: entry.clientId,
         clientSecret: entry.clientSecret,
       });
-    }
-    if (!Array.isArray(parsed)) {
-      for (const [repo, id] of Object.entries(parsed.bindings ?? {})) {
-        if (memory.has(id)) bindings.set(repo, id);
-      }
     }
   } catch {
     // No file yet, or one we cannot parse. Either way: no accounts.
@@ -133,8 +125,7 @@ async function persist(): Promise<void> {
   }));
   // 0o600: the tokens inside are encrypted, but the account list is not, and
   // it is nobody else's business which servers this user works against.
-  const payload = { accounts: entries, bindings: Object.fromEntries(bindings) };
-  await fs.writeFile(storeFile(), JSON.stringify(payload, null, 2), { mode: 0o600 });
+  await fs.writeFile(storeFile(), JSON.stringify({ accounts: entries }, null, 2), { mode: 0o600 });
 }
 
 /** True when tokens survive a restart. False means this session only. */
@@ -153,38 +144,10 @@ export async function listAccounts(): Promise<ProviderAccount[]> {
   return [...memory.values()].map(c => c.account);
 }
 
-/** Every account signed in to this host — often more than one. */
-export async function accountsForHost(host: string): Promise<ProviderAccount[]> {
+/** The account signed in to this host, if any. */
+export async function accountForHost(host: string): Promise<ProviderAccount | null> {
   await load();
-  return [...memory.values()].filter(c => c.host === host).map(c => c.account);
-}
-
-/** Which account a repository commits and pushes as, if the user has said. */
-export async function boundAccount(repoPath: string): Promise<ProviderAccount | null> {
-  await load();
-  const id = bindings.get(repoPath);
-  return id ? (memory.get(id)?.account ?? null) : null;
-}
-
-/**
- * Forget which account a repository used.
- *
- * The token is deliberately untouched: it belongs to the host and is shared
- * with every other repository there, so removing one repository from the list
- * must never sign the user out of the rest.
- */
-export async function unbindRepo(repoPath: string): Promise<boolean> {
-  await load();
-  if (!bindings.delete(repoPath)) return false;
-  await persist();
-  return true;
-}
-
-export async function bindRepo(repoPath: string, accountId: string): Promise<void> {
-  await load();
-  if (!memory.has(accountId)) return;
-  bindings.set(repoPath, accountId);
-  await persist();
+  return memory.get(accountIdFor(host))?.account ?? null;
 }
 
 export async function clearCredential(accountId: string): Promise<ProviderAccount | null> {
@@ -192,8 +155,6 @@ export async function clearCredential(accountId: string): Promise<ProviderAccoun
   const existing = memory.get(accountId);
   if (!existing) return null;
   memory.delete(accountId);
-  // A binding to an account that no longer exists would quietly point nowhere.
-  for (const [repo, id] of bindings) if (id === accountId) bindings.delete(repo);
   await persist();
   return existing.account;
 }
@@ -255,6 +216,5 @@ export async function getFreshToken(accountId: string): Promise<string | null> {
 /** Exported for tests: lets a suite start from a known state. */
 export function resetStoreCache(): void {
   memory.clear();
-  bindings.clear();
   loaded = false;
 }

@@ -17,13 +17,10 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       await useAccountStore.getState().loadAccounts();
-      // The footer shows the open repository's own account, not merely that
-      // some account exists — so the binding has to be re-read too, or signing
-      // in leaves the footer still claiming nobody is signed in.
-      const { repoPath, remoteHost } = useRepoStore.getState();
-      if (repoPath && remoteHost) {
-        await useAccountStore.getState().refreshCurrent(repoPath, remoteHost);
-      }
+      // The footer shows the account for this repository's host, not merely
+      // that some account exists — so point it at the freshly loaded list, or
+      // signing in leaves the footer still claiming nobody is signed in.
+      useAccountStore.getState().refreshCurrent(useRepoStore.getState().remoteHost);
     };
     const run = () => void load().catch(() => {});
     run();

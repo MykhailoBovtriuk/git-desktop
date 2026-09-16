@@ -37,11 +37,5 @@
     "hostPlaceholder": "github.com",
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen."
   },
-  "signedInAs": "Ingelogd als {{name}} op {{host}}",
-  "pick": {
-    "title": "Welk account voor deze repository?",
-    "hint": "Je bent op {{host}} ingelogd met meer dan één account.",
-    "use": "Dit account gebruiken",
-    "another": "Inloggen op een ander account…"
-  }
+  "signedInAs": "Ingelogd als {{name}} op {{host}}"
 }

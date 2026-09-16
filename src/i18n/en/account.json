@@ -37,11 +37,5 @@
     "hostPlaceholder": "github.com",
     "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting."
   },
-  "signedInAs": "Signed in as {{name}} on {{host}}",
-  "pick": {
-    "title": "Which account for this repository?",
-    "hint": "You are signed in to more than one account on {{host}}.",
-    "use": "Use this account",
-    "another": "Sign in to another account…"
-  }
+  "signedInAs": "Signed in as {{name}} on {{host}}"
 }

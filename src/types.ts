@@ -113,11 +113,11 @@ export type ProviderId =
  */
 export interface ProviderAccount {
   /**
-   * Stable identity of this account, `host|login`.
+   * Stable identity of this account: the host.
    *
-   * Accounts are keyed by this rather than by host because one host commonly
-   * carries several: a personal and a work GitHub account differ only by who
-   * signed in. Keying by host silently merged them.
+   * `git credential` addresses a credential by protocol and host, so a second
+   * account on the same host is one git cannot be told to prefer. One host,
+   * one account — signing in again replaces it.
    */
   id: string;
   providerId: ProviderId;
@@ -151,15 +151,15 @@ export interface ProviderOption {
   tokenHelpUrl: string | null;
 }
 
+/**
+ * How git authenticates to a remote. An ssh remote uses a key, so neither a
+ * stored token nor a sign-in offer has anything to do there.
+ */
+export type RemoteProtocol = 'ssh' | 'https' | 'other';
+
 export type SignInPhase =
-  /** Several accounts already exist on this host — which one is this repo? */
-  | 'pick-account'
   /** Nobody claims this host — which service does it run? */
-  | 'choose'
-  | 'browser'
-  | 'waiting'
-  | 'token'
-  | 'error';
+  'choose' | 'browser' | 'waiting' | 'token' | 'error';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 

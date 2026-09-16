@@ -10,6 +10,10 @@ import type { ProviderDefinition } from './types';
  *
  * The OAuth members are unreachable for this provider: `oauth-flow` never runs
  * for it. They exist so the registry can stay one homogeneous list.
+ *
+ * The credential is still checked before anything stores it — see
+ * `verify-credential`, which proves it against the repository's own remote
+ * rather than against an API this server may not have.
  */
 export const tokenProvider: ProviderDefinition = {
   id: 'token',
@@ -23,9 +27,9 @@ export const tokenProvider: ProviderDefinition = {
     apiBase: `https://${host}`,
   }),
   tokenHelpUrl: host => `https://${host}`,
-  // Never called: there is no API to ask, and the form already carries
-  // everything an account needs. Throwing beats returning a hollow account
-  // that would silently show up as a signed-in user with no name.
+  // Never called: there is no API here to ask. `accountFromToken` routes this
+  // provider through `verifyAgainstRemote` instead. Throwing beats returning a
+  // hollow account that would show up as a signed-in user with no name.
   fetchAccount: () =>
     Promise.reject(new Error('Token sign-in builds its account from the form, not from an API')),
 };

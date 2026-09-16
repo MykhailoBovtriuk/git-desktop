@@ -42,29 +42,6 @@ const OPTIONS: ProviderOption[] = [
   },
 ];
 
-const CANDIDATES = [
-  {
-    id: 'github.com|octocat',
-    providerId: 'github' as const,
-    host: 'github.com',
-    displayName: 'GitHub',
-    login: 'octocat',
-    name: 'The Octocat',
-    email: 'o@x',
-    avatarDataUrl: null,
-  },
-  {
-    id: 'github.com|work',
-    providerId: 'github' as const,
-    host: 'github.com',
-    displayName: 'GitHub',
-    login: 'work',
-    name: 'Work Account',
-    email: 'w@x',
-    avatarDataUrl: null,
-  },
-];
-
 function setup({
   phase = 'browser' as SignInPhase | null,
   providerId = 'github' as string | null,
@@ -78,14 +55,10 @@ function setup({
     submitToken: vi.fn().mockResolvedValue(undefined),
     cancelSignIn: vi.fn().mockResolvedValue(undefined),
     dismissForRepo: vi.fn(),
-    chooseAccount: vi.fn().mockResolvedValue(undefined),
-    openSignIn: vi.fn().mockResolvedValue(undefined),
   };
   const state = {
     phase,
-    target: phase
-      ? { host, providerId, options: OPTIONS, repoPath: '/tmp/repo', candidates: CANDIDATES }
-      : null,
+    target: phase ? { host, providerId, options: OPTIONS, repoPath: '/tmp/repo' } : null,
     error,
     busy: false,
     ...actions,
@@ -174,29 +147,6 @@ describe('SignInModal', () => {
     expect(screen.getByText('state did not match')).toBeTruthy();
     fireEvent.click(screen.getByText('error.useToken'));
     expect(actions.chooseProvider).toHaveBeenCalledWith('token');
-  });
-
-  // Two accounts on one host: which owns this repository is a question only
-  // the user can answer, and guessing attributes their work to the wrong one.
-  it('asks which of several accounts owns the repository', () => {
-    const actions = setup({ phase: 'pick-account' });
-    render(<SignInModal />);
-
-    expect(screen.getByText('The Octocat')).toBeTruthy();
-    expect(screen.getByText('Work Account')).toBeTruthy();
-    expect(screen.getByText('pick.use').closest('button')).toBeDisabled();
-
-    fireEvent.click(screen.getByText('Work Account'));
-    fireEvent.click(screen.getByText('pick.use'));
-    expect(actions.chooseAccount).toHaveBeenCalledWith('github.com|work');
-  });
-
-  it('offers a third account from the picker', () => {
-    const actions = setup({ phase: 'pick-account' });
-    render(<SignInModal />);
-
-    fireEvent.click(screen.getByText('pick.another'));
-    expect(actions.openSignIn).toHaveBeenCalledWith('github.com', '/tmp/repo');
   });
 
   // "Not now" must not come back the next time the same repository is opened.

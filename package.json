@@ -4,7 +4,7 @@
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && node scripts/gen-oauth-config.mjs && tsc -p tsconfig.node.json && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && node scripts/gen-oauth-config.mjs && tsc -p tsconfig.node.json && VITE_DEV_SERVER_URL=http://localhost:5173 node scripts/dev-electron.mjs\"",
     "build": "node scripts/clean-dist.mjs && node scripts/gen-oauth-config.mjs && tsc && vite build && tsc -p tsconfig.node.json",
     "build:electron": "npm run build && electron-builder",
     "test": "vitest run",

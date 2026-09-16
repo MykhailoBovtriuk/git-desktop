@@ -1,11 +1,14 @@
-import type { Commit, Branch, GitStatus, StashEntry } from '../types';
+import type { Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
 import { invoke } from './invoke';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
 export const gitApi = {
   openRepo: (path: string) =>
-    invoke<{ root: string; remoteHost: string | null }>('git:open-repo', path),
+    invoke<{ root: string; remoteHost: string | null; remoteProtocol: RemoteProtocol | null }>(
+      'git:open-repo',
+      path,
+    ),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),

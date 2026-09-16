@@ -33,10 +33,15 @@ overwrites values you have already set.
 
 ## 3. Signing in (authentication)
 
-When you open a repository whose remote points at a host you are not signed in
-to, the app offers to sign in right away. You can dismiss it — the offer also
-lives behind the **Sign in** link in the footer and under **Settings →
-Accounts → Add account**.
+Signing in exists for one reason: to put a credential where git can read it,
+so `push`/`pull`/`fetch` work from a window with no terminal to prompt you.
+The app therefore only asks when that is actually missing. Opening a
+repository prompts you when **all** of the following hold — the remote is an
+`https` address, no account is signed in to that host, and git cannot already
+authenticate to it through your system credential helper. An `ssh` remote
+never prompts: it authenticates with your key, and a token has nothing to do
+there. You can dismiss the offer — it also lives behind the **Sign in** link in
+the footer and under **Settings → Accounts → Add account**.
 
 - **GitHub, GitLab, Azure DevOps, Bitbucket, Gitea/Forgejo/Codeberg** — the
   sign-in opens your browser; after you approve, the browser redirects back to
@@ -50,17 +55,29 @@ Accounts → Add account**.
   "Where do I get a token?" link opens the right settings page for known
   hosts.
 
+Every token is **checked before it is stored**. On a host the app knows, it
+asks that host's API who the token belongs to and takes the name and avatar
+from the answer. On any other server it asks the repository's own remote —
+the same endpoint `git fetch` starts from — with the credential attached, and
+believes the answer. A token that fails leaves nothing behind: no account, no
+keychain entry. This is why signing in to an unknown server has to be started
+from a repository on it, over `https`: without a remote there is nothing to
+check against.
+
 Accounts are **per host**: github.com, a work GitLab and Azure DevOps can be
 signed in at the same time, and signing out of one does not touch the others.
-When one host has several accounts, each repository remembers which account it
-uses — the footer shows it (`@login`), and clicking the name lets you switch.
+One host holds one account, because `git credential` addresses a credential by
+host — signing in again replaces it. The footer shows it (`@login`), and
+clicking the name opens the Accounts screen.
 
 Tokens that expire (GitLab, Bitbucket, Azure) are refreshed automatically
 before network operations. On Linux without a keyring, tokens live only for
 the session — the Accounts screen says so explicitly.
 
-If a push fails with an authentication error, the toast carries a **Sign in**
-button aimed at the right server.
+If a push to an `https` remote fails with an authentication error, the toast
+carries a **Sign in** button aimed at the right server. An SSH key problem —
+a refused key, a locked passphrase, a missing identity file — says so instead:
+signing in cannot replace a key.
 
 ## 4. The everyday cycle
 

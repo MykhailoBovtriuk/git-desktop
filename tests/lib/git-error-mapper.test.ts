@@ -14,8 +14,13 @@ describe('classifyGitError', () => {
     );
   });
 
-  it('classifies an SSH permission denial as auth', () => {
-    expect(classifyGitError('git@github.com: Permission denied (publickey).').kind).toBe('auth');
+  // An ssh key, not a credential: signing in cannot replace a key the server
+  // refused, and offering it anyway sent people through a dialog with no
+  // bearing on their problem.
+  it('classifies an SSH permission denial as a key problem, with no sign-in offered', () => {
+    const r = classifyGitError('git@github.com: Permission denied (publickey).');
+    expect(r.kind).toBe('sshKey');
+    expect(r.action).toBeUndefined();
   });
 
   it('treats an HTTP 403 as auth even though it mentions "unable to access"', () => {
@@ -84,12 +89,12 @@ describe('classifyGitError', () => {
   // Taken verbatim from git when signing with a passphrase-protected key that
   // the agent does not hold. Fails fast rather than hanging, but must still
   // point the user somewhere.
-  it('treats a locked signing key as an auth problem', () => {
+  it('treats a locked signing key as a key problem', () => {
     const r = classifyGitError(
       'error: Enter passphrase for "/home/j/.ssh/id_ed25519": Load key: incorrect passphrase supplied to decrypt private key?\nfatal: failed to write commit object',
     );
-    expect(r.kind).toBe('auth');
-    expect(r.action).toBe('signIn');
+    expect(r.kind).toBe('sshKey');
+    expect(r.action).toBeUndefined();
   });
 
   it('does not mistake unrelated failures for auth problems', () => {
@@ -101,18 +106,28 @@ describe('classifyGitError', () => {
 
   // Deleting the key file while the profile is still applied: git keeps the
   // config, so commits fail outright until the config is cleared.
-  it('treats a missing signing key as an auth problem', () => {
+  it('treats a missing signing key as a key problem', () => {
     const r = classifyGitError(
       "error: Couldn't load public key /home/j/.ssh/id_ed25519.pub: No such file or directory?\nfatal: failed to write commit object",
     );
-    expect(r.kind).toBe('auth');
-    expect(r.action).toBe('signIn');
+    expect(r.kind).toBe('sshKey');
+    expect(r.action).toBeUndefined();
   });
 
-  it('treats a missing ssh identity file as an auth problem', () => {
+  it('treats a missing ssh identity file as a key problem', () => {
     const r = classifyGitError(
       'Warning: Identity file /home/j/.ssh/id_ed25519 not accessible: No such file or directory.',
     );
+    expect(r.kind).toBe('sshKey');
+  });
+
+  // The https side of the same question keeps its offer: here a credential is
+  // exactly what is missing.
+  it('still offers sign-in for an https credential failure', () => {
+    const r = classifyGitError(
+      "fatal: Authentication failed for 'https://github.com/owner/repo.git/'",
+    );
     expect(r.kind).toBe('auth');
+    expect(r.action).toBe('signIn');
   });
 });

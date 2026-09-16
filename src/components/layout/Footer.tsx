@@ -11,31 +11,39 @@ import { errorMessage } from '../../lib/error-message';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { currentBranch, remoteHost, headCommit, aheadBehind, fetch, pull, push, publishBranch } =
-    useRepoStore(
-      useShallow(s => ({
-        currentBranch: s.currentBranch,
-        remoteHost: s.remoteHost,
-        headCommit: s.headCommit,
-        aheadBehind: s.aheadBehind,
-        fetch: s.fetch,
-        pull: s.pull,
-        push: s.push,
-        publishBranch: s.publishBranch,
-      })),
-    );
+  const {
+    currentBranch,
+    remoteHost,
+    remoteProtocol,
+    headCommit,
+    aheadBehind,
+    fetch,
+    pull,
+    push,
+    publishBranch,
+  } = useRepoStore(
+    useShallow(s => ({
+      currentBranch: s.currentBranch,
+      remoteHost: s.remoteHost,
+      remoteProtocol: s.remoteProtocol,
+      headCommit: s.headCommit,
+      aheadBehind: s.aheadBehind,
+      fetch: s.fetch,
+      pull: s.pull,
+      push: s.push,
+      publishBranch: s.publishBranch,
+    })),
+  );
   const { addToast, openOverlayView } = useUiStore(
     useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
   );
-  const { account, openSignIn, changeAccountForRepo } = useAccountStore(
-    useShallow(s => ({
-      account: s.current,
-      openSignIn: s.openSignIn,
-      changeAccountForRepo: s.changeAccountForRepo,
-    })),
+  const { account, openSignIn } = useAccountStore(
+    useShallow(s => ({ account: s.current, openSignIn: s.openSignIn })),
   );
-  const repoPath = useRepoStore(s => s.repoPath);
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
+  // A token only ever reaches an https remote. Offering to sign in for an ssh
+  // one — or for no remote at all — is an offer that cannot be kept.
+  const signInHost = remoteProtocol === 'https' ? remoteHost : null;
 
   // Through the same classifier as fetch/pull/push: publishing a new branch is
   // the likeliest first meeting with authentication, so raw stderr here left
@@ -58,8 +66,8 @@ export function Footer() {
           title: t('publishBranch'),
           message: friendly || raw,
           action:
-            errAction === 'signIn' && remoteHost
-              ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
+            errAction === 'signIn' && signInHost
+              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
               : undefined,
         });
       });
@@ -84,8 +92,8 @@ export function Footer() {
         action:
           errAction === 'publishBranch' && currentBranch
             ? { label: t('publishBranch'), onClick: handlePublish }
-            : errAction === 'signIn' && remoteHost
-              ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
+            : errAction === 'signIn' && signInHost
+              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
               : undefined,
       });
     } finally {
@@ -116,11 +124,7 @@ export function Footer() {
           <>
             <span className="text-surface2 shrink-0">|</span>
             <button
-              onClick={() =>
-                repoPath && remoteHost
-                  ? void changeAccountForRepo(repoPath, remoteHost)
-                  : openOverlayView('settings')
-              }
+              onClick={() => openOverlayView('settings')}
               title={accountLabel}
               aria-label={accountLabel}
               className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
@@ -136,11 +140,11 @@ export function Footer() {
         )}
         {/* No account but a remote to reach: the one thing worth offering here
             is the way to fix that, before a push fails and explains it. */}
-        {!account && remoteHost && (
+        {!account && signInHost && (
           <>
             <span className="text-surface2 shrink-0">|</span>
             <button
-              onClick={() => void openSignIn(remoteHost)}
+              onClick={() => void openSignIn(signInHost)}
               className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
             >
               <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />

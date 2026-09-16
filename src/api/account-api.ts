@@ -1,4 +1,4 @@
-import type { ProviderAccount, ProviderId, ProviderOption } from '../types';
+import type { ProviderAccount, ProviderId, ProviderOption, RemoteProtocol } from '../types';
 import { invoke } from './invoke';
 
 export interface AccountsSnapshot {
@@ -16,27 +16,13 @@ export interface ProvidersForHost {
   options: ProviderOption[];
 }
 
-export interface RepoAccounts {
-  /** The account the user already chose for this repository. */
-  bound: ProviderAccount | null;
-  /** Everything signed in on this host — more than one is normal. */
-  candidates: ProviderAccount[];
-}
-
 export const accountApi = {
   list: () => invoke<AccountsSnapshot>('account:list'),
   providersFor: (host: string | null) => invoke<ProvidersForHost>('account:providers', host),
-  forRepo: (repoPath: string, host: string | null) =>
-    invoke<RepoAccounts>('account:for-repo', repoPath, host),
-  bind: (repoPath: string, accountId: string) => invoke<null>('account:bind', repoPath, accountId),
-  unbind: (repoPath: string) => invoke<null>('account:unbind', repoPath),
-  signIn: (
-    providerId: ProviderId,
-    host: string,
-    clientId?: string,
-    clientSecret?: string,
-    repoPath?: string | null,
-  ) => invoke<null>('account:sign-in', providerId, host, clientId, clientSecret, repoPath),
+  needsSignIn: (host: string, protocol: RemoteProtocol | null) =>
+    invoke<boolean>('account:needs-sign-in', host, protocol),
+  signIn: (providerId: ProviderId, host: string, clientId?: string, clientSecret?: string) =>
+    invoke<null>('account:sign-in', providerId, host, clientId, clientSecret),
   signInWithToken: (host: string, login: string, token: string, repoPath?: string | null) =>
     invoke<ProviderAccount>('account:sign-in-token', host, login, token, repoPath),
   openTokenHelp: (providerId: ProviderId, host: string) =>

@@ -5,7 +5,7 @@ import { Footer } from '../../../src/components/layout/Footer';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 import { useAccountStore } from '../../../src/stores/account-store';
-import type { ProviderAccount } from '../../../src/types';
+import type { ProviderAccount, RemoteProtocol } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -15,7 +15,7 @@ vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 vi.mock('../../../src/stores/account-store', () => ({ useAccountStore: vi.fn() }));
 
 const ACCOUNT: ProviderAccount = {
-  id: 'github.com|octocat',
+  id: 'github.com',
   providerId: 'github',
   host: 'github.com',
   displayName: 'GitHub',
@@ -28,6 +28,7 @@ const ACCOUNT: ProviderAccount = {
 function setup({
   account = ACCOUNT as ProviderAccount | null,
   remoteHost = 'github.com' as string | null,
+  remoteProtocol = 'https' as RemoteProtocol | null,
 } = {}) {
   const openOverlayView = vi.fn();
   const openSignIn = vi.fn();
@@ -35,6 +36,7 @@ function setup({
   const repoState = {
     currentBranch: 'feature/login',
     remoteHost,
+    remoteProtocol,
     repoPath: '/tmp/repo',
     // HEAD's own hash — deliberately not commits[0], which getLog sorts
     // across every branch and so can belong to somebody else's branch.
@@ -46,17 +48,11 @@ function setup({
     publishBranch: vi.fn(),
   };
   const uiState = { addToast: vi.fn(), openOverlayView };
-  const changeAccountForRepo = vi.fn();
-  const accountState = {
-    current: account,
-    accountFor: () => account,
-    openSignIn,
-    changeAccountForRepo,
-  };
+  const accountState = { current: account, accountFor: () => account, openSignIn };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(accountState)) as any);
-  return { openOverlayView, openSignIn, changeAccountForRepo };
+  return { openOverlayView, openSignIn };
 }
 
 describe('Footer', () => {
@@ -77,13 +73,13 @@ describe('Footer', () => {
     expect(screen.queryByText('feature/login')).toBeNull();
   });
 
-  // A binding made silently — the usual case, with one account — has to stay
-  // changeable, or it is wrong forever once a second account turns up.
-  it('reopens the account choice for this repository when clicked', () => {
-    const { changeAccountForRepo } = setup();
+  // One account per host, so there is no choice to reopen — the chip is a way
+  // to the Accounts screen, where signing out and back in is the whole story.
+  it('opens the accounts screen when clicked', () => {
+    const { openOverlayView } = setup();
     render(<Footer />);
     fireEvent.click(screen.getByText('@MykhailoBovtriuk'));
-    expect(changeAccountForRepo).toHaveBeenCalledWith('/tmp/repo', 'github.com');
+    expect(openOverlayView).toHaveBeenCalledWith('settings');
   });
 
   // A remote with nobody signed in is the state where the next push fails, so
@@ -96,9 +92,18 @@ describe('Footer', () => {
   });
 
   it('says nothing about accounts for a repository with no remote', () => {
-    setup({ account: null, remoteHost: null });
+    setup({ account: null, remoteHost: null, remoteProtocol: null });
     render(<Footer />);
     expect(screen.queryByText('signIn')).toBeNull();
     expect(screen.getByText('a1b2c3d')).toBeTruthy();
+  });
+
+  // An ssh remote authenticates with a key. Offering a sign-in there was an
+  // offer the app could not keep, and it is where "why am I logging in at
+  // all?" came from.
+  it('offers no sign-in for an ssh remote', () => {
+    setup({ account: null, remoteProtocol: 'ssh' });
+    render(<Footer />);
+    expect(screen.queryByText('signIn')).toBeNull();
   });
 });

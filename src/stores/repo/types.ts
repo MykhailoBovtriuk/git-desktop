@@ -1,5 +1,13 @@
 import type { StoreApi } from 'zustand';
-import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../../types';
+import type {
+  Commit,
+  Branch,
+  GitStatus,
+  AheadBehind,
+  MergeState,
+  RemoteProtocol,
+  StashEntry,
+} from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
 
@@ -38,6 +46,8 @@ export interface RepoState {
   openRepo: (path: string) => Promise<void>;
   /** Host of the open repository's remote, or null for a local-only repo. */
   remoteHost: string | null;
+  /** How that remote authenticates — only an https one a token can help with. */
+  remoteProtocol: RemoteProtocol | null;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
    * answer must never block a commit, only a definite "no" does.

@@ -2,6 +2,9 @@ node_modules/
 dist/
 dist-electron/
 release/
+# The macOS development app bundle (scripts/dev-electron.mjs): a clone of
+# Electron.app carrying our bundle id, rebuilt on every dev launch.
+.dev-bundle/
 .DS_Store
 *.log
 

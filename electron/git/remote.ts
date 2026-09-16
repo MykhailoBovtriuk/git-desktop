@@ -1,5 +1,5 @@
 import { GitContext } from './context';
-import { accountsForHost, boundAccount, getFreshToken } from '../auth/token-store';
+import { accountForHost, getFreshToken } from '../auth/token-store';
 import { resolveRemoteHost } from '../auth/remote-host';
 
 /**
@@ -24,14 +24,9 @@ export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
 async function refreshCredentialIfNeeded(ctx: GitContext): Promise<void> {
   try {
     const host = await resolveRemoteHost(await getRemoteUrl(ctx));
-    const repoPath = ctx.getRepoPath();
-    if (!host || !repoPath) return;
-    // The account this repository was bound to, falling back to the only one
-    // on the host. With several and no choice made, refreshing an arbitrary
-    // one would hand git the wrong identity.
-    const bound = await boundAccount(repoPath);
-    const candidates = bound ? [bound] : await accountsForHost(host);
-    if (candidates.length === 1) await getFreshToken(candidates[0].id);
+    if (!host) return;
+    const account = await accountForHost(host);
+    if (account) await getFreshToken(account.id);
   } catch {
     // Refreshing is an optimisation over letting git fail; never a reason to
     // block the operation the user asked for.

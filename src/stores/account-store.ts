@@ -15,10 +15,8 @@ interface SignInTarget {
   /** Null until the user picks one, for a host no provider claims. */
   providerId: ProviderId | null;
   options: ProviderOption[];
-  /** The repository this sign-in is for, so the result can be bound to it. */
+  /** The repository this sign-in was started from, if any. */
   repoPath: string | null;
-  /** Accounts already on this host, when the question is "which of these?". */
-  candidates: ProviderAccount[];
 }
 
 interface AccountState {
@@ -35,35 +33,13 @@ interface AccountState {
    */
   dismissedRepos: Set<string>;
 
-  /** The account the open repository is bound to, as far as the renderer knows. */
+  /** The account for the open repository's host, as far as the renderer knows. */
   current: ProviderAccount | null;
 
   loadAccounts: () => Promise<void>;
   accountFor: (host: string | null) => ProviderAccount | null;
-  /**
-   * Decide what to ask about a freshly opened repository: nothing, which of
-   * the accounts already on this host, or a full sign-in.
-   */
-  resolveForRepo: (repoPath: string, host: string) => Promise<void>;
-  /**
-   * Re-read which account the open repository belongs to, without ever putting
-   * a dialog in the way.
-   *
-   * Signing in finishes in the main process, so the renderer learns about it
-   * through `account:changed` — and reloading only the account list left the
-   * footer, which shows the repository's own account, still saying nobody was
-   * signed in.
-   */
-  refreshCurrent: (repoPath: string, host: string) => Promise<ProviderAccount[]>;
-  chooseAccount: (accountId: string) => Promise<void>;
-  /**
-   * Reopen the choice for a repository already bound.
-   *
-   * A binding made silently — the usual case, when only one account existed —
-   * would otherwise be unchangeable, and it is wrong exactly when a second
-   * account turns up.
-   */
-  changeAccountForRepo: (repoPath: string, host: string) => Promise<void>;
+  /** Point `current` at whoever is signed in to this host. */
+  refreshCurrent: (host: string | null) => void;
   openSignIn: (host: string, repoPath?: string | null) => Promise<void>;
   chooseProvider: (providerId: ProviderId) => void;
   setHost: (host: string) => void;
@@ -71,15 +47,6 @@ interface AccountState {
   submitToken: (login: string, token: string) => Promise<void>;
   cancelSignIn: () => Promise<void>;
   dismissForRepo: (repoPath: string) => void;
-  /**
-   * Drop everything this app remembered about a repository.
-   *
-   * Removing it from the list is the user saying they are done with it, so the
-   * chosen account and the dismissed prompt go too — adding it back later
-   * should behave like the first time, not silently reuse an old answer. The
-   * token stays: it belongs to the host, and other repositories still need it.
-   */
-  forgetRepo: (repoPath: string) => Promise<void>;
   signOut: (accountId: string) => Promise<void>;
 }
 
@@ -113,93 +80,28 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
 
   accountFor: host => (host ? (get().accounts.find(a => a.host === host) ?? null) : null),
 
-  refreshCurrent: async (repoPath, host) => {
-    const { bound, candidates } = await accountApi.forRepo(repoPath, host);
-    if (bound) {
-      set({ current: bound });
-      return [];
-    }
-    // One account on the host is not a question. Binding it silently is the
-    // same answer the user would give, without a dialog in the way.
-    if (candidates.length === 1) {
-      await accountApi.bind(repoPath, candidates[0].id).catch(() => {});
-      set({ current: candidates[0] });
-      return [];
-    }
-    set({ current: null });
-    return candidates;
-  },
-
-  resolveForRepo: async (repoPath, host) => {
-    const candidates = await get().refreshCurrent(repoPath, host);
-    // Empty means refreshCurrent settled it: either the repository was already
-    // bound, or there was exactly one account to bind it to.
-    if (candidates.length === 0 && get().current) return;
-
-    if (candidates.length === 0) {
-      await get().openSignIn(host, repoPath);
-      return;
-    }
-    // Two or more: asking beats guessing, and guessing is what silently
-    // attributed work to whichever account signed in last.
-    const info = await accountApi.providersFor(host);
-    set({
-      phase: 'pick-account',
-      target: { host, providerId: info.providerId, options: info.options, repoPath, candidates },
-    });
-  },
-
-  changeAccountForRepo: async (repoPath, host) => {
-    set({ busy: true, error: null });
-    try {
-      const [{ candidates }, info] = await Promise.all([
-        accountApi.forRepo(repoPath, host),
-        accountApi.providersFor(host),
-      ]);
-      set({
-        phase: 'pick-account',
-        target: { host, providerId: info.providerId, options: info.options, repoPath, candidates },
-      });
-    } catch (err: unknown) {
-      set({ phase: 'error', error: errorMessage(err) });
-    } finally {
-      set({ busy: false });
-    }
-  },
-
-  chooseAccount: async accountId => {
-    const target = get().target;
-    if (!target?.repoPath) return;
-    set({ busy: true });
-    try {
-      await accountApi.bind(target.repoPath, accountId);
-      set({
-        phase: null,
-        target: null,
-        current: get().accounts.find(a => a.id === accountId) ?? null,
-      });
-    } catch (err: unknown) {
-      set({ phase: 'error', error: errorMessage(err) });
-    } finally {
-      set({ busy: false });
-    }
-  },
+  refreshCurrent: host =>
+    set(s => ({ current: host ? (s.accounts.find(a => a.host === host) ?? null) : null })),
 
   openSignIn: async (host, repoPath = null) => {
     set({ busy: true, error: null });
     try {
       const info = await accountApi.providersFor(host);
+      // A host we recognise skips the picker: choosing "GitHub" for github.com
+      // is not a decision worth asking about. But recognising a host is not the
+      // same as being able to sign in to it — a build with no GitLab client id
+      // knows what gitlab.com is and still cannot open a browser flow for it,
+      // and sending the user there produced a dialog whose only button failed.
+      const offered = info.options.some(o => o.id === info.providerId);
+      const onlyToken = info.options.length === 1 && info.options[0]?.id === 'token';
       set({
         target: {
           host,
-          providerId: info.providerId,
+          providerId: offered ? info.providerId : onlyToken ? 'token' : null,
           options: info.options,
           repoPath,
-          candidates: [],
         },
-        // A host we recognise skips the picker: choosing "GitHub" for
-        // github.com is not a decision worth asking about.
-        phase: info.providerId ? 'browser' : 'choose',
+        phase: offered ? 'browser' : onlyToken ? 'token' : 'choose',
       });
     } catch (err: unknown) {
       set({ phase: 'error', error: errorMessage(err) });
@@ -221,13 +123,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
     if (!target?.providerId) return;
     set({ busy: true, error: null });
     try {
-      await accountApi.signIn(
-        target.providerId,
-        target.host,
-        clientId,
-        clientSecret,
-        target.repoPath,
-      );
+      await accountApi.signIn(target.providerId, target.host, clientId, clientSecret);
       // The browser now owns the next step; the answer arrives over
       // 'account:changed', which is why this is a state and not an await.
       set({ phase: 'waiting' });
@@ -261,15 +157,6 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
   dismissForRepo: repoPath =>
     set(s => ({ dismissedRepos: new Set(s.dismissedRepos).add(repoPath) })),
 
-  forgetRepo: async repoPath => {
-    set(s => {
-      const dismissedRepos = new Set(s.dismissedRepos);
-      dismissedRepos.delete(repoPath);
-      return { dismissedRepos, current: null };
-    });
-    await accountApi.unbind(repoPath).catch(() => {});
-  },
-
   signOut: async accountId => {
     await accountApi.signOut(accountId);
     set(s => ({ current: s.current?.id === accountId ? null : s.current }));
@@ -280,4 +167,3 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
 function hasHost(snapshot: { accounts: ProviderAccount[] }, target: SignInTarget | null): boolean {
   return !!target && snapshot.accounts.some(a => a.host === target.host);
 }
-

@@ -1,6 +1,6 @@
 import { ipcMain, dialog } from 'electron';
 import { GitService } from '../git-service';
-import { resolveRemoteHost } from '../auth/remote-host';
+import { resolveRemote } from '../auth/remote-host';
 import { stripLegacyProfileKeys } from '../auth/legacy-cleanup';
 import { hasIdentity } from '../auth/identity-bootstrap';
 import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '../ipc-validators';
@@ -17,10 +17,12 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       const root = await git.openRepo(dirPath);
       options.onRepoOpened?.(root);
       await stripLegacyProfileKeys(root);
-      // The host decides which account applies and whether to offer sign-in, so
-      // it travels with the repo rather than costing a second round trip.
+      // The host decides which account applies, and the protocol decides
+      // whether an account applies at all — both travel with the repo rather
+      // than costing a second round trip.
       const remoteUrl = await git.getRemoteUrl().catch(() => null);
-      return { root, remoteHost: await resolveRemoteHost(remoteUrl) };
+      const { host, protocol } = await resolveRemote(remoteUrl);
+      return { root, remoteHost: host, remoteProtocol: protocol };
     }),
   );
 

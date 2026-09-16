@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -33,6 +36,117 @@ const becomeReady = async () => {
   await Promise.resolve();
   await Promise.resolve();
 };
+
+describe('bundleDeclaresScheme', () => {
+  const bundleWith = (plist: string | null): string => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-bundle-'));
+    const macos = path.join(dir, 'App.app', 'Contents', 'MacOS');
+    fs.mkdirSync(macos, { recursive: true });
+    if (plist !== null) {
+      fs.writeFileSync(path.join(dir, 'App.app', 'Contents', 'Info.plist'), plist);
+    }
+    return path.join(macos, 'Electron');
+  };
+
+  it('sees the scheme in an XML plist', () => {
+    const exe = bundleWith(
+      '<plist><dict><key>CFBundleURLSchemes</key><array><string>git-desktop-auth</string></array></dict></plist>',
+    );
+    expect(deepLink.bundleDeclaresScheme(exe)).toBe(true);
+  });
+
+  // Binary plists store the scheme as plain text too, which is why this reads
+  // rather than parses.
+  it('sees the scheme in a binary plist', () => {
+    const exe = bundleWith(null);
+    const plist = path.resolve(path.dirname(exe), '..', 'Info.plist');
+    fs.writeFileSync(
+      plist,
+      Buffer.concat([
+        Buffer.from('bplist00', 'latin1'),
+        Buffer.from([0x5f, 0x10, 0x10]),
+        Buffer.from('git-desktop-auth', 'latin1'),
+      ]),
+    );
+    expect(deepLink.bundleDeclaresScheme(exe)).toBe(true);
+  });
+
+  it('says no for a bundle that claims nothing', () => {
+    expect(
+      deepLink.bundleDeclaresScheme(
+        bundleWith(
+          '<plist><dict><key>CFBundleIdentifier</key><string>com.github.Electron</string></dict></plist>',
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it('says no when there is no bundle at all', () => {
+    expect(deepLink.bundleDeclaresScheme('/usr/local/bin/node')).toBe(false);
+  });
+});
+
+describe('registerProtocol', () => {
+  const asPlatform = (platform: string, execPath: string, fn: () => void) => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const execDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath')!;
+    Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+    Object.defineProperty(process, 'execPath', { value: execPath, configurable: true });
+    try {
+      fn();
+    } finally {
+      Object.defineProperty(process, 'platform', platformDescriptor);
+      Object.defineProperty(process, 'execPath', execDescriptor);
+    }
+  };
+
+  const bundle = (declares: boolean): string => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-bundle-'));
+    const macos = path.join(dir, 'App.app', 'Contents', 'MacOS');
+    fs.mkdirSync(macos, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'App.app', 'Contents', 'Info.plist'),
+      declares ? '<plist><string>git-desktop-auth</string></plist>' : '<plist></plist>',
+    );
+    return path.join(macos, 'Electron');
+  };
+
+  beforeEach(() => setAsDefault.mockClear());
+
+  // A plain `electron .` runs inside Electron's own bundle, and claiming a
+  // scheme there points the OS at `com.github.Electron` — an identifier several
+  // shipped apps carry a copy of. The callback lands in one of those, and the
+  // preference is system-wide and sticky, so it takes the installed app's
+  // callback with it.
+  it('claims nothing on macOS from a bundle that does not declare the scheme', () => {
+    asPlatform('darwin', bundle(false), () => deepLink.registerProtocol());
+    expect(setAsDefault).not.toHaveBeenCalled();
+  });
+
+  // Both the packaged app and the development bundle declare it, and both are
+  // entitled to it.
+  it('claims the scheme on macOS from a bundle that does declare it', () => {
+    asPlatform('darwin', bundle(true), () => deepLink.registerProtocol());
+    expect(setAsDefault).toHaveBeenCalledWith('git-desktop-auth');
+  });
+
+  // Windows and Linux route by executable path, so a dev run can point the
+  // scheme at the project rather than at a bare electron with nothing to run.
+  it('points the scheme at the project on Windows in development', () => {
+    const previousDefaultApp = process.defaultApp;
+    (process as { defaultApp?: boolean }).defaultApp = true;
+    try {
+      asPlatform('win32', process.execPath, () => deepLink.registerProtocol());
+    } finally {
+      (process as { defaultApp?: boolean }).defaultApp = previousDefaultApp;
+    }
+    expect(setAsDefault).toHaveBeenCalledWith(
+      'git-desktop-auth',
+      expect.any(String),
+      expect.arrayContaining([expect.any(String)]),
+    );
+  });
+});
 
 describe('findDeepLink', () => {
   it('picks the callback out of an argument list', () => {

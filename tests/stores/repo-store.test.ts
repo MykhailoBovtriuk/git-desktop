@@ -46,16 +46,19 @@ const accountState = {
   dismissedRepos: new Set<string>(),
   accounts: [] as unknown[],
   accountFor: () => null,
+  refreshCurrent: vi.fn(),
   loadAccounts: vi.fn(async () => {
     accountState.loaded = true;
   }),
-  resolveForRepo: vi.fn(async () => {}),
-  forgetRepo: vi.fn(async () => {}),
   openSignIn: vi.fn(async () => {}),
 };
 vi.mock('../../src/stores/account-store', () => ({
   useAccountStore: { getState: () => accountState },
 }));
+
+/** The main process decides whether a sign-in would help; the store only asks. */
+const needsSignIn = vi.fn(async () => true);
+vi.mock('../../src/api/account-api', () => ({ accountApi: { needsSignIn } }));
 
 const { useRepoStore, LOG_PAGE_SIZE } = await import('../../src/stores/repo-store');
 
@@ -630,14 +633,18 @@ describe('repo-store state consistency', () => {
 describe('sign-in prompt on opening a repository', () => {
   beforeEach(async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    (gitApi.openRepo as any).mockResolvedValue({ root: '/tmp/r', remoteHost: 'github.com' });
+    (gitApi.openRepo as any).mockResolvedValue({
+      root: '/tmp/r',
+      remoteHost: 'github.com',
+      remoteProtocol: 'https',
+    });
     accountState.loaded = false;
     accountState.phase = null;
     accountState.dismissedRepos = new Set();
     accountState.loadAccounts.mockClear();
-    accountState.resolveForRepo.mockClear();
-    accountState.forgetRepo.mockClear();
     accountState.openSignIn.mockClear();
+    needsSignIn.mockClear();
+    needsSignIn.mockResolvedValue(true);
   });
 
   // Regression: the store rehydrates and reopens the last repository well
@@ -649,22 +656,48 @@ describe('sign-in prompt on opening a repository', () => {
     await new Promise(r => setTimeout(r, 0));
 
     expect(accountState.loadAccounts).toHaveBeenCalled();
-    expect(accountState.resolveForRepo).toHaveBeenCalledWith('/tmp/r', 'github.com');
-  });
-
-  it('forgets the chosen account when a repository leaves the list', () => {
-    useRepoStore.setState({ recentRepos: ['/tmp/r'] });
-    useRepoStore.getState().removeRecentRepo('/tmp/r');
-    expect(accountState.forgetRepo).toHaveBeenCalledWith('/tmp/r');
+    expect(accountState.openSignIn).toHaveBeenCalledWith('github.com', '/tmp/r');
   });
 
   it('says nothing for a repository with no remote', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    (gitApi.openRepo as any).mockResolvedValue({ root: '/tmp/r', remoteHost: null });
+    (gitApi.openRepo as any).mockResolvedValue({
+      root: '/tmp/r',
+      remoteHost: null,
+      remoteProtocol: null,
+    });
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(accountState.resolveForRepo).not.toHaveBeenCalled();
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+
+  // An ssh remote authenticates with a key: a token has nothing to do there,
+  // and asking anyway is the prompt people met on repositories that already
+  // worked perfectly well.
+  it('says nothing for an ssh remote', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.openRepo as any).mockResolvedValue({
+      root: '/tmp/r',
+      remoteHost: 'github.com',
+      remoteProtocol: 'ssh',
+    });
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(needsSignIn).not.toHaveBeenCalled();
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+
+  // The usual case on a machine somebody has worked on for years: the system
+  // credential store already holds the credential, so git needs nothing.
+  it('says nothing when git can already authenticate on its own', async () => {
+    needsSignIn.mockResolvedValue(false);
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(needsSignIn).toHaveBeenCalledWith('github.com', 'https');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
   it('does not nag about a repository the user already dismissed', async () => {
@@ -673,6 +706,6 @@ describe('sign-in prompt on opening a repository', () => {
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(accountState.resolveForRepo).not.toHaveBeenCalled();
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 });
