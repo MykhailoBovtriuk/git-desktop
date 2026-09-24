@@ -37,8 +37,8 @@ export function Footer() {
   const { addToast, openOverlayView } = useUiStore(
     useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
   );
-  const { account, openSignIn } = useAccountStore(
-    useShallow(s => ({ account: s.current, openSignIn: s.openSignIn })),
+  const { account, authSource, openSignIn } = useAccountStore(
+    useShallow(s => ({ account: s.current, authSource: s.authSource, openSignIn: s.openSignIn })),
   );
   const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
   // A token only ever reaches an https remote. Offering to sign in for an ssh
@@ -138,9 +138,29 @@ export function Footer() {
             </button>
           </>
         )}
-        {/* No account but a remote to reach: the one thing worth offering here
-            is the way to fix that, before a push fails and explains it. */}
-        {!account && signInHost && (
+        {/* Authenticated, just not by us. Saying so beats both the old blue
+            "Sign in" — an invitation to redo what is already done — and the
+            silence an ssh remote used to get, which read as "no account". */}
+        {!account && (authSource === 'system' || authSource === 'ssh') && (
+          <>
+            <span className="text-surface2 shrink-0">|</span>
+            <span
+              title={t(authSource === 'ssh' ? 'account.viaSshHint' : 'account.viaSystemHint')}
+              className="flex items-center gap-1.5 min-w-0 px-1 py-0.5"
+            >
+              <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />
+              <span className="text-subtext truncate">
+                {t(authSource === 'ssh' ? 'account.viaSsh' : 'account.viaSystem')}
+              </span>
+            </span>
+          </>
+        )}
+
+        {/* Nothing authenticates this remote yet: the one thing worth offering
+            here is the way to fix that, before a push fails and explains it.
+            A null source means the answer is still in flight — flashing the
+            offer and taking it back is worse than appearing a moment later. */}
+        {!account && authSource === 'none' && signInHost && (
           <>
             <span className="text-surface2 shrink-0">|</span>
             <button

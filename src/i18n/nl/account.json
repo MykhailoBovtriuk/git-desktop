@@ -35,7 +35,10 @@
     "signOut": "Uitloggen",
     "add": "Account toevoegen",
     "hostPlaceholder": "github.com",
-    "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen."
+    "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
+    "viaSystem": "Buiten deze app ingelogd, via de systeemopslag voor credentials",
+    "viaSsh": "Gebruikt je SSH-sleutel — geen account nodig",
+    "externalHint": "Alleen voor de geopende repository: git kun je naar één server vragen, nooit om een lijst."
   },
   "signedInAs": "Ingelogd als {{name}} op {{host}}"
 }

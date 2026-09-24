@@ -15,18 +15,21 @@ const saveCredential = vi.fn().mockResolvedValue(undefined);
 const approveCredentials = vi.fn().mockResolvedValue(undefined);
 const ensureGlobalIdentity = vi.fn().mockResolvedValue(undefined);
 const originUrlFor = vi.fn<(repo: string) => Promise<string | null>>();
+const accountForHost = vi.fn<() => Promise<unknown>>();
+const hasStoredCredential = vi.fn<() => Promise<boolean>>();
 const verifyAgainstRemote = vi.fn<() => Promise<void>>();
 const fetchAccount = vi.fn<() => Promise<unknown>>();
 
 vi.mock('../../electron/auth/token-store', () => ({
   saveCredential: (...a: unknown[]) => saveCredential(...a),
-  accountForHost: vi.fn().mockResolvedValue(null),
+  accountForHost: () => accountForHost(),
   clearCredential: vi.fn(),
   isPersistent: () => true,
   listAccounts: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../electron/auth/git-credentials', () => ({
+  hasStoredCredential: () => hasStoredCredential(),
   approveCredentials: (...a: unknown[]) => approveCredentials(...a),
   rejectCredentials: vi.fn(),
   gitUsernameFor: (account: { login: string }) => account.login,
@@ -75,6 +78,39 @@ beforeEach(() => {
   vi.clearAllMocks();
   originUrlFor.mockResolvedValue(null);
   verifyAgainstRemote.mockResolvedValue(undefined);
+  accountForHost.mockResolvedValue(null);
+  hasStoredCredential.mockResolvedValue(false);
+});
+
+const askAuthSource = (host: string | null, protocol: string | null) =>
+  handlers.get('account:auth-source')!(null, host, protocol) as Promise<{ data?: string }>;
+
+describe('account:auth-source', () => {
+  it('reports an account of our own first', async () => {
+    accountForHost.mockResolvedValue({ id: 'github.com' });
+    expect((await askAuthSource('github.com', 'https')).data).toBe('account');
+  });
+
+  // An ssh remote goes by key, so the keychain has nothing to say about it —
+  // and asking anyway would provoke a credential lookup on every ssh repo.
+  it('settles ssh without touching the keychain', async () => {
+    expect((await askAuthSource('github.com', 'ssh')).data).toBe('ssh');
+    expect(hasStoredCredential).not.toHaveBeenCalled();
+  });
+
+  it('reports the system credential store when git can already authenticate', async () => {
+    hasStoredCredential.mockResolvedValue(true);
+    expect((await askAuthSource('github.com', 'https')).data).toBe('system');
+  });
+
+  it('reports nothing at all when no credential exists', async () => {
+    expect((await askAuthSource('github.com', 'https')).data).toBe('none');
+  });
+
+  it('reports nothing for a repository with no remote', async () => {
+    expect((await askAuthSource(null, null)).data).toBe('none');
+    expect(hasStoredCredential).not.toHaveBeenCalled();
+  });
 });
 
 describe('account:sign-in-token', () => {

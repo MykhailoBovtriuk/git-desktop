@@ -20,7 +20,11 @@ export default function App() {
       // The footer shows the account for this repository's host, not merely
       // that some account exists — so point it at the freshly loaded list, or
       // signing in leaves the footer still claiming nobody is signed in.
-      useAccountStore.getState().refreshCurrent(useRepoStore.getState().remoteHost);
+      const { remoteHost, remoteProtocol } = useRepoStore.getState();
+      useAccountStore.getState().refreshCurrent(remoteHost);
+      // Signing out has to take the footer's answer with it, or it goes on
+      // claiming the system keychain has this covered.
+      await useAccountStore.getState().refreshAuthSource(remoteHost, remoteProtocol);
     };
     const run = () => void load().catch(() => {});
     run();

@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain, shell } from 'electron';
-import type { ProviderAccount, ProviderId } from '../../src/types';
+import type { AuthSource, ProviderAccount, ProviderId } from '../../src/types';
 import { assertString } from '../ipc-validators';
 import { wrap } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn } from '../auth/oauth-flow';
@@ -189,21 +189,25 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   );
 
   /**
-   * Whether offering a sign-in for this remote would help anyone.
+   * What authenticates this remote — which decides both whether to offer a
+   * sign-in and what to say when there is nothing to offer.
    *
-   * Three ways the answer is no, and the app used to ignore all three: the
-   * remote authenticates with an ssh key rather than a token, an account for
-   * the host is already signed in, or git can already authenticate on its own
-   * because the system credential store holds the credential. That last one is
-   * the usual case on a machine somebody has been working on for years, and
-   * asking them to sign in there was noise with no outcome.
+   * One answer rather than a yes/no, because the interesting cases are not
+   * "needs signing in": an ssh remote goes by key, and the usual state on a
+   * machine somebody has worked on for years is a credential already sitting in
+   * the OS store. Asking them to sign in there was noise with no outcome, and
+   * saying nothing at all read as "no account" rather than "you are fine".
+   *
+   * Order matters: ssh is settled before the keychain is touched at all, so an
+   * ssh repository never provokes a credential lookup it has no use for.
    */
-  ipcMain.handle('account:needs-sign-in', (_e, host: unknown, protocol: unknown) =>
-    wrap(async () => {
-      if (protocol !== 'https') return false;
+  ipcMain.handle('account:auth-source', (_e, host: unknown, protocol: unknown) =>
+    wrap(async (): Promise<AuthSource> => {
+      if (typeof host !== 'string' || !host) return 'none';
       assertHost(host);
-      if (await accountForHost(host)) return false;
-      return !(await hasStoredCredential(host));
+      if (await accountForHost(host)) return 'account';
+      if (protocol !== 'https') return 'ssh';
+      return (await hasStoredCredential(host)) ? 'system' : 'none';
     }),
   );
 

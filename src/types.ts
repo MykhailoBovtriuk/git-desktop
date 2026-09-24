@@ -157,6 +157,16 @@ export interface ProviderOption {
  */
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
 
+/**
+ * What actually authenticates this repository's remote — the question the UI
+ * needs answered before it offers a sign-in nobody needs.
+ *
+ * `system` is the common case on a machine somebody has worked on for years:
+ * the credential is in the OS store, put there by git or another tool, and this
+ * app neither created it nor may remove it.
+ */
+export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
+
 export type SignInPhase =
   /** Nobody claims this host — which service does it run? */
   'choose' | 'browser' | 'waiting' | 'token' | 'error';

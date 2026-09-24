@@ -20,6 +20,10 @@
   },
   "signIn": "Sign in",
   "account": {
-    "signedInAs": "Signed in as {{name}} on {{host}}"
+    "signedInAs": "Signed in as {{name}} on {{host}}",
+    "viaSystem": "system keychain",
+    "viaSsh": "ssh key",
+    "viaSystemHint": "Git authenticates to this server with a credential already in your system credential store. This app did not create it.",
+    "viaSshHint": "This remote uses SSH, so git authenticates with your key. Signing in would change nothing."
   }
 }

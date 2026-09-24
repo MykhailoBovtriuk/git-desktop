@@ -5,7 +5,7 @@ import { Footer } from '../../../src/components/layout/Footer';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 import { useAccountStore } from '../../../src/stores/account-store';
-import type { ProviderAccount, RemoteProtocol } from '../../../src/types';
+import type { AuthSource, ProviderAccount, RemoteProtocol } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -29,6 +29,7 @@ function setup({
   account = ACCOUNT as ProviderAccount | null,
   remoteHost = 'github.com' as string | null,
   remoteProtocol = 'https' as RemoteProtocol | null,
+  authSource = 'none' as AuthSource | null,
 } = {}) {
   const openOverlayView = vi.fn();
   const openSignIn = vi.fn();
@@ -48,7 +49,7 @@ function setup({
     publishBranch: vi.fn(),
   };
   const uiState = { addToast: vi.fn(), openOverlayView };
-  const accountState = { current: account, accountFor: () => account, openSignIn };
+  const accountState = { current: account, accountFor: () => account, authSource, openSignIn };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(accountState)) as any);
@@ -92,7 +93,7 @@ describe('Footer', () => {
   });
 
   it('says nothing about accounts for a repository with no remote', () => {
-    setup({ account: null, remoteHost: null, remoteProtocol: null });
+    setup({ account: null, remoteHost: null, remoteProtocol: null, authSource: null });
     render(<Footer />);
     expect(screen.queryByText('signIn')).toBeNull();
     expect(screen.getByText('a1b2c3d')).toBeTruthy();
@@ -100,10 +101,39 @@ describe('Footer', () => {
 
   // An ssh remote authenticates with a key. Offering a sign-in there was an
   // offer the app could not keep, and it is where "why am I logging in at
-  // all?" came from.
-  it('offers no sign-in for an ssh remote', () => {
-    setup({ account: null, remoteProtocol: 'ssh' });
+  // all?" came from. Silence was not much better — it read as "no account".
+  it('names the ssh key instead of offering a sign-in', () => {
+    setup({ account: null, remoteProtocol: 'ssh', authSource: 'ssh' });
     render(<Footer />);
     expect(screen.queryByText('signIn')).toBeNull();
+    expect(screen.getByText('account.viaSsh')).toBeTruthy();
+  });
+
+  // The usual state on a machine somebody has worked on for years: git already
+  // has the credential, so "Sign in" was an invitation to redo what was done.
+  it('names the system credential store instead of offering a sign-in', () => {
+    setup({ account: null, authSource: 'system' });
+    render(<Footer />);
+    expect(screen.queryByText('signIn')).toBeNull();
+    expect(screen.getByText('account.viaSystem')).toBeTruthy();
+  });
+
+  // Flashing the offer and withdrawing it a moment later is worse than showing
+  // it slightly late.
+  it('says nothing while the answer is still in flight', () => {
+    setup({ account: null, authSource: null });
+    render(<Footer />);
+    expect(screen.queryByText('signIn')).toBeNull();
+    expect(screen.queryByText('account.viaSystem')).toBeNull();
+    expect(screen.queryByText('account.viaSsh')).toBeNull();
+  });
+
+  // An account of our own wins: it has a name and a face, which beats naming
+  // the mechanism.
+  it('prefers the signed-in account over the mechanism', () => {
+    setup({ authSource: 'account' });
+    render(<Footer />);
+    expect(screen.getByText('@MykhailoBovtriuk')).toBeTruthy();
+    expect(screen.queryByText('account.viaSystem')).toBeNull();
   });
 });

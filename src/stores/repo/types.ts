@@ -78,6 +78,14 @@ export interface RepoState {
   cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
+  /**
+   * Create a branch at the current commit and switch to it.
+   *
+   * `changes` decides what happens to uncommitted work: 'bring' leaves the
+   * working tree alone so it carries over, 'leave' stashes it against the
+   * branch being left first.
+   */
+  createBranch: (name: string, changes: 'bring' | 'leave') => Promise<void>;
   deleteBranch: (branch: string, force?: boolean) => Promise<void>;
   deleteRemoteBranch: (remote: string, branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;

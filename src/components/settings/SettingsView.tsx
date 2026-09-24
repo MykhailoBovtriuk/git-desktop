@@ -18,7 +18,6 @@ const THEMES: ThemePreference[] = ['light', 'dark', 'system'];
 
 export function SettingsView() {
   const { t, i18n } = useTranslation('settings');
-  const closeOverlayView = useUiStore(s => s.closeOverlayView);
   const overlayBack = useUiStore(s => s.overlayBack);
   const { theme, setTheme, autoRefreshMs, setAutoRefreshMs } = useSettingsStore(
     useShallow(s => ({
@@ -35,11 +34,7 @@ export function SettingsView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-base">
-      <PageHeader
-        crumbs={[{ label: t('title') }]}
-        onBack={overlayBack}
-        onClose={closeOverlayView}
-      />
+      <PageHeader crumbs={[{ label: t('title') }]} onBack={overlayBack} />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-2">

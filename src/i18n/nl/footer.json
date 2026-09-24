@@ -20,6 +20,10 @@
   },
   "signIn": "Inloggen",
   "account": {
-    "signedInAs": "Ingelogd als {{name}} op {{host}}"
+    "signedInAs": "Ingelogd als {{name}} op {{host}}",
+    "viaSystem": "systeemsleutelhanger",
+    "viaSsh": "ssh-sleutel",
+    "viaSystemHint": "Git authenticeert bij deze server met een credential die al in je systeemopslag staat. Deze app heeft hem niet aangemaakt.",
+    "viaSshHint": "Deze remote gebruikt SSH, dus git authenticeert met je sleutel. Inloggen verandert hier niets."
   }
 }

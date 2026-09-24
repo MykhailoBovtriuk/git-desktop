@@ -27,6 +27,7 @@ vi.mock('../../src/api/git-api', () => ({
     abortRebase: vi.fn().mockResolvedValue(null),
     continueRebase: vi.fn().mockResolvedValue(null),
     applyPatch: vi.fn().mockResolvedValue(null),
+    createBranch: vi.fn().mockResolvedValue(null),
     deleteBranch: vi.fn().mockResolvedValue(null),
     abortMerge: vi.fn().mockResolvedValue(null),
     hasIdentity: vi.fn().mockResolvedValue(true),
@@ -47,6 +48,10 @@ const accountState = {
   accounts: [] as unknown[],
   accountFor: () => null,
   refreshCurrent: vi.fn(),
+  authSource: null as string | null,
+  refreshAuthSource: vi.fn(async (host: string | null, protocol: string | null) => {
+    accountState.authSource = host ? await authSource(host, protocol) : null;
+  }),
   loadAccounts: vi.fn(async () => {
     accountState.loaded = true;
   }),
@@ -56,9 +61,9 @@ vi.mock('../../src/stores/account-store', () => ({
   useAccountStore: { getState: () => accountState },
 }));
 
-/** The main process decides whether a sign-in would help; the store only asks. */
-const needsSignIn = vi.fn(async () => true);
-vi.mock('../../src/api/account-api', () => ({ accountApi: { needsSignIn } }));
+/** The main process decides what authenticates the remote; the store only asks. */
+const authSource = vi.fn(async (_host: string, _protocol: string | null) => 'none' as string);
+vi.mock('../../src/api/account-api', () => ({ accountApi: { authSource } }));
 
 const { useRepoStore, LOG_PAGE_SIZE } = await import('../../src/stores/repo-store');
 
@@ -630,6 +635,46 @@ describe('repo-store state consistency', () => {
   });
 });
 
+describe('creating a branch', () => {
+  beforeEach(async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.createBranch as any).mockClear();
+    (gitApi.stashSave as any).mockClear();
+    await useRepoStore.getState().openRepo('/tmp/r');
+    useRepoStore.setState({ currentBranch: 'main' });
+  });
+
+  it('leaves the working tree alone when the changes come along', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    await useRepoStore.getState().createBranch('feature/login', 'bring');
+
+    expect(gitApi.stashSave).not.toHaveBeenCalled();
+    expect(gitApi.createBranch).toHaveBeenCalledWith('feature/login');
+  });
+
+  // The order is the whole behaviour: the new branch sits on the same commit,
+  // so a stash taken after the switch would set the work aside on the *new*
+  // branch — the opposite of leaving it behind.
+  it('stashes against the branch being left, before switching', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    const calls: string[] = [];
+    (gitApi.stashSave as any).mockImplementation(() => {
+      calls.push('stash');
+      return Promise.resolve(null);
+    });
+    (gitApi.createBranch as any).mockImplementation(() => {
+      calls.push('create');
+      return Promise.resolve(null);
+    });
+
+    await useRepoStore.getState().createBranch('feature/login', 'leave');
+
+    expect(calls).toEqual(['stash', 'create']);
+    // -u, or an untracked file would follow along despite the choice.
+    expect(gitApi.stashSave).toHaveBeenCalledWith('WIP on main', false, true);
+  });
+});
+
 describe('sign-in prompt on opening a repository', () => {
   beforeEach(async () => {
     const { gitApi } = await import('../../src/api/git-api');
@@ -643,8 +688,10 @@ describe('sign-in prompt on opening a repository', () => {
     accountState.dismissedRepos = new Set();
     accountState.loadAccounts.mockClear();
     accountState.openSignIn.mockClear();
-    needsSignIn.mockClear();
-    needsSignIn.mockResolvedValue(true);
+    accountState.refreshAuthSource.mockClear();
+    accountState.authSource = null;
+    authSource.mockClear();
+    authSource.mockResolvedValue('none');
   });
 
   // Regression: the store rehydrates and reopens the last repository well
@@ -674,29 +721,39 @@ describe('sign-in prompt on opening a repository', () => {
 
   // An ssh remote authenticates with a key: a token has nothing to do there,
   // and asking anyway is the prompt people met on repositories that already
-  // worked perfectly well.
-  it('says nothing for an ssh remote', async () => {
+  // worked perfectly well. The answer is still fetched — the footer says what
+  // *is* authenticating the remote, and 'ssh' is one of the things it says.
+  it('says nothing for an ssh remote, but still learns what authenticates it', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.openRepo as any).mockResolvedValue({
       root: '/tmp/r',
       remoteHost: 'github.com',
       remoteProtocol: 'ssh',
     });
+    authSource.mockResolvedValue('ssh');
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(needsSignIn).not.toHaveBeenCalled();
+    expect(authSource).toHaveBeenCalledWith('github.com', 'ssh');
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
   // The usual case on a machine somebody has worked on for years: the system
   // credential store already holds the credential, so git needs nothing.
   it('says nothing when git can already authenticate on its own', async () => {
-    needsSignIn.mockResolvedValue(false);
+    authSource.mockResolvedValue('system');
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(needsSignIn).toHaveBeenCalledWith('github.com', 'https');
+    expect(authSource).toHaveBeenCalledWith('github.com', 'https');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when an account for the host is already signed in', async () => {
+    authSource.mockResolvedValue('account');
+    await useRepoStore.getState().openRepo('/tmp/r');
+    await new Promise(r => setTimeout(r, 0));
+
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 

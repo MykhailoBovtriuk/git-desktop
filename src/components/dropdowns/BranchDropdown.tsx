@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, SectionLabel, TextInput, cn } from '../../shared/ui';
 import { BranchItem } from './BranchItem';
 import { useBranchActions } from './useBranchActions';
@@ -18,6 +19,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   const { branches, mergeState, merging } = useRepoStore(
     useShallow(s => ({ branches: s.branches, mergeState: s.mergeState, merging: s.merging })),
   );
+  const openNewBranch = useUiStore(s => s.openNewBranch);
   const { checkout, merge, rebase, handle, confirmDeleteLocal, confirmDeleteRemote } =
     useBranchActions(onClose);
 
@@ -58,12 +60,22 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       />
 
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
-        {local.length > 0 && (
-          <>
-            <SectionLabel>{t('local')}</SectionLabel>
-            {local.map(renderItem)}
-          </>
-        )}
+        {/* The header row stays even when the filter matches nothing locally:
+            typing a name that does not exist yet is exactly when creating it is
+            the thing you want, and hiding the row hid the way to do it. */}
+        <div className="flex items-center justify-between">
+          <SectionLabel>{t('local')}</SectionLabel>
+          <button
+            onClick={() => {
+              onClose();
+              openNewBranch();
+            }}
+            className="text-blue text-xs hover:underline px-2 py-1"
+          >
+            {t('new')}
+          </button>
+        </div>
+        {local.map(renderItem)}
 
         {remote.length > 0 && (
           <>

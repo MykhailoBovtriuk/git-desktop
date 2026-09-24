@@ -13,6 +13,7 @@ import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
 import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
+import { NewBranchModal } from '../branches/NewBranchModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
@@ -90,6 +91,7 @@ export function Shell() {
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
+      <NewBranchModal />
       <ConfirmDialog />
       <SignInModal />
     </div>

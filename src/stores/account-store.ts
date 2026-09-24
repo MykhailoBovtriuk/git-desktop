@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { accountApi } from '../api/account-api';
-import type { ProviderAccount, ProviderId, ProviderOption, SignInPhase } from '../types';
+import type {
+  AuthSource,
+  ProviderAccount,
+  ProviderId,
+  ProviderOption,
+  RemoteProtocol,
+  SignInPhase,
+} from '../types';
 import { errorMessage } from '../lib/error-message';
 
 /**
@@ -35,11 +42,22 @@ interface AccountState {
 
   /** The account for the open repository's host, as far as the renderer knows. */
   current: ProviderAccount | null;
+  /**
+   * What authenticates the open repository's remote. Null until the main
+   * process has answered — the UI shows nothing rather than flashing a sign-in
+   * offer it may be about to withdraw.
+   *
+   * Cached rather than asked per render: answering it runs `git credential
+   * fill`, which reaches into the OS keychain.
+   */
+  authSource: AuthSource | null;
 
   loadAccounts: () => Promise<void>;
   accountFor: (host: string | null) => ProviderAccount | null;
   /** Point `current` at whoever is signed in to this host. */
   refreshCurrent: (host: string | null) => void;
+  /** Re-ask the main process what authenticates this remote. */
+  refreshAuthSource: (host: string | null, protocol: RemoteProtocol | null) => Promise<void>;
   openSignIn: (host: string, repoPath?: string | null) => Promise<void>;
   chooseProvider: (providerId: ProviderId) => void;
   setHost: (host: string) => void;
@@ -53,6 +71,7 @@ interface AccountState {
 export const useAccountStore = create<AccountState>()((set, get) => ({
   accounts: [],
   current: null,
+  authSource: null,
   persistent: true,
   loaded: false,
   phase: null,
@@ -79,6 +98,15 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
   },
 
   accountFor: host => (host ? (get().accounts.find(a => a.host === host) ?? null) : null),
+
+  refreshAuthSource: async (host, protocol) => {
+    if (!host) {
+      set({ authSource: null });
+      return;
+    }
+    const authSource = await accountApi.authSource(host, protocol).catch(() => null);
+    set({ authSource });
+  },
 
   refreshCurrent: host =>
     set(s => ({ current: host ? (s.accounts.find(a => a.host === host) ?? null) : null })),

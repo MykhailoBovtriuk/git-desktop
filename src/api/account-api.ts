@@ -1,4 +1,10 @@
-import type { ProviderAccount, ProviderId, ProviderOption, RemoteProtocol } from '../types';
+import type {
+  AuthSource,
+  ProviderAccount,
+  ProviderId,
+  ProviderOption,
+  RemoteProtocol,
+} from '../types';
 import { invoke } from './invoke';
 
 export interface AccountsSnapshot {
@@ -19,8 +25,8 @@ export interface ProvidersForHost {
 export const accountApi = {
   list: () => invoke<AccountsSnapshot>('account:list'),
   providersFor: (host: string | null) => invoke<ProvidersForHost>('account:providers', host),
-  needsSignIn: (host: string, protocol: RemoteProtocol | null) =>
-    invoke<boolean>('account:needs-sign-in', host, protocol),
+  authSource: (host: string, protocol: RemoteProtocol | null) =>
+    invoke<AuthSource>('account:auth-source', host, protocol),
   signIn: (providerId: ProviderId, host: string, clientId?: string, clientSecret?: string) =>
     invoke<null>('account:sign-in', providerId, host, clientId, clientSecret),
   signInWithToken: (host: string, login: string, token: string, repoPath?: string | null) =>

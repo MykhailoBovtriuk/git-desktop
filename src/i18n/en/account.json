@@ -35,7 +35,10 @@
     "signOut": "Sign Out",
     "add": "Add account",
     "hostPlaceholder": "github.com",
-    "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting."
+    "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting.",
+    "viaSystem": "Signed in outside this app, via the system credential store",
+    "viaSsh": "Uses your SSH key — no account needed",
+    "externalHint": "Shown for the open repository only: git can be asked about one server at a time, never for a list."
   },
   "signedInAs": "Signed in as {{name}} on {{host}}"
 }

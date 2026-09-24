@@ -1,5 +1,4 @@
 import { gitApi } from '../../api/git-api';
-import { accountApi } from '../../api/account-api';
 import { useAccountStore } from '../account-store';
 import type { RemoteProtocol } from '../../types';
 import type { RepoState, RepoSlice } from './types';
@@ -37,17 +36,21 @@ let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
  * which is the dead end this whole feature exists to remove. Dismissing it is
  * remembered for the session, so re-opening the same repo does not nag.
  *
- * "Needs it" is asked of the main process, not assumed. An ssh remote, an
- * account already signed in, or a credential git can already read on its own
- * all make the offer pointless — and offering anyway is what made this feature
- * feel like it existed for its own sake.
+ * What authenticates the remote is asked of the main process, not assumed —
+ * an ssh remote, an account already signed in, or a credential git can already
+ * read on its own all make the offer pointless, and offering anyway is what
+ * made this feature feel like it existed for its own sake.
+ *
+ * The answer is fetched even for the cases that will not prompt: the footer
+ * shows what *is* authenticating the remote, and that needs the ssh and
+ * system-keychain answers just as much as the empty one.
  */
 async function promptSignInIfNeeded(
   root: string,
   remoteHost: string | null,
   remoteProtocol: RemoteProtocol | null,
 ): Promise<void> {
-  if (!remoteHost || remoteProtocol !== 'https') return;
+  if (!remoteHost) return;
 
   // Wait for the account list rather than skipping when it is not in yet. On
   // startup the store rehydrates and reopens the last repository immediately,
@@ -63,9 +66,11 @@ async function promptSignInIfNeeded(
 
   const account = useAccountStore.getState();
   account.refreshCurrent(remoteHost);
+  await account.refreshAuthSource(remoteHost, remoteProtocol);
+
   if (account.dismissedRepos.has(root)) return;
   if (account.phase) return;
-  if (!(await accountApi.needsSignIn(remoteHost, remoteProtocol).catch(() => false))) return;
+  if (useAccountStore.getState().authSource !== 'none') return;
   await account.openSignIn(remoteHost, root);
 }
 
