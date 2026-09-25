@@ -19,6 +19,7 @@ import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
 import { AboutView } from '../about/AboutView';
 import { SignInModal } from '../account/SignInModal';
+import { UpdateModal } from '../update/UpdateModal';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
@@ -63,6 +64,7 @@ export function Shell() {
         <Toast />
         <ConfirmDialog />
         <SignInModal />
+        <UpdateModal />
       </>
     );
   }
@@ -94,6 +96,7 @@ export function Shell() {
       <NewBranchModal />
       <ConfirmDialog />
       <SignInModal />
+      <UpdateModal />
     </div>
   );
 }

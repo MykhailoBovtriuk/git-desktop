@@ -16,6 +16,7 @@ import enRepo from './en/repo.json';
 import enSettings from './en/settings.json';
 import enAbout from './en/about.json';
 import enAccount from './en/account.json';
+import enUpdate from './en/update.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -31,6 +32,7 @@ import ukRepo from './uk/repo.json';
 import ukSettings from './uk/settings.json';
 import ukAbout from './uk/about.json';
 import ukAccount from './uk/account.json';
+import ukUpdate from './uk/update.json';
 
 import nlCommon from './nl/common.json';
 import nlStaging from './nl/staging.json';
@@ -46,6 +48,7 @@ import nlRepo from './nl/repo.json';
 import nlSettings from './nl/settings.json';
 import nlAbout from './nl/about.json';
 import nlAccount from './nl/account.json';
+import nlUpdate from './nl/update.json';
 
 i18n
   .use(LanguageDetector)
@@ -69,6 +72,7 @@ i18n
         settings: enSettings,
         about: enAbout,
         account: enAccount,
+        update: enUpdate,
       },
       uk: {
         common: ukCommon,
@@ -85,6 +89,7 @@ i18n
         settings: ukSettings,
         about: ukAbout,
         account: ukAccount,
+        update: ukUpdate,
       },
       nl: {
         common: nlCommon,
@@ -101,6 +106,7 @@ i18n
         settings: nlSettings,
         about: nlAbout,
         account: nlAccount,
+        update: nlUpdate,
       },
     },
     // No 'navigator': English is the default until the user picks a language,

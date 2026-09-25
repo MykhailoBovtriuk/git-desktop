@@ -50,7 +50,7 @@ describe('registered IPC channels', () => {
   // Pushed from main to the renderer rather than invoked, so they have no
   // ipcMain.handle to match against. 'repo:changed' stays off this list only
   // because its prefix is not in the pattern below.
-  const PUSH_EVENTS = new Set(['account:changed']);
+  const PUSH_EVENTS = new Set(['account:changed', 'app:update-progress']);
 
   const channelsInFiles = (...relPaths: string[]) => {
     const found = relPaths.flatMap(relPath => {
@@ -72,7 +72,12 @@ describe('registered IPC channels', () => {
     expect(channels.length).toBeGreaterThan(0);
     expect(channelsInFiles('electron/preload.ts')).toEqual(channels);
     expect(
-      channelsInFiles('src/api/git-api.ts', 'src/api/app-api.ts', 'src/api/account-api.ts'),
+      channelsInFiles(
+        'src/api/git-api.ts',
+        'src/api/app-api.ts',
+        'src/api/account-api.ts',
+        'src/api/update-api.ts',
+      ),
     ).toEqual(channels);
   });
 });

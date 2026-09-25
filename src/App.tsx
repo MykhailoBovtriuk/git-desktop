@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import './i18n/config';
 import { useAutoRefresh } from './hooks/use-auto-refresh';
 import { useTheme } from './hooks/use-theme';
+import { useUpdateCheck } from './hooks/use-update-check';
 import { Shell } from './components/layout/Shell';
 import { accountApi } from './api/account-api';
 import { useAccountStore } from './stores/account-store';
@@ -10,6 +11,7 @@ import { useRepoStore } from './stores/repo-store';
 export default function App() {
   useTheme();
   useAutoRefresh();
+  useUpdateCheck();
 
   // Sign-in completes in the main process after a browser round trip, so the
   // result is pushed rather than returned. Without this subscription the modal

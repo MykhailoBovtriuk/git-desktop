@@ -11,9 +11,10 @@ import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
 import { registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
+import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
 
 export { wrap };
-export type IpcHandlerOptions = RepoHandlerOptions & AppHandlerOptions;
+export type IpcHandlerOptions = RepoHandlerOptions & AppHandlerOptions & UpdateHandlerOptions;
 
 const gitService = new GitService();
 
@@ -34,4 +35,5 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   registerFileHandlers(gitService);
   registerAccountHandlers(options);
   registerAppHandlers(options);
+  registerUpdateHandlers(options);
 }

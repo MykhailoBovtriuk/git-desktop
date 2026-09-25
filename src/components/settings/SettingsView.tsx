@@ -11,6 +11,7 @@ import {
 import { PageHeader } from '../layout/PageHeader';
 import { SettingsSection } from './SettingsSection';
 import { AccountsSection } from './AccountsSection';
+import { UpdateSection } from './UpdateSection';
 import { SegmentedControl } from '../../shared/ui';
 import type { ThemePreference } from '../../types';
 
@@ -67,6 +68,8 @@ export function SettingsView() {
               }))}
             />
           </SettingsSection>
+
+          <UpdateSection />
 
           <AccountsSection />
         </div>

@@ -23,4 +23,5 @@ export {
   FiCheck as CheckIcon,
   FiCornerUpLeft as StashPopIcon,
   FiTrash2 as StashDropIcon,
+  FiDownload as DownloadIcon,
 } from 'react-icons/fi';
