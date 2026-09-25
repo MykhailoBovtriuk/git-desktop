@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
+import { absolutePathIn } from '../../lib/absolute-path';
 import { FileList } from './FileList';
 
 /**
@@ -12,22 +13,34 @@ import { FileList } from './FileList';
 export function WorkingTreeFiles() {
   const { t } = useTranslation('staging');
   const runAction = useGitAction();
-  const { status, stageFiles, unstageFiles, discardChanges } = useRepoStore(
+  const { status, repoPath, stageFiles, unstageFiles, discardChanges } = useRepoStore(
     useShallow(s => ({
       status: s.status,
+      repoPath: s.repoPath,
       stageFiles: s.stageFiles,
       unstageFiles: s.unstageFiles,
       discardChanges: s.discardChanges,
     })),
   );
-  const { selectedFile, selectedFileArea, setSelectedFile, requestConfirm } = useUiStore(
+  const { selectedFile, selectedFileArea, setSelectedFile, requestConfirm, addToast } = useUiStore(
     useShallow(s => ({
       selectedFile: s.selectedFile,
       selectedFileArea: s.selectedFileArea,
       setSelectedFile: s.setSelectedFile,
       requestConfirm: s.requestConfirm,
+      addToast: s.addToast,
     })),
   );
+
+  // The renderer is served from app://, registered as a secure scheme in
+  // electron/main.ts, so the Clipboard API is available here. It can still
+  // refuse — an unfocused window, a denied permission — and a click that
+  // silently does nothing is worse than one that says why.
+  const copyPath = (path: string) => {
+    void navigator.clipboard
+      ?.writeText(absolutePathIn(repoPath, path))
+      .catch(() => addToast({ variant: 'error', title: t('copyPath'), message: t('copyFailed') }));
+  };
 
   const unstagedPaths = status.unstaged.map(f => f.path);
   const stagedPaths = status.staged.map(f => f.path);
@@ -71,6 +84,7 @@ export function WorkingTreeFiles() {
             staged={false}
             onStage={path => stage([path])}
             onDiscard={handleDiscard}
+            onCopyPath={copyPath}
             onSelect={path => setSelectedFile(path, 'unstaged')}
             selectedFile={selectedFileArea === 'unstaged' ? selectedFile : null}
           />
@@ -92,6 +106,7 @@ export function WorkingTreeFiles() {
             files={status.staged}
             staged={true}
             onUnstage={path => unstage([path])}
+            onCopyPath={copyPath}
             onSelect={path => setSelectedFile(path, 'staged')}
             selectedFile={selectedFileArea === 'staged' ? selectedFile : null}
           />

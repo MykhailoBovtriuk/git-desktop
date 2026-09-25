@@ -14,9 +14,14 @@ export {
   FiPlus as StageIcon,
   FiMinus as UnstageIcon,
   FiX as DiscardIcon,
-  FiX as CloseIcon,
   FiUser as UserIcon,
+  // Two names for one glyph, on purpose: in the stash list it means "apply",
+  // in a file row it means "copy". Naming the copy button StashApplyIcon at the
+  // call site would read worse than this duplicate line does here.
   FiCopy as StashApplyIcon,
+  FiCopy as CopyIcon,
+  FiCheck as CheckIcon,
   FiCornerUpLeft as StashPopIcon,
   FiTrash2 as StashDropIcon,
+  FiDownload as DownloadIcon,
 } from 'react-icons/fi';

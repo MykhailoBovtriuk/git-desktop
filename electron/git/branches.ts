@@ -33,6 +33,17 @@ export async function getBranches(ctx: GitContext): Promise<Branch[]> {
   return branches;
 }
 
+/**
+ * Create a branch at the current commit and switch to it.
+ *
+ * The working tree is deliberately untouched: the new branch points at the same
+ * commit, so uncommitted work carries over — staged and unstaged alike. A
+ * caller that wants the work left behind stashes it first.
+ */
+export async function createBranch(ctx: GitContext, name: string): Promise<void> {
+  await ctx.ensureRepo().checkoutLocalBranch(name);
+}
+
 export async function checkout(ctx: GitContext, branch: string): Promise<void> {
   await ctx.ensureRepo().checkout(branch);
 }

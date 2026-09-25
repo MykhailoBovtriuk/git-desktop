@@ -1,21 +1,25 @@
 import { BrowserWindow, ipcMain, shell } from 'electron';
-import type { ProviderAccount, ProviderId } from '../../src/types';
+import type { AuthSource, ProviderAccount, ProviderId } from '../../src/types';
 import { assertString } from '../ipc-validators';
 import { wrap } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn } from '../auth/oauth-flow';
 import { providerById, providerForHost, providerOptions } from '../auth/providers/registry';
 import {
-  accountsForHost,
-  bindRepo,
-  unbindRepo,
-  boundAccount,
+  accountForHost,
   clearCredential,
   isPersistent,
   listAccounts,
   saveCredential,
 } from '../auth/token-store';
 import { accountIdFor } from '../auth/account-id';
-import { approveCredentials, gitUsernameFor, rejectCredentials } from '../auth/git-credentials';
+import { hostFromRemoteUrl, originUrlFor } from '../auth/remote-host';
+import { verifyAgainstRemote } from '../auth/verify-credential';
+import {
+  approveCredentials,
+  gitUsernameFor,
+  hasStoredCredential,
+  rejectCredentials,
+} from '../auth/git-credentials';
 import { ensureGlobalIdentity } from '../auth/identity-bootstrap';
 
 export interface AccountHandlerOptions {
@@ -34,6 +38,69 @@ function assertHost(value: unknown): asserts value is string {
 }
 
 /**
+ * A username or token on its way to `git credential`, where the protocol is one
+ * `key=value` per line. A newline inside a value there is not a typo — it is a
+ * second field nobody asked for.
+ */
+function assertCredentialField(value: unknown, name: string): asserts value is string {
+  assertString(value, name);
+  if (/[\r\n\0]/.test(value as string)) {
+    throw new Error(`Invalid argument: ${name} contains a line break`);
+  }
+}
+
+/**
+ * Who a pasted token belongs to — and, more to the point, whether it works at
+ * all.
+ *
+ * Nothing is stored before this resolves. An unchecked token makes the app
+ * claim a sign-in it has no evidence for, and writes that claim into the system
+ * credential store, where the next `git push` trips over it.
+ */
+async function accountFromToken(
+  host: string,
+  login: string,
+  token: string,
+  repoPath: string | null,
+): Promise<ProviderAccount> {
+  const provider = providerForHost(host);
+  if (provider) {
+    // A host we recognise has an API that both proves the token works and
+    // knows the user's real name and avatar — better data than a form carries.
+    const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        /returned 40[13]/.test(message)
+          ? `${provider.displayName} rejected this token`
+          : `Could not check this token with ${provider.displayName}`,
+      );
+    });
+    return { ...fetched, id: accountIdFor(host) };
+  }
+
+  // Nobody's API to ask: check the credential by using it against the very
+  // remote it is meant for. Whatever `ls-remote` accepts, `git push` accepts.
+  const remoteUrl = repoPath ? await originUrlFor(repoPath) : null;
+  if (!remoteUrl || !/^https:\/\//i.test(remoteUrl) || hostFromRemoteUrl(remoteUrl) !== host) {
+    throw new Error(
+      `Sign in from a repository whose remote is an https address on ${host} — ` +
+        'there is no other way to check a token for this server',
+    );
+  }
+  await verifyAgainstRemote(remoteUrl, login, token);
+  return {
+    id: accountIdFor(host),
+    providerId: 'token',
+    host,
+    displayName: host,
+    login,
+    name: null,
+    email: '',
+    avatarDataUrl: null,
+  };
+}
+
+/**
  * Everything that has to happen once a token is in hand, whichever route it
  * arrived by. Kept in one place so the browser flow and the pasted-token flow
  * cannot drift apart on, say, whether identity gets bootstrapped.
@@ -45,8 +112,6 @@ async function adoptAccount(
   expiresAt: number | null,
   clientId: string,
   clientSecret: string | null,
-  /** The repository the sign-in was started from, if any. */
-  repoPath: string | null = null,
 ): Promise<ProviderAccount> {
   await saveCredential({
     id: account.id,
@@ -62,9 +127,6 @@ async function adoptAccount(
   // user they are signed in.
   await approveCredentials(account.host, gitUsernameFor(account), token);
   await ensureGlobalIdentity(account);
-  // Signing in from a repository is a statement about that repository: it is
-  // the one place the user has told us which of several accounts it uses.
-  if (repoPath) await bindRepo(repoPath, account.id);
   notify();
   return account;
 }
@@ -73,8 +135,6 @@ async function adoptAccount(
  * The browser came back. Called from the deep-link handler in main.ts rather
  * than over IPC — the renderer is not part of this round trip.
  */
-let signInRepo: string | null = null;
-
 export async function handleAuthCallback(url: string): Promise<void> {
   try {
     const result = await completeSignIn(url);
@@ -85,9 +145,7 @@ export async function handleAuthCallback(url: string): Promise<void> {
       result.token.expiresAt,
       result.clientId,
       result.clientSecret,
-      signInRepo,
     );
-    signInRepo = null;
   } catch (err: unknown) {
     lastError = err instanceof Error ? err.message : String(err);
     notify();
@@ -131,58 +189,34 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   );
 
   /**
-   * What this repository should commit and push as.
+   * What authenticates this remote — which decides both whether to offer a
+   * sign-in and what to say when there is nothing to offer.
    *
-   * Three answers, and the caller behaves differently for each: an account the
-   * user already chose, a set of accounts on this host to choose between, or
-   * nothing at all — which is the only case that needs a sign-in.
+   * One answer rather than a yes/no, because the interesting cases are not
+   * "needs signing in": an ssh remote goes by key, and the usual state on a
+   * machine somebody has worked on for years is a credential already sitting in
+   * the OS store. Asking them to sign in there was noise with no outcome, and
+   * saying nothing at all read as "no account" rather than "you are fine".
+   *
+   * Order matters: ssh is settled before the keychain is touched at all, so an
+   * ssh repository never provokes a credential lookup it has no use for.
    */
-  ipcMain.handle('account:for-repo', (_e, repoPath: unknown, host: unknown) =>
-    wrap(async () => {
-      assertString(repoPath, 'repoPath');
-      if (typeof host !== 'string' || !host) return { bound: null, candidates: [] };
+  ipcMain.handle('account:auth-source', (_e, host: unknown, protocol: unknown) =>
+    wrap(async (): Promise<AuthSource> => {
+      if (typeof host !== 'string' || !host) return 'none';
       assertHost(host);
-      const bound = await boundAccount(repoPath);
-      // A binding made before the remote was repointed elsewhere is stale.
-      return {
-        bound: bound && bound.host === host ? bound : null,
-        candidates: await accountsForHost(host),
-      };
-    }),
-  );
-
-  ipcMain.handle('account:bind', (_e, repoPath: unknown, accountId: unknown) =>
-    wrap(async () => {
-      assertString(repoPath, 'repoPath');
-      assertString(accountId, 'accountId');
-      await bindRepo(repoPath, accountId);
-      notify();
-      return null;
-    }),
-  );
-
-  ipcMain.handle('account:unbind', (_e, repoPath: unknown) =>
-    wrap(async () => {
-      assertString(repoPath, 'repoPath');
-      if (await unbindRepo(repoPath)) notify();
-      return null;
+      if (await accountForHost(host)) return 'account';
+      if (protocol !== 'https') return 'ssh';
+      return (await hasStoredCredential(host)) ? 'system' : 'none';
     }),
   );
 
   ipcMain.handle(
     'account:sign-in',
-    (
-      _e,
-      providerId: unknown,
-      host: unknown,
-      clientId: unknown,
-      clientSecret: unknown,
-      repoPath: unknown,
-    ) =>
+    (_e, providerId: unknown, host: unknown, clientId: unknown, clientSecret: unknown) =>
       wrap(async () => {
         assertString(providerId, 'providerId');
         assertHost(host);
-        signInRepo = typeof repoPath === 'string' && repoPath ? repoPath : null;
         const provider = providerById(providerId as ProviderId);
         if (!provider) throw new Error(`Unknown provider: ${providerId}`);
 
@@ -198,36 +232,20 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   );
 
   // The path for every server nobody registered an OAuth app for. The account
-  // is built from the form because there is no API here we can rely on.
+  // is built from whatever proved the token works, never from the form alone.
   ipcMain.handle(
     'account:sign-in-token',
     (_e, host: unknown, login: unknown, token: unknown, repoPath: unknown) =>
       wrap(async () => {
         assertHost(host);
-        assertString(login, 'login');
-        assertString(token, 'token');
-        const account: ProviderAccount = {
-          id: accountIdFor(host, login),
-          providerId: 'token',
-          host,
-          displayName: host,
-          login,
-          name: null,
-          email: '',
-          avatarDataUrl: null,
-        };
+        assertCredentialField(login, 'login');
+        assertCredentialField(token, 'token');
+        const repo = typeof repoPath === 'string' && repoPath ? repoPath : null;
+        const account = await accountFromToken(host, login, token, repo);
         // No expiry is known for a hand-made token, and there is nothing to
         // refresh it with — so it is stored as non-expiring and simply stops
         // working when the user revokes it.
-        return adoptAccount(
-          account,
-          token,
-          null,
-          null,
-          '',
-          null,
-          typeof repoPath === 'string' && repoPath ? repoPath : null,
-        );
+        return adoptAccount(account, token, null, null, '', null);
       }),
   );
 
@@ -247,7 +265,6 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   ipcMain.handle('account:cancel-sign-in', () =>
     wrap(async () => {
       cancelSignIn();
-      signInRepo = null;
       lastError = null;
       return null;
     }),

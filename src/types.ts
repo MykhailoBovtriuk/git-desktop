@@ -113,11 +113,11 @@ export type ProviderId =
  */
 export interface ProviderAccount {
   /**
-   * Stable identity of this account, `host|login`.
+   * Stable identity of this account: the host.
    *
-   * Accounts are keyed by this rather than by host because one host commonly
-   * carries several: a personal and a work GitHub account differ only by who
-   * signed in. Keying by host silently merged them.
+   * `git credential` addresses a credential by protocol and host, so a second
+   * account on the same host is one git cannot be told to prefer. One host,
+   * one account — signing in again replaces it.
    */
   id: string;
   providerId: ProviderId;
@@ -151,15 +151,25 @@ export interface ProviderOption {
   tokenHelpUrl: string | null;
 }
 
+/**
+ * How git authenticates to a remote. An ssh remote uses a key, so neither a
+ * stored token nor a sign-in offer has anything to do there.
+ */
+export type RemoteProtocol = 'ssh' | 'https' | 'other';
+
+/**
+ * What actually authenticates this repository's remote — the question the UI
+ * needs answered before it offers a sign-in nobody needs.
+ *
+ * `system` is the common case on a machine somebody has worked on for years:
+ * the credential is in the OS store, put there by git or another tool, and this
+ * app neither created it nor may remove it.
+ */
+export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
+
 export type SignInPhase =
-  /** Several accounts already exist on this host — which one is this repo? */
-  | 'pick-account'
   /** Nobody claims this host — which service does it run? */
-  | 'choose'
-  | 'browser'
-  | 'waiting'
-  | 'token'
-  | 'error';
+  'choose' | 'browser' | 'waiting' | 'token' | 'error';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -171,10 +181,69 @@ export interface Toast {
   action?: { label: string; onClick: () => void };
 }
 
+/**
+ * A release worth offering, as the renderer needs it.
+ *
+ * `assetName` is null when nothing is built for this platform and
+ * architecture — the UI then links to the release page instead of pretending
+ * it can download something.
+ */
+export interface UpdateInfo {
+  /** Without the leading v: '1.2.0'. */
+  version: string;
+  /** As tagged: 'v1.2.0'. */
+  tag: string;
+  notes: string;
+  publishedAt: string | null;
+  releaseUrl: string;
+  assetName: string | null;
+  /** Bytes, 0 when the release did not say. */
+  assetSize: number;
+  prerelease: boolean;
+}
+
+/**
+ * `skipped` is a check that never reached the network: a dev run, where an
+ * installer must not be launched over the real install anyway.
+ */
+export type UpdateStatus = 'up-to-date' | 'available' | 'skipped';
+
+export interface UpdateCheckResult {
+  status: UpdateStatus;
+  currentVersion: string;
+  latest: UpdateInfo | null;
+  /** The release matching the running version, for reinstalling it. */
+  current: UpdateInfo | null;
+  /** False in a dev run: downloading and installing are refused. */
+  canInstall: boolean;
+  checkedAt: number;
+}
+
+export interface UpdateProgress {
+  version: string;
+  receivedBytes: number;
+  /** 0 when the server sent no Content-Length. */
+  totalBytes: number;
+  percent: number;
+  bytesPerSecond: number;
+}
+
+export interface DownloadedUpdate {
+  version: string;
+  filePath: string;
+}
+
+export type UpdatePhase =
+  /** Nothing asked for yet, or the last answer was "up to date". */
+  'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
+
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
   onGitChanged: (cb: () => void) => () => void;
   onAccountChanged: (cb: () => void) => () => void;
+  // Unlike the two above, this one carries a payload: the renderer draws the
+  // progress bar from it rather than asking back for the numbers.
+  onUpdateProgress: (cb: (progress: UpdateProgress) => void) => () => void;
   platform: string;
 }
 

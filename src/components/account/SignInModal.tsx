@@ -22,13 +22,11 @@ export function SignInModal() {
     error,
     busy,
     chooseProvider,
-    chooseAccount,
     setHost,
     continueWithBrowser,
     submitToken,
     cancelSignIn,
     dismissForRepo,
-    openSignIn,
   } = useAccountStore(
     useShallow(s => ({
       phase: s.phase,
@@ -36,13 +34,11 @@ export function SignInModal() {
       error: s.error,
       busy: s.busy,
       chooseProvider: s.chooseProvider,
-      chooseAccount: s.chooseAccount,
       setHost: s.setHost,
       continueWithBrowser: s.continueWithBrowser,
       submitToken: s.submitToken,
       cancelSignIn: s.cancelSignIn,
       dismissForRepo: s.dismissForRepo,
-      openSignIn: s.openSignIn,
     })),
   );
   const repoPath = useRepoStore(s => s.repoPath);
@@ -76,58 +72,6 @@ export function SignInModal() {
       {primary}
     </>
   );
-
-  // Several accounts already exist on this host. Which one owns this
-  // repository is a question only the user can answer, and guessing it wrong
-  // attributes their work to the wrong identity.
-  if (phase === 'pick-account') {
-    return (
-      <Modal
-        title={t('pick.title')}
-        subtitle={t('pick.hint', { host: target.host })}
-        onClose={cancel}
-        footer={footer(
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={busy || !picked}
-            onClick={() => picked && void chooseAccount(picked)}
-          >
-            {t('pick.use')}
-          </Button>,
-        )}
-      >
-        <div className="flex flex-col gap-1">
-          {target.candidates.map(account => (
-            <label
-              key={account.id}
-              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface1 cursor-pointer"
-            >
-              <input
-                type="radio"
-                name="account"
-                checked={picked === account.id}
-                onChange={() => setPicked(account.id)}
-              />
-              {account.avatarDataUrl && (
-                <img src={account.avatarDataUrl} alt="" className="w-5 h-5 rounded-full" />
-              )}
-              <span className="text-text text-sm">
-                {account.name || account.login}{' '}
-                <span className="text-subtext">@{account.login}</span>
-              </span>
-            </label>
-          ))}
-          <button
-            onClick={() => void openSignIn(target.host, target.repoPath)}
-            className="text-blue text-xs hover:underline self-start mt-2 px-2"
-          >
-            {t('pick.another')}
-          </button>
-        </div>
-      </Modal>
-    );
-  }
 
   if (phase === 'choose') {
     return (

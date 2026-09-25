@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AccountsSection } from '../../../src/components/settings/AccountsSection';
 import { useAccountStore } from '../../../src/stores/account-store';
 import { useRepoStore } from '../../../src/stores/repo-store';
-import type { ProviderAccount } from '../../../src/types';
+import type { AuthSource, ProviderAccount } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -27,10 +27,11 @@ function setup({
   accounts = [] as ProviderAccount[],
   persistent = true,
   remoteHost = null as string | null,
+  authSource = null as AuthSource | null,
 } = {}) {
   const openSignIn = vi.fn();
   const signOut = vi.fn().mockResolvedValue(undefined);
-  const state = { accounts, persistent, openSignIn, signOut };
+  const state = { accounts, persistent, authSource, openSignIn, signOut };
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(state)) as any);
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel({ remoteHost })) as any);
   return { openSignIn, signOut };
@@ -99,5 +100,51 @@ describe('AccountsSection', () => {
     setup();
     render(<AccountsSection />);
     expect(screen.queryByText('section.notPersistent')).toBeNull();
+  });
+
+  // The credential is not ours: git or another tool put it in the OS store, and
+  // offering Sign out would be offering to delete somebody else's keychain
+  // entry.
+  it('names a credential that works outside this app, with no way to sign out of it', () => {
+    setup({ remoteHost: 'github.com', authSource: 'system' });
+    render(<AccountsSection />);
+
+    expect(screen.getByText('github.com')).toBeTruthy();
+    expect(screen.getByText('section.viaSystem')).toBeTruthy();
+    expect(screen.queryByText('section.signOut')).toBeNull();
+  });
+
+  it('names an ssh remote the same way', () => {
+    setup({ remoteHost: 'github.com', authSource: 'ssh' });
+    render(<AccountsSection />);
+
+    expect(screen.getByText('section.viaSsh')).toBeTruthy();
+    expect(screen.queryByText('section.signOut')).toBeNull();
+  });
+
+  // `git credential` answers about one host and can never be enumerated, so the
+  // row has to admit it speaks only for the open repository.
+  it('says the external row covers the open repository only', () => {
+    setup({ remoteHost: 'github.com', authSource: 'system' });
+    render(<AccountsSection />);
+    expect(screen.getByText('section.externalHint')).toBeTruthy();
+  });
+
+  it('shows no external row when an account of our own covers the host', () => {
+    setup({
+      accounts: [account('github.com', 'octocat')],
+      remoteHost: 'github.com',
+      authSource: 'account',
+    });
+    render(<AccountsSection />);
+
+    expect(screen.queryByText('section.viaSystem')).toBeNull();
+    expect(screen.queryByText('section.externalHint')).toBeNull();
+  });
+
+  it('shows no external row when nothing authenticates the host', () => {
+    setup({ remoteHost: 'github.com', authSource: 'none' });
+    render(<AccountsSection />);
+    expect(screen.queryByText('section.externalHint')).toBeNull();
   });
 });

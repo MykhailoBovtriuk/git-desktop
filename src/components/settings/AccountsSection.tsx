@@ -14,15 +14,21 @@ import { Button, TextInput, UserIcon } from '../../shared/ui';
  */
 export function AccountsSection() {
   const { t } = useTranslation('account');
-  const { accounts, persistent, openSignIn, signOut } = useAccountStore(
+  const { accounts, authSource, persistent, openSignIn, signOut } = useAccountStore(
     useShallow(s => ({
       accounts: s.accounts,
+      authSource: s.authSource,
       persistent: s.persistent,
       openSignIn: s.openSignIn,
       signOut: s.signOut,
     })),
   );
   const remoteHost = useRepoStore(s => s.remoteHost);
+  // Only the open repository's server: `git credential` can be asked about a
+  // host but never enumerated, so a full list of what works outside this app is
+  // not something we could honestly show.
+  const external =
+    remoteHost && (authSource === 'system' || authSource === 'ssh') ? authSource : null;
   const [adding, setAdding] = useState(false);
   const [host, setHost] = useState('');
 
@@ -67,7 +73,21 @@ export function AccountsSection() {
             </Button>
           </div>
         ))}
+
+        {external && (
+          <div className="bg-mantle/50 rounded p-3 flex items-center gap-3">
+            <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
+            <div className="min-w-0">
+              <p className="text-subtext text-sm truncate">{remoteHost}</p>
+              <p className="text-subtext text-xs truncate">
+                {t(external === 'ssh' ? 'section.viaSsh' : 'section.viaSystem')}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {external && <p className="text-subtext text-xs mt-2">{t('section.externalHint')}</p>}
 
       {adding ? (
         <div className="flex items-center gap-2 mt-3">

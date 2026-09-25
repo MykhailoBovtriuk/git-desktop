@@ -16,9 +16,25 @@ export async function getStashList(ctx: GitContext): Promise<StashEntry[]> {
     });
 }
 
-export async function stashSave(ctx: GitContext, message?: string, staged = false): Promise<void> {
+/**
+ * `includeUntracked` matters wherever "set everything aside" has to mean
+ * everything: `getStatus` counts an untracked file as a change, so without `-u`
+ * a stash that looks complete in the UI leaves new files sitting in the working
+ * tree. It is exclusive with `staged` — git rejects `--staged -u`, and the two
+ * ask for opposite things anyway.
+ */
+export async function stashSave(
+  ctx: GitContext,
+  message?: string,
+  staged = false,
+  includeUntracked = false,
+): Promise<void> {
+  if (staged && includeUntracked) {
+    throw new Error('stashSave: staged and includeUntracked are mutually exclusive');
+  }
   const args = ['stash', 'push'];
   if (staged) args.push('--staged');
+  if (includeUntracked) args.push('-u');
   if (message?.trim()) args.push('-m', message.trim());
   await ctx.ensureRepo().raw(args);
 }

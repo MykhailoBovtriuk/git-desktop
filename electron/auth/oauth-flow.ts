@@ -154,7 +154,7 @@ export async function completeSignIn(callbackUrl: string): Promise<SignInResult>
 
   const token = await postToken(provider.endpoints(flow.host).tokenUrl, params);
   const fetched = await provider.fetchAccount(flow.host, token.accessToken);
-  const account: ProviderAccount = { ...fetched, id: accountIdFor(flow.host, fetched.login) };
+  const account: ProviderAccount = { ...fetched, id: accountIdFor(flow.host) };
 
   return { account, token, clientId: flow.clientId, clientSecret: flow.clientSecret };
 }

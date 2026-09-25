@@ -123,6 +123,74 @@ describe('GitService', () => {
     expect(content).toBe('hello');
   });
 
+  it('createBranch creates a branch at HEAD and switches to it', async () => {
+    await git.openRepo(tmpDir);
+    await git.createBranch('feature/login');
+
+    const branches = await git.getBranches();
+    expect(branches.find(b => b.current)!.name).toBe('feature/login');
+    expect(await git.getHeadCommit()).toBe(
+      execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim(),
+    );
+  });
+
+  // The new branch sits on the same commit, so switching to it must not touch
+  // the working tree — that is what "bring my changes" relies on.
+  it('createBranch carries uncommitted work over, staged and unstaged alike', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+    execSync('git add file.txt', { cwd: tmpDir });
+
+    await git.createBranch('feature/wip');
+
+    const status = await git.getStatus();
+    expect(status.staged.map(f => f.path)).toEqual(['file.txt']);
+    expect(status.unstaged.map(f => f.path)).toEqual(['fresh.txt']);
+    expect(fs.readFileSync(path.join(tmpDir, 'fresh.txt'), 'utf8')).toBe('brand new');
+  });
+
+  it('createBranch refuses a name that is already taken', async () => {
+    await git.openRepo(tmpDir);
+    await git.createBranch('feature/login');
+    execSync('git checkout -q -', { cwd: tmpDir });
+
+    await expect(git.createBranch('feature/login')).rejects.toThrow();
+  });
+
+  // getStatus counts an untracked file as a change, so a stash without -u would
+  // report a clean sweep and leave new files sitting in the tree — which is how
+  // "leave my changes behind" would quietly bring one along.
+  it('stashSave takes untracked files too when asked', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+
+    await git.stashSave('WIP on main', false, true);
+
+    const status = await git.getStatus();
+    expect(status.staged).toEqual([]);
+    expect(status.unstaged).toEqual([]);
+    expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(false);
+  });
+
+  it('stashSave leaves untracked files alone by default', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+
+    await git.stashSave('WIP on main');
+
+    expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(true);
+  });
+
+  // git rejects the combination outright; catching it here names the reason
+  // rather than surfacing git's own wording about incompatible options.
+  it('stashSave refuses to combine staged-only with untracked', async () => {
+    await git.openRepo(tmpDir);
+    await expect(git.stashSave('nope', true, true)).rejects.toThrow(/mutually exclusive/i);
+  });
+
   it('checkout switches branch', async () => {
     await git.openRepo(tmpDir);
     execSync('git checkout -b develop', { cwd: tmpDir });

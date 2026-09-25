@@ -15,6 +15,10 @@ export function useGitAction() {
   const addToast = useUiStore(s => s.addToast);
   const openSignIn = useAccountStore(s => s.openSignIn);
   const remoteHost = useRepoStore(s => s.remoteHost);
+  const remoteProtocol = useRepoStore(s => s.remoteProtocol);
+  // A stored token authenticates an https remote and nothing else, so an ssh
+  // repository gets the message without an offer that could not have helped.
+  const signInHost = remoteProtocol === 'https' ? remoteHost : null;
 
   return async (fn: () => Promise<unknown>, opts: GitActionOptions): Promise<boolean> => {
     try {
@@ -37,8 +41,8 @@ export function useGitAction() {
         // An auth failure is a dead end without somewhere to go: offer the
         // sign-in that would fix it, already aimed at the right server.
         action:
-          action === 'signIn' && remoteHost
-            ? { label: t('signIn'), onClick: () => void openSignIn(remoteHost) }
+          action === 'signIn' && signInHost
+            ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
             : undefined,
       });
       return false;

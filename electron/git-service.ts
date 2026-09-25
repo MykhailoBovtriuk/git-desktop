@@ -66,6 +66,9 @@ export class GitService {
   getBranches(): Promise<Branch[]> {
     return branches.getBranches(this.ctx);
   }
+  createBranch(name: string): Promise<void> {
+    return branches.createBranch(this.ctx, name);
+  }
   checkout(branch: string): Promise<void> {
     return branches.checkout(this.ctx, branch);
   }
@@ -133,8 +136,8 @@ export class GitService {
   getStashList(): Promise<StashEntry[]> {
     return stash.getStashList(this.ctx);
   }
-  stashSave(message?: string, staged = false): Promise<void> {
-    return stash.stashSave(this.ctx, message, staged);
+  stashSave(message?: string, staged = false, includeUntracked = false): Promise<void> {
+    return stash.stashSave(this.ctx, message, staged, includeUntracked);
   }
   getStashTop(): Promise<string | null> {
     return stash.getStashTop(this.ctx);

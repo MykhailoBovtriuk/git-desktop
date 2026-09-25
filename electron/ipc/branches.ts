@@ -6,6 +6,13 @@ import { wrap } from './wrap';
 export function registerBranchHandlers(git: GitService) {
   ipcMain.handle('git:get-branches', () => wrap(() => git.getBranches()));
 
+  ipcMain.handle('git:create-branch', (_e, name: string) =>
+    wrap(() => {
+      assertBranchName(name, 'name');
+      return git.createBranch(name).then(() => null);
+    }),
+  );
+
   ipcMain.handle('git:checkout', (_e, branch: string) =>
     wrap(() => {
       assertBranchName(branch, 'branch');

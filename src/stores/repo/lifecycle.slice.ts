@@ -1,5 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import { useAccountStore } from '../account-store';
+import type { RemoteProtocol } from '../../types';
 import type { RepoState, RepoSlice } from './types';
 import { errorMessage } from '../../lib/error-message';
 
@@ -9,6 +10,7 @@ type LifecycleSlice = Pick<
   | 'busyCount'
   | 'repoPath'
   | 'remoteHost'
+  | 'remoteProtocol'
   | 'hasIdentity'
   | 'loadIdentity'
   | 'recentRepos'
@@ -33,8 +35,21 @@ let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
  * letting the user work for a while and meet the question as a failed push,
  * which is the dead end this whole feature exists to remove. Dismissing it is
  * remembered for the session, so re-opening the same repo does not nag.
+ *
+ * What authenticates the remote is asked of the main process, not assumed —
+ * an ssh remote, an account already signed in, or a credential git can already
+ * read on its own all make the offer pointless, and offering anyway is what
+ * made this feature feel like it existed for its own sake.
+ *
+ * The answer is fetched even for the cases that will not prompt: the footer
+ * shows what *is* authenticating the remote, and that needs the ssh and
+ * system-keychain answers just as much as the empty one.
  */
-async function promptSignInIfNeeded(root: string, remoteHost: string | null): Promise<void> {
+async function promptSignInIfNeeded(
+  root: string,
+  remoteHost: string | null,
+  remoteProtocol: RemoteProtocol | null,
+): Promise<void> {
   if (!remoteHost) return;
 
   // Wait for the account list rather than skipping when it is not in yet. On
@@ -50,9 +65,13 @@ async function promptSignInIfNeeded(root: string, remoteHost: string | null): Pr
   }
 
   const account = useAccountStore.getState();
+  account.refreshCurrent(remoteHost);
+  await account.refreshAuthSource(remoteHost, remoteProtocol);
+
   if (account.dismissedRepos.has(root)) return;
   if (account.phase) return;
-  await account.resolveForRepo(root, remoteHost);
+  if (useAccountStore.getState().authSource !== 'none') return;
+  await account.openSignIn(remoteHost, root);
 }
 
 export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
@@ -60,6 +79,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   busyCount: 0,
   repoPath: null,
   remoteHost: null,
+  remoteProtocol: null,
   hasIdentity: null,
   recentRepos: [],
   busyOperation: null,
@@ -88,12 +108,13 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
       epoch: s.epoch + 1,
       repoPath: root,
       remoteHost: opened?.remoteHost ?? null,
+      remoteProtocol: opened?.remoteProtocol ?? null,
       hasIdentity: null,
       mergeState: null,
       recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
-    void promptSignInIfNeeded(root, opened?.remoteHost ?? null);
+    void promptSignInIfNeeded(root, opened?.remoteHost ?? null, opened?.remoteProtocol ?? null);
     if (get().merging && !get().mergeState) {
       try {
         const conflicts = await gitApi.getMergeConflicts();
@@ -125,15 +146,18 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   },
 
   removeRecentRepo: path => {
-    // Forget the account chosen for it too: leaving the binding behind meant a
-    // repository removed and added back silently reused an old answer.
-    void useAccountStore.getState().forgetRepo(path);
     set(s => ({
       recentRepos: s.recentRepos.filter(r => r && r !== path),
       // Dropping the repo that is currently open leaves nothing to show, so
       // close it too — Shell falls back to the welcome screen on a null path.
       ...(s.repoPath === path
-        ? { repoPath: null, remoteHost: null, mergeState: null, epoch: s.epoch + 1 }
+        ? {
+            repoPath: null,
+            remoteHost: null,
+            remoteProtocol: null,
+            mergeState: null,
+            epoch: s.epoch + 1,
+          }
         : {}),
     }));
   },

@@ -13,11 +13,13 @@ import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
 import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
+import { NewBranchModal } from '../branches/NewBranchModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
 import { AboutView } from '../about/AboutView';
 import { SignInModal } from '../account/SignInModal';
+import { UpdateModal } from '../update/UpdateModal';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
@@ -62,6 +64,7 @@ export function Shell() {
         <Toast />
         <ConfirmDialog />
         <SignInModal />
+        <UpdateModal />
       </>
     );
   }
@@ -90,8 +93,10 @@ export function Shell() {
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
+      <NewBranchModal />
       <ConfirmDialog />
       <SignInModal />
+      <UpdateModal />
     </div>
   );
 }

@@ -3,28 +3,42 @@ import { REDIRECT_URI } from './oauth-config';
 /** Every outbound request identifies the app; GitHub rejects requests without one. */
 const USER_AGENT = 'git-desktop';
 
-export class OAuthError extends Error {}
+/**
+ * `status` and `headers` are carried so a caller can tell a rate limit from a
+ * real failure; both are absent when the request never reached a server.
+ */
+export class OAuthError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly headers?: Headers,
+  ) {
+    super(message);
+  }
+}
 
 /**
  * A JSON GET against a provider API.
  *
  * `Accept` is per-call because providers disagree: GitHub wants its versioned
- * media type, everyone else wants plain JSON.
+ * media type, everyone else wants plain JSON. A null token means an anonymous
+ * call — the update check has no account behind it, and an empty bearer would
+ * earn a 401 rather than the public answer it is after.
  */
 export async function getJson<T>(
   url: string,
-  token: string,
+  token: string | null,
   accept = 'application/json',
 ): Promise<T> {
   const res = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       Accept: accept,
       'User-Agent': USER_AGENT,
     },
   });
   if (!res.ok) {
-    throw new OAuthError(`${url} returned ${res.status}`);
+    throw new OAuthError(`${url} returned ${res.status}`, res.status, res.headers);
   }
   return (await res.json()) as T;
 }

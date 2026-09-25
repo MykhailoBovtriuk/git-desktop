@@ -4,9 +4,7 @@ import type { ProviderAccount, ProviderOption } from '../../src/types';
 const api = {
   list: vi.fn(),
   providersFor: vi.fn(),
-  forRepo: vi.fn(),
-  bind: vi.fn(),
-  unbind: vi.fn(),
+  needsSignIn: vi.fn(),
   signIn: vi.fn(),
   signInWithToken: vi.fn(),
   cancelSignIn: vi.fn(),
@@ -18,7 +16,7 @@ vi.mock('../../src/api/account-api', () => ({ accountApi: api }));
 const { useAccountStore } = await import('../../src/stores/account-store');
 
 const ACCOUNT: ProviderAccount = {
-  id: 'github.com|octocat',
+  id: 'github.com',
   providerId: 'github',
   host: 'github.com',
   displayName: 'GitHub',
@@ -26,6 +24,15 @@ const ACCOUNT: ProviderAccount = {
   name: 'The Octocat',
   email: 'octo@example.com',
   avatarDataUrl: null,
+};
+
+const GITHUB_OPTION: ProviderOption = {
+  id: 'github',
+  displayName: 'GitHub',
+  configured: true,
+  needsHost: false,
+  needsClientId: false,
+  tokenHelpUrl: null,
 };
 
 const OPTIONS: ProviderOption[] = [
@@ -89,10 +96,35 @@ describe('account store', () => {
     api.providersFor.mockResolvedValue({
       host: 'github.com',
       providerId: 'github',
-      options: OPTIONS,
+      options: [GITHUB_OPTION, ...OPTIONS],
     });
     await useAccountStore.getState().openSignIn('github.com');
     expect(useAccountStore.getState().phase).toBe('browser');
+  });
+
+  // Recognising a host is not the same as being able to sign in to it: a build
+  // with no GitLab client id knows what gitlab.com is and cannot open a browser
+  // flow for it. Sending the user there produced a dialog whose only button
+  // failed with "No OAuth client id available".
+  it('does not send the user to a browser flow this build cannot start', async () => {
+    api.providersFor.mockResolvedValue({
+      host: 'gitlab.com',
+      providerId: 'gitlab',
+      options: OPTIONS,
+    });
+    await useAccountStore.getState().openSignIn('gitlab.com');
+    expect(useAccountStore.getState().phase).toBe('choose');
+  });
+
+  it('goes straight to the token form when that is all this build offers', async () => {
+    api.providersFor.mockResolvedValue({
+      host: 'gitlab.com',
+      providerId: 'gitlab',
+      options: [OPTIONS[1]],
+    });
+    await useAccountStore.getState().openSignIn('gitlab.com');
+    expect(useAccountStore.getState().phase).toBe('token');
+    expect(useAccountStore.getState().target?.providerId).toBe('token');
   });
 
   it('asks which server it is when nobody claims the host', async () => {
@@ -121,25 +153,19 @@ describe('account store', () => {
     api.providersFor.mockResolvedValue({
       host: 'github.com',
       providerId: 'github',
-      options: OPTIONS,
+      options: [GITHUB_OPTION, ...OPTIONS],
     });
     await useAccountStore.getState().openSignIn('github.com');
     await useAccountStore.getState().continueWithBrowser();
 
-    expect(api.signIn).toHaveBeenCalledWith('github', 'github.com', undefined, undefined, null);
+    expect(api.signIn).toHaveBeenCalledWith('github', 'github.com', undefined, undefined);
     expect(useAccountStore.getState().phase).toBe('waiting');
   });
 
   it('closes the dialog when the awaited account turns up', async () => {
     useAccountStore.setState({
       phase: 'waiting',
-      target: {
-        host: 'github.com',
-        providerId: 'github',
-        options: OPTIONS,
-        repoPath: null,
-        candidates: [],
-      },
+      target: { host: 'github.com', providerId: 'github', options: OPTIONS, repoPath: null },
     });
     await useAccountStore.getState().loadAccounts();
     expect(useAccountStore.getState().phase).toBeNull();
@@ -197,135 +223,61 @@ describe('account store', () => {
     expect(useAccountStore.getState().dismissedRepos.has('/tmp/other')).toBe(false);
   });
 
-  describe('deciding what to ask about a freshly opened repository', () => {
-    beforeEach(() => {
-      api.forRepo.mockReset();
-      api.bind.mockResolvedValue(null);
+  describe('the account shown for the open repository', () => {
+    // Signing in finishes in the main process and arrives over
+    // account:changed. Reloading only the account list left the footer — which
+    // names the account for this host — still saying nobody was signed in.
+    it('points at whoever is signed in to the host', async () => {
+      await useAccountStore.getState().loadAccounts();
+      expect(useAccountStore.getState().current).toBeNull();
+
+      useAccountStore.getState().refreshCurrent('github.com');
+      expect(useAccountStore.getState().current).toEqual(ACCOUNT);
+    });
+
+    it('clears when the repository has no remote, or one nobody signed in to', async () => {
+      await useAccountStore.getState().loadAccounts();
+      useAccountStore.getState().refreshCurrent('github.com');
+
+      useAccountStore.getState().refreshCurrent('gitlab.example.com');
+      expect(useAccountStore.getState().current).toBeNull();
+
+      useAccountStore.getState().refreshCurrent('github.com');
+      useAccountStore.getState().refreshCurrent(null);
+      expect(useAccountStore.getState().current).toBeNull();
+    });
+
+    // It runs on every account change, including ones the user did not start
+    // from this repository.
+    it('never opens a dialog on its own', async () => {
+      await useAccountStore.getState().loadAccounts();
+      useAccountStore.getState().refreshCurrent('github.com');
+      expect(useAccountStore.getState().phase).toBeNull();
+    });
+
+    it('carries the repository into a sign-in started from it', async () => {
       api.providersFor.mockResolvedValue({
         host: 'github.com',
         providerId: 'github',
-        options: OPTIONS,
+        options: [GITHUB_OPTION, ...OPTIONS],
       });
-    });
+      api.signInWithToken.mockResolvedValue(ACCOUNT);
+      await useAccountStore.getState().openSignIn('github.com', '/src/p');
 
-    // The user already answered for this repo. Asking again would be nagging.
-    it('asks nothing when the repository is already bound', async () => {
-      api.forRepo.mockResolvedValue({ bound: ACCOUNT, candidates: [ACCOUNT] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().phase).toBeNull();
-      expect(useAccountStore.getState().current).toEqual(ACCOUNT);
-    });
-
-    it('offers a sign-in when nothing is signed in to that host', async () => {
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().phase).toBe('browser');
       expect(useAccountStore.getState().target?.repoPath).toBe('/src/p');
+
+      // The repository is how the main process finds a remote to check the
+      // token against, so it has to survive the round trip to the form.
+      useAccountStore.getState().chooseProvider('token');
+      await useAccountStore.getState().submitToken('me', 'secret');
+      expect(api.signInWithToken).toHaveBeenCalledWith('github.com', 'me', 'secret', '/src/p');
     });
-
-    // Regression: signing in finishes in the main process and arrives over
-    // account:changed. Reloading only the account list left the footer — which
-    // shows the repository's own account — still saying nobody was signed in.
-    it('picks up an account bound while the repository was already open', async () => {
-      api.forRepo.mockResolvedValue({ bound: ACCOUNT, candidates: [ACCOUNT] });
-      expect(useAccountStore.getState().current).toBeNull();
-
-      const candidates = await useAccountStore.getState().refreshCurrent('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().current).toEqual(ACCOUNT);
-      expect(candidates).toEqual([]);
-    });
-
-    // It must never interrupt: this runs on every account change, including
-    // ones the user did not start from this repository.
-    it('never opens a dialog while refreshing', async () => {
-      const work = { ...ACCOUNT, id: 'github.com|work', login: 'work' };
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [ACCOUNT, work] });
-
-      const candidates = await useAccountStore.getState().refreshCurrent('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().phase).toBeNull();
-      expect(candidates).toHaveLength(2);
-    });
-
-    // One possible answer is not a question worth a dialog.
-    it('binds the only account on the host without asking', async () => {
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [ACCOUNT] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-
-      expect(api.bind).toHaveBeenCalledWith('/src/p', ACCOUNT.id);
-      expect(useAccountStore.getState().phase).toBeNull();
-      expect(useAccountStore.getState().current).toEqual(ACCOUNT);
-    });
-
-    // Two accounts on one host is exactly the case that used to be guessed
-    // wrong, attributing work to whichever signed in last.
-    it('asks which account when the host already has some', async () => {
-      const work = { ...ACCOUNT, id: 'github.com|work', login: 'work' };
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [ACCOUNT, work] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().phase).toBe('pick-account');
-      expect(useAccountStore.getState().target?.candidates).toHaveLength(2);
-    });
-
-    it('remembers the account the user picks for that repository', async () => {
-      const work = { ...ACCOUNT, id: 'github.com|work', login: 'work' };
-      useAccountStore.setState({ accounts: [ACCOUNT, work] });
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [ACCOUNT, work] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-      await useAccountStore.getState().chooseAccount('github.com|work');
-
-      expect(api.bind).toHaveBeenCalledWith('/src/p', 'github.com|work');
-      expect(useAccountStore.getState().phase).toBeNull();
-      expect(useAccountStore.getState().current?.login).toBe('work');
-    });
-
-    it('lets the user reopen a binding that was made silently', async () => {
-      const work = { ...ACCOUNT, id: 'github.com|work', login: 'work' };
-      api.forRepo.mockResolvedValue({ bound: ACCOUNT, candidates: [ACCOUNT, work] });
-      await useAccountStore.getState().changeAccountForRepo('/src/p', 'github.com');
-
-      expect(useAccountStore.getState().phase).toBe('pick-account');
-      expect(useAccountStore.getState().target?.candidates).toHaveLength(2);
-      expect(useAccountStore.getState().target?.repoPath).toBe('/src/p');
-    });
-
-    it('carries the repository into the sign-in so the result binds to it', async () => {
-      api.forRepo.mockResolvedValue({ bound: null, candidates: [] });
-      await useAccountStore.getState().resolveForRepo('/src/p', 'github.com');
-      await useAccountStore.getState().continueWithBrowser();
-
-      expect(api.signIn).toHaveBeenCalledWith(
-        'github',
-        'github.com',
-        undefined,
-        undefined,
-        '/src/p',
-      );
-    });
-  });
-
-  // Adding a repository back should behave like the first time, not silently
-  // reuse an answer given before it was removed.
-  it('forgets everything remembered about a removed repository', async () => {
-    api.unbind.mockResolvedValue(null);
-    useAccountStore.getState().dismissForRepo('/src/p');
-    useAccountStore.setState({ current: ACCOUNT });
-
-    await useAccountStore.getState().forgetRepo('/src/p');
-
-    expect(api.unbind).toHaveBeenCalledWith('/src/p');
-    expect(useAccountStore.getState().dismissedRepos.has('/src/p')).toBe(false);
-    expect(useAccountStore.getState().current).toBeNull();
   });
 
   it('reloads after signing out', async () => {
     api.list.mockResolvedValue({ accounts: [], persistent: true, error: null });
-    await useAccountStore.getState().signOut('github.com|octocat');
-    expect(api.signOut).toHaveBeenCalledWith('github.com|octocat');
+    await useAccountStore.getState().signOut('github.com');
+    expect(api.signOut).toHaveBeenCalledWith('github.com');
     expect(useAccountStore.getState().accounts).toEqual([]);
   });
 });

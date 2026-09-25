@@ -1,5 +1,13 @@
 import type { StoreApi } from 'zustand';
-import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../../types';
+import type {
+  Commit,
+  Branch,
+  GitStatus,
+  AheadBehind,
+  MergeState,
+  RemoteProtocol,
+  StashEntry,
+} from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
 
@@ -38,6 +46,8 @@ export interface RepoState {
   openRepo: (path: string) => Promise<void>;
   /** Host of the open repository's remote, or null for a local-only repo. */
   remoteHost: string | null;
+  /** How that remote authenticates — only an https one a token can help with. */
+  remoteProtocol: RemoteProtocol | null;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
    * answer must never block a commit, only a definite "no" does.
@@ -68,6 +78,14 @@ export interface RepoState {
   cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
+  /**
+   * Create a branch at the current commit and switch to it.
+   *
+   * `changes` decides what happens to uncommitted work: 'bring' leaves the
+   * working tree alone so it carries over, 'leave' stashes it against the
+   * branch being left first.
+   */
+  createBranch: (name: string, changes: 'bring' | 'leave') => Promise<void>;
   deleteBranch: (branch: string, force?: boolean) => Promise<void>;
   deleteRemoteBranch: (remote: string, branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;

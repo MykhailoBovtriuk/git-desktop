@@ -17,9 +17,9 @@ export function allowedHelpers(platform: string = process.platform): string[] {
   return ALLOWED_HELPERS[platform] ?? [];
 }
 
-function run(args: string[], stdin?: string): Promise<string> {
+function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = execFile('git', args, (err, stdout) => {
+    const child = execFile('git', args, { env: env ?? process.env }, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout);
     });
@@ -80,6 +80,27 @@ export async function approveCredentials(
 ): Promise<void> {
   await ensureCredentialHelper();
   await run(['credential', 'approve'], describe(host, username, token));
+}
+
+/**
+ * Whether git can already authenticate to a host on its own.
+ *
+ * The answer decides whether offering a sign-in is help or noise. On a machine
+ * someone has been working on for years the system helper already holds the
+ * credential, and the app used to ask anyway — a prompt whose only honest
+ * outcome was "you did not need this".
+ *
+ * `GIT_TERMINAL_PROMPT=0` and no askpass, so an unanswered lookup fails
+ * immediately instead of trying to ask a terminal that is not there.
+ */
+export async function hasStoredCredential(host: string): Promise<boolean> {
+  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  delete env.GIT_ASKPASS;
+  delete env.SSH_ASKPASS;
+  const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
+    () => '',
+  );
+  return /^password=.+/m.test(out);
 }
 
 /** Forget a stored credential. Best effort: a helper may have nothing to erase. */

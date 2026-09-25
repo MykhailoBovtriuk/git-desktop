@@ -17,8 +17,18 @@ export type Language = (typeof LANGUAGES)[number];
 interface SettingsState {
   theme: ThemePreference;
   autoRefreshMs: AutoRefreshMs;
+  autoCheckUpdates: boolean;
+  includePrereleases: boolean;
+  /**
+   * A version the user chose not to hear about again. Cleared by asking for a
+   * check explicitly, which is what that button means.
+   */
+  skippedVersion: string | null;
   setTheme: (theme: ThemePreference) => void;
   setAutoRefreshMs: (ms: AutoRefreshMs) => void;
+  setAutoCheckUpdates: (enabled: boolean) => void;
+  setIncludePrereleases: (enabled: boolean) => void;
+  setSkippedVersion: (version: string | null) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -26,9 +36,15 @@ export const useSettingsStore = create<SettingsState>()(
     set => ({
       theme: 'system',
       autoRefreshMs: 60_000,
+      autoCheckUpdates: true,
+      includePrereleases: false,
+      skippedVersion: null,
 
       setTheme: theme => set({ theme }),
       setAutoRefreshMs: autoRefreshMs => set({ autoRefreshMs }),
+      setAutoCheckUpdates: autoCheckUpdates => set({ autoCheckUpdates }),
+      setIncludePrereleases: includePrereleases => set({ includePrereleases }),
+      setSkippedVersion: skippedVersion => set({ skippedVersion }),
     }),
     {
       name: 'git-desktop-settings',

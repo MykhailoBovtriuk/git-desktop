@@ -44,6 +44,28 @@ function normalize(host: string): string {
   return lower.endsWith('.') ? lower.slice(0, -1) : lower;
 }
 
+/**
+ * How git will authenticate to a remote — which decides whether signing in can
+ * help at all.
+ *
+ * An ssh remote never carries a token: it authenticates with a key, so both the
+ * sign-in offer and the stored credential are beside the point there. Treating
+ * every remote the same is what had the app asking people to sign in to
+ * repositories where signing in changes nothing.
+ */
+export type RemoteProtocol = 'ssh' | 'https' | 'other';
+
+export function protocolFromRemoteUrl(remoteUrl: string | null | undefined): RemoteProtocol | null {
+  if (!remoteUrl) return null;
+  const raw = remoteUrl.trim();
+  if (!raw) return null;
+  if (!raw.includes('://')) return SCP_LIKE.test(raw) ? 'ssh' : 'other';
+  const scheme = raw.slice(0, raw.indexOf('://')).toLowerCase();
+  if (scheme === 'ssh' || scheme === 'git+ssh') return 'ssh';
+  if (scheme === 'https' || scheme === 'http') return 'https';
+  return 'other';
+}
+
 /** True for a host git can reach over the network — i.e. not a local path. */
 export function isNetworkHost(host: string | null): host is string {
   return !!host && host.length > 0 && !host.startsWith('.') && !host.includes('/');
@@ -98,4 +120,44 @@ export async function resolveRemoteHost(
   // A name with a dot is already a hostname; only a bare nickname needs asking.
   const resolved = host.includes('.') ? host : await resolveSshAlias(host);
   return isNetworkHost(resolved) && resolved.includes('.') ? resolved : null;
+}
+
+/** The host and the protocol together: both answers come from one URL. */
+export async function resolveRemote(
+  remoteUrl: string | null | undefined,
+): Promise<{ host: string | null; protocol: RemoteProtocol | null }> {
+  return {
+    host: await resolveRemoteHost(remoteUrl),
+    protocol: protocolFromRemoteUrl(remoteUrl),
+  };
+}
+
+/**
+ * The remote URL of a repository on disk, preferring `origin`.
+ *
+ * Read here rather than taken from the renderer: this address is handed to
+ * `git ls-remote`, and a value that travelled through the UI is a value
+ * somebody could have changed on the way.
+ */
+export async function originUrlFor(repoRoot: string): Promise<string | null> {
+  try {
+    const { stdout } = await run('git', ['-C', repoRoot, 'remote']);
+    const names = stdout
+      .split('\n')
+      .map(n => n.trim())
+      .filter(Boolean);
+    const chosen = names.includes('origin') ? 'origin' : names[0];
+    if (!chosen) return null;
+    const { stdout: url } = await run('git', [
+      '-C',
+      repoRoot,
+      'config',
+      '--get',
+      `remote.${chosen}.url`,
+    ]);
+    return url.trim() || null;
+  } catch {
+    // Not a repository, or a remote with no URL configured.
+    return null;
+  }
 }

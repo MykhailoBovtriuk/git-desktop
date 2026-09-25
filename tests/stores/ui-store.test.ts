@@ -126,35 +126,10 @@ describe('overlay views', () => {
     useUiStore.setState({ activeView: 'changes', previousView: 'changes', overlayStack: [] });
   });
 
-  it('returns to the view the user came from', () => {
-    useUiStore.getState().setActiveView('graph');
-    useUiStore.getState().openOverlayView('settings');
-    expect(useUiStore.getState().activeView).toBe('settings');
-
-    useUiStore.getState().closeOverlayView();
-    expect(useUiStore.getState().activeView).toBe('graph');
-  });
-
-  it('keeps the original origin when switching between overlays', () => {
-    useUiStore.getState().setActiveView('history');
-    useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('about');
-
-    useUiStore.getState().closeOverlayView();
-    expect(useUiStore.getState().activeView).toBe('history');
-  });
-
-  it('keeps the original origin when moving to a sub-screen', () => {
-    useUiStore.getState().setActiveView('graph');
-    useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('about');
-
-    expect(useUiStore.getState().activeView).toBe('about');
-    useUiStore.getState().closeOverlayView();
-    expect(useUiStore.getState().activeView).toBe('graph');
-  });
-
-  it('goes back one screen at a time', () => {
+  // Back is the only way out of an overlay now that the header carries no
+  // close button, so a sub-screen costs one press per level — and the last one
+  // has to land on where the user actually came from, not on 'changes'.
+  it('goes back one screen at a time, out to where the user came from', () => {
     useUiStore.getState().setActiveView('graph');
     useUiStore.getState().openOverlayView('settings');
     useUiStore.getState().openOverlayView('about');
@@ -164,6 +139,7 @@ describe('overlay views', () => {
 
     useUiStore.getState().overlayBack();
     expect(useUiStore.getState().activeView).toBe('graph');
+    expect(useUiStore.getState().overlayStack).toEqual([]);
   });
 
   it('leaves the overlay when back is pressed on the top-level screen', () => {
@@ -185,15 +161,5 @@ describe('overlay views', () => {
     expect(useUiStore.getState().overlayStack).toEqual([]);
     useUiStore.getState().overlayBack();
     expect(useUiStore.getState().activeView).toBe('changes');
-  });
-
-  it('closes out of a sub-screen in one step', () => {
-    useUiStore.getState().setActiveView('graph');
-    useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('about');
-
-    useUiStore.getState().closeOverlayView();
-    expect(useUiStore.getState().activeView).toBe('graph');
-    expect(useUiStore.getState().overlayStack).toEqual([]);
   });
 });
