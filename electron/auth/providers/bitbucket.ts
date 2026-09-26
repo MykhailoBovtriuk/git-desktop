@@ -13,10 +13,8 @@ interface BitbucketEmails {
 }
 
 /**
- * Bitbucket Cloud. Two things make it the awkward one:
- *  - no PKCE for desktop consumers, so a secret is required;
- *  - access tokens live two hours, so the refresh path in the token store is
- *    not optional here the way it is for GitHub.
+ * Bitbucket Cloud: no PKCE for desktop consumers, so a secret is required;
+ * tokens live two hours, so refresh is mandatory.
  */
 export const bitbucket: ProviderDefinition = {
   id: 'bitbucket',

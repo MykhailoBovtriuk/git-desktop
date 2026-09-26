@@ -35,7 +35,7 @@ export function CommitList({ filter }: CommitListProps) {
 
   const parentRef = useRef<HTMLDivElement>(null);
   // useVirtualizer returns a mutable instance the React Compiler lint can't
-  // prove stable — expected for this library's designed usage, not a bug.
+  // prove stable.
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: filtered.length,

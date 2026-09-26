@@ -7,13 +7,7 @@ import { accountApi } from '../../api/account-api';
 import { Button, Modal, TextInput } from '../../shared/ui';
 import type { ProviderId } from '../../types';
 
-/**
- * The whole sign-in conversation, in one dialog.
- *
- * Four states rather than four screens: the user is answering one question —
- * "who are you on this server" — and the steps differ only in what the server
- * supports.
- */
+/** The whole sign-in flow in one dialog: four states, not four screens. */
 export function SignInModal() {
   const { t } = useTranslation('account');
   const {
@@ -176,9 +170,8 @@ export function SignInModal() {
     );
   }
 
-  // 'browser' and 'waiting' share a dialog: the second is the first with the
-  // button already pressed, and swapping the whole panel would read as a step
-  // backwards rather than progress.
+  // 'browser' and 'waiting' share a dialog, so pressing the button does not
+  // look like a step back.
   const waiting = phase === 'waiting';
   const needsClientId = !!provider?.needsClientId;
 

@@ -6,11 +6,8 @@ import { Button, DownloadIcon, Modal } from '../../shared/ui';
 import { formatBytes, updateErrorText } from './update-text';
 
 /**
- * The startup offer, and the download it turns into.
- *
- * One dialog through every phase rather than a dialog per phase: "update",
- * "downloading" and "ready" are the same decision in progress, and swapping
- * panels would read as starting over.
+ * One dialog through every phase: update, downloading and ready are one
+ * decision in progress.
  */
 export function UpdateModal() {
   const { t } = useTranslation('update');

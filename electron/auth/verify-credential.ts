@@ -1,28 +1,13 @@
 /**
- * Prove a username and token actually authenticate, before anything stores
- * them.
- *
- * The generic token path has no API to ask — it exists precisely for servers
- * nobody registered an OAuth app for — so the check goes to the one endpoint
- * every git server over https must serve: the Smart HTTP advertisement that
- * `git fetch` and `git push` themselves begin with.
- *
- * Running `git ls-remote` would look more natural and prove nothing: against a
- * public repository the server never issues a challenge, so git never sends the
- * credential and the command succeeds with any rubbish at all — measured, not
- * assumed. Sending the Authorization header unasked is what forces the server
- * to have an opinion; GitHub, GitLab and Forgejo all answer 401 to a bad one
- * even on a repository they would serve anonymously.
+ * Prove a credential via the Smart HTTP advertisement, sending Authorization
+ * unasked: a public repo never challenges, so `ls-remote` accepts anything.
  */
 
 const USER_AGENT = 'git-desktop';
 
 /**
- * The advertisement URL for a remote.
- *
- * Any credentials already embedded in the remote URL are dropped: they would be
- * sent in place of the ones being checked, and the answer would be about the
- * wrong identity.
+ * The advertisement URL for a remote, with any embedded credentials dropped so
+ * they do not replace the ones being checked.
  */
 export function probeUrlFor(remoteUrl: string): string {
   const url = new URL(remoteUrl);

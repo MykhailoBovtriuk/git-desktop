@@ -54,9 +54,8 @@ describe('resolveRemoteHost', () => {
     expect(await resolveRemoteHost('git@gitlab.com:g/r.git')).toBe('gitlab.com');
   });
 
-  // Regression: people with two accounts on one service give each a nickname in
-  // ~/.ssh/config. Judging "is this a host" by whether it contains a dot threw
-  // those remotes away, so the app never offered to sign in to them at all.
+  // Regression: SSH aliases from ~/.ssh/config were discarded for lacking a
+  // dot.
   it('resolves an ssh config nickname to the host behind it', async () => {
     // `ssh -G` on an unknown name echoes it back, which is the safe fallback;
     // a name that really is configured resolves to its hostname.

@@ -45,9 +45,8 @@ export function Footer() {
   // one — or for no remote at all — is an offer that cannot be kept.
   const signInHost = remoteProtocol === 'https' ? remoteHost : null;
 
-  // Through the same classifier as fetch/pull/push: publishing a new branch is
-  // the likeliest first meeting with authentication, so raw stderr here left
-  // the user with no way forward at exactly the wrong moment.
+  // Same classifier as fetch/pull/push: publishing is often the first contact
+  // with authentication.
   const handlePublish = () => {
     void publishBranch()
       .then(() =>
@@ -138,9 +137,8 @@ export function Footer() {
             </button>
           </>
         )}
-        {/* Authenticated, just not by us. Saying so beats both the old blue
-            "Sign in" — an invitation to redo what is already done — and the
-            silence an ssh remote used to get, which read as "no account". */}
+        {/* Authenticated, just not by us: say so instead of offering a needless
+            sign-in. */}
         {!account && (authSource === 'system' || authSource === 'ssh') && (
           <>
             <span className="text-surface2 shrink-0">|</span>
@@ -156,10 +154,8 @@ export function Footer() {
           </>
         )}
 
-        {/* Nothing authenticates this remote yet: the one thing worth offering
-            here is the way to fix that, before a push fails and explains it.
-            A null source means the answer is still in flight — flashing the
-            offer and taking it back is worse than appearing a moment later. */}
+        {/* Nothing authenticates this remote yet, so offer to sign in. A null
+            source is still loading: better late than flashing the offer. */}
         {!account && authSource === 'none' && signInHost && (
           <>
             <span className="text-surface2 shrink-0">|</span>

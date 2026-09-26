@@ -102,8 +102,7 @@ describe('AccountsSection', () => {
     expect(screen.queryByText('section.notPersistent')).toBeNull();
   });
 
-  // The credential is not ours: git or another tool put it in the OS store, and
-  // offering Sign out would be offering to delete somebody else's keychain
+  // The credential is not ours, so no Sign out for someone else's keychain
   // entry.
   it('names a credential that works outside this app, with no way to sign out of it', () => {
     setup({ remoteHost: 'github.com', authSource: 'system' });

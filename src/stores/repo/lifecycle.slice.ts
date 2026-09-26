@@ -25,25 +25,12 @@ type LifecycleSlice = Pick<
 
 // Coalesce concurrent refreshes: within one generation, all callers share the
 // same round of loaders instead of firing duplicate IPC. Module-level because
-// there is a single store instance (equivalent to the former closure var).
+// there is a single store instance.
 let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
 
 /**
- * Offer to sign in the moment a repository that needs it is opened.
- *
- * This is the only place the prompt appears on its own: the alternative is
- * letting the user work for a while and meet the question as a failed push,
- * which is the dead end this whole feature exists to remove. Dismissing it is
- * remembered for the session, so re-opening the same repo does not nag.
- *
- * What authenticates the remote is asked of the main process, not assumed —
- * an ssh remote, an account already signed in, or a credential git can already
- * read on its own all make the offer pointless, and offering anyway is what
- * made this feature feel like it existed for its own sake.
- *
- * The answer is fetched even for the cases that will not prompt: the footer
- * shows what *is* authenticating the remote, and that needs the ssh and
- * system-keychain answers just as much as the empty one.
+ * Offer to sign in when a repository that needs it opens, unless it is ssh,
+ * already signed in or covered by git. The answer also feeds the footer.
  */
 async function promptSignInIfNeeded(
   root: string,
@@ -52,11 +39,8 @@ async function promptSignInIfNeeded(
 ): Promise<void> {
   if (!remoteHost) return;
 
-  // Wait for the account list rather than skipping when it is not in yet. On
-  // startup the store rehydrates and reopens the last repository immediately,
-  // which is well before the first `account:list` returns — bailing out here
-  // meant the prompt never appeared for the repo the user already had open,
-  // i.e. on every launch.
+  // Wait for the account list: at startup the last repository reopens before it
+  // arrives, so skipping would lose the prompt.
   if (!useAccountStore.getState().loaded) {
     await useAccountStore
       .getState()

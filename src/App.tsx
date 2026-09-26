@@ -13,15 +13,13 @@ export default function App() {
   useAutoRefresh();
   useUpdateCheck();
 
-  // Sign-in completes in the main process after a browser round trip, so the
-  // result is pushed rather than returned. Without this subscription the modal
-  // would sit on "waiting" forever even though the account is already stored.
+  // Sign-in finishes in the main process, so the result is pushed; without this
+  // the modal would wait forever.
   useEffect(() => {
     const load = async () => {
       await useAccountStore.getState().loadAccounts();
-      // The footer shows the account for this repository's host, not merely
-      // that some account exists — so point it at the freshly loaded list, or
-      // signing in leaves the footer still claiming nobody is signed in.
+      // Point the footer at the fresh list, or it keeps saying nobody is signed
+      // in.
       const { remoteHost, remoteProtocol } = useRepoStore.getState();
       useAccountStore.getState().refreshCurrent(remoteHost);
       // Signing out has to take the footer's answer with it, or it goes on

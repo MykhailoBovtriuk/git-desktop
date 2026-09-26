@@ -1,20 +1,7 @@
 #!/usr/bin/env node
 /**
- * Launches Electron for development — through a real app bundle on macOS.
- *
- * macOS routes a URL scheme by bundle identifier, and `electron .` runs inside
- * Electron's own bundle, `com.github.Electron`. That identifier is not ours to
- * claim (several shipped apps carry a copy of it), so a development run can
- * neither receive the OAuth callback nor register for it without taking the
- * scheme away from the installed app and handing it to a stray Electron.
- *
- * The way out is to give development its own bundle: a clone of Electron.app
- * with our identifier and the scheme in its Info.plist. LaunchServices can then
- * route `git-desktop-auth://` to the running dev process like it would to any
- * installed app.
- *
- * Elsewhere the plain binary is already correct — Windows and Linux route by
- * executable path, which `registerProtocol` passes explicitly.
+ * Launches Electron for development; on macOS through a cloned bundle with our
+ * identifier, so the OAuth scheme does not route to `com.github.Electron`.
  */
 import { execFileSync, spawn } from 'child_process';
 import fs from 'fs';
@@ -32,13 +19,7 @@ function electronAppPath() {
   return path.join(root, 'node_modules', 'electron', 'dist', 'Electron.app');
 }
 
-/**
- * The Info.plist for the clone.
- *
- * Written whole rather than edited: the keys that matter are few, and a
- * hand-rolled edit of Electron's own plist would drift the moment Electron
- * changes it.
- */
+/** The clone's Info.plist, written whole rather than edited. */
 function infoPlist() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -68,13 +49,8 @@ function infoPlist() {
 }
 
 /**
- * The bundle's executable: a shell wrapper that starts Electron on this
- * project.
- *
- * Needed because the OS may launch this bundle cold — the browser redirecting
- * back while nothing is running — and it launches it with no arguments. Bare
- * Electron with nothing to run shows its welcome screen, which is the very
- * symptom this whole arrangement exists to stop.
+ * The bundle's executable: a wrapper that starts Electron on this project,
+ * since a cold launch passes no arguments.
  */
 function launcherScript() {
   return `#!/bin/sh
@@ -102,9 +78,8 @@ function buildBundle() {
   const launcher = path.join(BUNDLE, 'Contents', 'MacOS', LAUNCHER);
   fs.writeFileSync(launcher, launcherScript(), { mode: 0o755 });
 
-  // Rewriting Info.plist breaks the seal on the bundle, and macOS refuses to
-  // launch a bundle whose signature does not check out. Ad-hoc is enough: this
-  // never leaves the machine that built it.
+  // Editing Info.plist breaks the signature; an ad-hoc re-sign is enough for a
+  // local build.
   execFileSync('codesign', ['--force', '--sign', '-', BUNDLE], { stdio: 'pipe' });
 
   // Tell LaunchServices the bundle exists now, rather than whenever it next

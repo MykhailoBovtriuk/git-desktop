@@ -19,10 +19,8 @@ export interface UpdateHandlerOptions {
 }
 
 /**
- * Failures the UI has its own wording for travel as these tokens.
- *
- * The IPC envelope carries a message and nothing else, so the message is the
- * token; anything not listed here reaches the user as the text it came with.
+ * Failures the UI has its own wording for travel as these tokens; anything else
+ * is shown as-is.
  */
 const DEV_BUILD = 'dev-build';
 const NO_RELEASE = 'no-release';

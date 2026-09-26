@@ -60,9 +60,8 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       />
 
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
-        {/* The header row stays even when the filter matches nothing locally:
-            typing a name that does not exist yet is exactly when creating it is
-            the thing you want, and hiding the row hid the way to do it. */}
+        {/* The header row stays when the filter matches nothing: that is
+            exactly when the user wants to create the branch. */}
         <div className="flex items-center justify-between">
           <SectionLabel>{t('local')}</SectionLabel>
           <button

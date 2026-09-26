@@ -49,9 +49,8 @@ export function Shell() {
   const showsOverlay = isOverlayView(activeView);
 
   if (!repoPath) {
-    // There is no footer without a repository, so the welcome screen carries
-    // its own entry points into Settings/About — otherwise they'd be
-    // unreachable for a first-run user.
+    // Without a repository there is no footer, so the welcome screen links to
+    // Settings/About itself.
     return (
       <>
         {showsOverlay ? (

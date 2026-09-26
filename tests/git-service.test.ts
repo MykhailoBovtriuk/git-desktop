@@ -158,9 +158,8 @@ describe('GitService', () => {
     await expect(git.createBranch('feature/login')).rejects.toThrow();
   });
 
-  // getStatus counts an untracked file as a change, so a stash without -u would
-  // report a clean sweep and leave new files sitting in the tree — which is how
-  // "leave my changes behind" would quietly bring one along.
+  // Without -u untracked files stay in the tree, so "leave my changes" would
+  // bring them along.
   it('stashSave takes untracked files too when asked', async () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
@@ -245,7 +244,6 @@ describe('GitService', () => {
     expect(diff).toBe('');
   });
 
-  // P4.31 — upstream tracking / publish flow
   it('getBranches reports no tracking for a branch without an upstream', async () => {
     await git.openRepo(tmpDir);
     const current = (await git.getBranches()).find(b => b.current)!;
@@ -353,7 +351,6 @@ describe('rebase lifecycle', () => {
     await expect(git.continueRebase()).rejects.toThrow();
     expect(await git.isRebasing()).toBe(true);
 
-    // Resolve and continue.
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'resolved');
     execSync('git add file.txt', { cwd: tmpDir });
     await git.continueRebase();
@@ -427,9 +424,8 @@ describe('readFile/writeFile path guards', () => {
     expect(await git.readFile('.gitignore')).toBe('node_modules\n');
   });
 
-  // Writing into .git/ (hooks, config) means arbitrary code execution on the
-  // next git command — the guard must reject it even though the path is
-  // lexically inside the repo.
+  // Writing into .git/ means code execution on the next git command, even
+  // though the path is inside the repo.
   it('rejects writes into .git', async () => {
     await expect(git.writeFile('.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
     expect(fs.existsSync(path.join(tmpDir, '.git', 'hooks', 'pre-commit'))).toBe(false);

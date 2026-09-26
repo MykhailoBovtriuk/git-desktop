@@ -58,10 +58,8 @@ describe('provider registry', () => {
     expect(isConfigured('github')).toBe(true);
   });
 
-  // These need no baked-in key — the user brings one with the server address,
-  // or brings a token instead — so a fork with no secrets still has a way in.
-  // Regression: Gitea was treated as a hosted service, so a build without a
-  // Gitea client id hid Codeberg and every self-hosted Forgejo from the picker.
+  // These need no baked-in key, so a fork without secrets still has a way in.
+  // Regression: Gitea was hidden without its own client id.
   it('always offers the self-hosted and token paths', () => {
     for (const id of ['token', 'gitlab-self', 'github-enterprise', 'gitea'] as const) {
       expect(isConfigured(id), id).toBe(true);
@@ -80,9 +78,8 @@ describe('provider registry', () => {
     expect(options.find(o => o.id === 'token')?.needsHost).toBe(true);
   });
 
-  // Regression: needing an address and needing a client id are different
-  // questions. Codeberg needs no address, and asking it for a client id the
-  // build already carries left the sign-in button permanently disabled.
+  // Regression: an address and a client id are separate questions; asking
+  // Codeberg for an id disabled sign-in.
   it('asks for a client id only when the build has none', () => {
     process.env.OAUTH_GITEA_ID = 'gt-id';
     resetKeyCache();

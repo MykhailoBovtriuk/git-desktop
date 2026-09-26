@@ -12,9 +12,8 @@ interface GitLabUser {
 }
 
 /**
- * GitLab supports PKCE for public clients, so no secret is needed and forks can
- * ship a working browser sign-in. Self-managed instances are the same service
- * at a different address.
+ * GitLab supports PKCE, so no secret is needed. Self-managed instances are the
+ * same service at another address.
  */
 function makeGitLabProvider(
   id: ProviderId,

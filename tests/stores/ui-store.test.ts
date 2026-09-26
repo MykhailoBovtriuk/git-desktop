@@ -126,9 +126,8 @@ describe('overlay views', () => {
     useUiStore.setState({ activeView: 'changes', previousView: 'changes', overlayStack: [] });
   });
 
-  // Back is the only way out of an overlay now that the header carries no
-  // close button, so a sub-screen costs one press per level — and the last one
-  // has to land on where the user actually came from, not on 'changes'.
+  // Back is the only exit: one press per level, and the last lands where the
+  // user came from.
   it('goes back one screen at a time, out to where the user came from', () => {
     useUiStore.getState().setActiveView('graph');
     useUiStore.getState().openOverlayView('settings');

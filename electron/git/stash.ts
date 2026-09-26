@@ -17,11 +17,8 @@ export async function getStashList(ctx: GitContext): Promise<StashEntry[]> {
 }
 
 /**
- * `includeUntracked` matters wherever "set everything aside" has to mean
- * everything: `getStatus` counts an untracked file as a change, so without `-u`
- * a stash that looks complete in the UI leaves new files sitting in the working
- * tree. It is exclusive with `staged` — git rejects `--staged -u`, and the two
- * ask for opposite things anyway.
+ * `includeUntracked` also stashes untracked files, which `getStatus` counts as
+ * changes. Exclusive with `staged`: git rejects `--staged -u`.
  */
 export async function stashSave(
   ctx: GitContext,

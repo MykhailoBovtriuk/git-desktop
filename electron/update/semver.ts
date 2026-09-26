@@ -1,11 +1,4 @@
-/**
- * Just enough semver to rank release tags.
- *
- * A dependency for this would be the only runtime package the updater adds,
- * and the comparison it needs is forty lines: ranking `1.10.0` above `1.9.0`,
- * keeping a pre-release below the release it leads to, and refusing to guess
- * at tags that are not versions at all.
- */
+/** Just enough semver to rank release tags, instead of a dependency. */
 export interface SemVer {
   major: number;
   minor: number;
@@ -17,11 +10,8 @@ export interface SemVer {
 const PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9a-z.-]+))?$/i;
 
 /**
- * `null` for anything that is not a version.
- *
- * Releases carry whatever tag their author typed, so a `nightly` or a
- * `2026-09-release` has to be skipped rather than crash the check or, worse,
- * sort as `0.0.0`.
+ * `null` for anything that is not a version, so tags like `nightly` are
+ * skipped.
  */
 export function parseSemver(raw: string): SemVer | null {
   if (typeof raw !== 'string') return null;
@@ -73,10 +63,8 @@ export function compareSemver(a: SemVer, b: SemVer): number {
 }
 
 /**
- * Whether `candidate` is worth offering to someone running `current`.
- *
- * Unparseable input is never an update: a junk tag must not talk anyone into
- * downloading anything.
+ * Whether `candidate` is worth offering to someone running `current`;
+ * unparseable input never is.
  */
 export function isNewerVersion(candidate: string, current: string): boolean {
   const next = parseSemver(candidate);

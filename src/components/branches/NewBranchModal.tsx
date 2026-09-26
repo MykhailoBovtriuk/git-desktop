@@ -7,11 +7,8 @@ import { useGitAction } from '../../hooks/use-git-action';
 import { Button, Modal, TextInput } from '../../shared/ui';
 
 /**
- * Naming a new branch, and — only when there is something to decide — saying
- * what should happen to uncommitted work.
- *
- * Two steps in one dialog rather than two dialogs: the second is a consequence
- * of the first, and on a clean tree it never appears at all.
+ * Naming a new branch and, only with uncommitted work, choosing what happens to
+ * it. Two steps in one dialog.
  */
 export function NewBranchModal() {
   const { t } = useTranslation('branches');

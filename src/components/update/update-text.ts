@@ -1,9 +1,8 @@
 import type { TFunction } from 'i18next';
 
 /**
- * The tokens the main process and the update store send instead of prose,
- * mapped onto the `update` namespace. Anything else is a real message (a
- * failed HTTP status, a size mismatch) and is shown as it came.
+ * Maps the update tokens onto the `update` namespace; anything else is a real
+ * message shown as-is.
  */
 const ERROR_KEYS: Record<string, string> = {
   offline: 'errors.offline',

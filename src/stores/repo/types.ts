@@ -12,10 +12,8 @@ import type {
 export const LOG_PAGE_SIZE = 200;
 
 export interface RepoState {
-  // Generation counter: bumped when the repo is switched or a mutating
-  // operation starts/ends. Every loader captures it before its request and
-  // discards the response if the generation moved on — stale data from a
-  // previous repo or from before a mutation never overwrites fresh state.
+  // Generation counter, bumped on repo switch and around mutations; loaders
+  // discard responses from an older generation.
   epoch: number;
   busyCount: number;
   repoPath: string | null;
@@ -79,11 +77,8 @@ export interface RepoState {
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
   /**
-   * Create a branch at the current commit and switch to it.
-   *
-   * `changes` decides what happens to uncommitted work: 'bring' leaves the
-   * working tree alone so it carries over, 'leave' stashes it against the
-   * branch being left first.
+   * Create a branch here and switch to it; `changes` is 'bring' (keep the work)
+   * or 'leave' (stash it first).
    */
   createBranch: (name: string, changes: 'bring' | 'leave') => Promise<void>;
   deleteBranch: (branch: string, force?: boolean) => Promise<void>;

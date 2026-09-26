@@ -2,9 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { assetNameFor, linuxPackageFormat } from '../../electron/update/assets';
 
 describe('assetNameFor', () => {
-  // These are the asset names of a real release; they come from the
-  // `artifactName` templates in electron-builder.yml, so this table is the
-  // place that breaks first if those are ever edited.
+  // Real release asset names from electron-builder.yml `artifactName`; this
+  // breaks first if those change.
   it('names every artifact the release workflow publishes', () => {
     const cases: [string, string, 'AppImage' | 'deb', string][] = [
       ['darwin', 'x64', 'deb', 'Git-Desktop-x64.dmg'],

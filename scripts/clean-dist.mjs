@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 /**
- * Empty the build output before compiling.
- *
- * `tsc` writes files but never removes them, so a module deleted from the
- * source tree keeps being emitted from a previous run and ends up inside the
- * installer. That is how the removed profiles and auth modules were still
- * shipping long after they left the repository.
- *
- * Node's fs rather than `rm -rf`: this also runs on the Windows release runner.
+ * Empty the build output before compiling: `tsc` never deletes stale files,
+ * which then ship. Node's fs instead of `rm -rf` for Windows.
  */
 import fs from 'fs';
 import path from 'path';

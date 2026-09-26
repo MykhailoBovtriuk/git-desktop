@@ -4,33 +4,15 @@ import path from 'path';
 import { PROTOCOL_SCHEME } from './oauth-config';
 
 /**
- * Getting the browser's redirect back into this process.
- *
- * Three platforms, three mechanisms, and they disagree about when the URL
- * arrives — hence one module rather than a scattering of `process.platform`
- * checks in main.ts.
+ * Getting the browser's redirect back into this process; each platform delivers
+ * the URL differently and at a different time.
  */
 
 const PREFIX = `${PROTOCOL_SCHEME}://`;
 
 /**
- * Claim the scheme with the OS.
- *
- * Must run before `app.whenReady()` on Windows, where it writes to the registry
- * that the launcher consults. In development the executable is Electron itself,
- * so the app path has to be passed explicitly or the OS would hand the URL to a
- * bare `electron` with no project to run.
- *
- * Except on macOS, which does not take a path at all: it resolves a scheme
- * through a bundle identifier. Claiming a scheme the running bundle does not
- * declare points the OS at that bundle's identifier whatever it happens to be,
- * and for a plain `electron .` that identifier is `com.github.Electron` —
- * which any number of shipped apps carry a copy of (DaVinci Resolve bundles
- * one). The callback then lands in a stray Electron's welcome screen, and the
- * preference is system-wide and sticky, so one `npm run dev` also takes the
- * callback away from the installed app. Hence the Info.plist check rather than
- * a plain "are we packaged": the dev bundle `scripts/dev-electron.mjs` builds
- * declares the scheme too, and is a legitimate owner of it.
+ * Claim the scheme; on Windows before `app.whenReady()`. On macOS only a bundle
+ * declaring it in Info.plist may, or `electron .` steals it from the real app.
  */
 export function registerProtocol(): void {
   if (process.platform === 'darwin' && !bundleDeclaresScheme(process.execPath)) return;
@@ -45,12 +27,8 @@ export function registerProtocol(): void {
 }
 
 /**
- * Whether the macOS bundle this process runs from declares the scheme in its
- * Info.plist — the only claim the OS actually honours.
- *
- * Read, not parsed: the scheme is stored as plain text in both the XML and the
- * binary plist forms, and a plist parser would be a dependency carried for one
- * substring.
+ * Whether this macOS bundle declares the scheme in Info.plist. Read as text,
+ * not parsed: both plist forms store it verbatim.
  */
 export function bundleDeclaresScheme(execPath: string): boolean {
   try {
@@ -67,10 +45,8 @@ export function findDeepLink(argv: string[]): string | null {
 }
 
 /**
- * Start listening. Returns false when another instance already owns the lock,
- * in which case this process has handed its arguments over and must quit —
- * without that, a Windows redirect opens a second copy of the app and the first
- * one waits forever for a callback that went elsewhere.
+ * Start listening. Returns false when another instance holds the lock: this
+ * process has forwarded its arguments and must quit.
  */
 export function initDeepLinks(onUrl: (url: string) => void): boolean {
   if (!app.requestSingleInstanceLock()) return false;

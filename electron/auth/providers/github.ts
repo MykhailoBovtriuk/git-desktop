@@ -59,11 +59,8 @@ export function makeGitHubProvider(opts: {
 }
 
 /**
- * The email to commit as.
- *
- * A user who hid their address has no public email, and committing with a
- * blank one is rejected by git. GitHub's own noreply form is the documented
- * substitute and is what GitHub Desktop writes in the same situation.
+ * The email to commit as. A hidden address falls back to GitHub's noreply form,
+ * as GitHub Desktop does.
  */
 async function resolveEmail(api: string, token: string, user: GitHubUser): Promise<string> {
   const emails = await getJson<GitHubEmail[]>(`${api}/user/emails`, token, ACCEPT).catch(
@@ -81,10 +78,7 @@ export const github = makeGitHubProvider({
   apiBase: () => 'https://api.github.com',
 });
 
-/**
- * GitHub Enterprise Server. The API sits under /api/v3 on the same host rather
- * than on a separate api. subdomain, which is the one thing that differs.
- */
+/** GitHub Enterprise Server: the API sits under /api/v3 on the same host. */
 export const githubEnterprise = makeGitHubProvider({
   id: 'github-enterprise',
   displayName: 'GitHub Enterprise',

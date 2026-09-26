@@ -49,9 +49,7 @@ describe('verifyAgainstRemote', () => {
     await verifyAgainstRemote('https://git.example.com/a/b.git', 'alice', 'tok');
   });
 
-  // The whole point: a public repository issues no challenge, so git would
-  // never send the credential and any rubbish would "work". The header goes
-  // out unasked so the server has to have an opinion.
+  // A public repository never challenges, so the header must be sent unasked.
   it('sends the credential unasked rather than waiting to be challenged', async () => {
     answers(200);
     await verifyAgainstRemote('https://git.example.com/a/b.git', 'alice', 'tok');

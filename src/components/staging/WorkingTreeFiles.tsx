@@ -6,10 +6,6 @@ import { useGitAction } from '../../hooks/use-git-action';
 import { absolutePathIn } from '../../lib/absolute-path';
 import { FileList } from './FileList';
 
-/**
- * One component on purpose: ChangesSection and StashSection carried
- * byte-identical copies that had already drifted (hardcoded English headers).
- */
 export function WorkingTreeFiles() {
   const { t } = useTranslation('staging');
   const runAction = useGitAction();
@@ -32,10 +28,8 @@ export function WorkingTreeFiles() {
     })),
   );
 
-  // The renderer is served from app://, registered as a secure scheme in
-  // electron/main.ts, so the Clipboard API is available here. It can still
-  // refuse — an unfocused window, a denied permission — and a click that
-  // silently does nothing is worse than one that says why.
+  // The Clipboard API can still refuse (unfocused window, denied permission);
+  // say why instead of failing silently.
   const copyPath = (path: string) => {
     void navigator.clipboard
       ?.writeText(absolutePathIn(repoPath, path))

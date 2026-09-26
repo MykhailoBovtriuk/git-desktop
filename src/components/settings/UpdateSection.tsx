@@ -8,11 +8,8 @@ import { Button, DownloadIcon, Switch } from '../../shared/ui';
 import { updateErrorText } from '../update/update-text';
 
 /**
- * Where updates are asked for rather than offered.
- *
- * Its own section instead of a `SettingsSection`: that one is a single
- * title-and-control row, and this needs a status line, a button that changes
- * with the phase and two switches.
+ * Where updates are asked for. Its own section: it needs a status line, a phase
+ * button and two switches.
  */
 export function UpdateSection() {
   const { t } = useTranslation('update');

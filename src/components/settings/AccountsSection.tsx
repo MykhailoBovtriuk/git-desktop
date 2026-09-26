@@ -5,13 +5,7 @@ import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { Button, TextInput, UserIcon } from '../../shared/ui';
 
-/**
- * Every server this user is signed in to, one row each.
- *
- * A list rather than a single account because being signed in to github.com, a
- * work GitLab and Azure DevOps at once is the normal case, not an edge one —
- * and signing out of one must visibly not touch the others.
- */
+/** Every server this user is signed in to, one row each. */
 export function AccountsSection() {
   const { t } = useTranslation('account');
   const { accounts, authSource, persistent, openSignIn, signOut } = useAccountStore(
@@ -24,9 +18,7 @@ export function AccountsSection() {
     })),
   );
   const remoteHost = useRepoStore(s => s.remoteHost);
-  // Only the open repository's server: `git credential` can be asked about a
-  // host but never enumerated, so a full list of what works outside this app is
-  // not something we could honestly show.
+  // Only the open repository's server: `git credential` cannot enumerate hosts.
   const external =
     remoteHost && (authSource === 'system' || authSource === 'ssh') ? authSource : null;
   const [adding, setAdding] = useState(false);
@@ -121,9 +113,7 @@ export function AccountsSection() {
         </Button>
       )}
 
-      {/* A machine with no OS keychain cannot keep a token safely, and the app
-          refuses to write one in the clear — so say the session is all there is
-          rather than letting the user find out at the next launch. */}
+      {/* Without an OS keychain tokens last this session only; say so up front. */}
       {!persistent && <p className="text-yellow text-xs mt-3">{t('section.notPersistent')}</p>}
     </section>
   );

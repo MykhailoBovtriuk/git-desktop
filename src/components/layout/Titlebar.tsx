@@ -57,10 +57,8 @@ export function Titlebar() {
 
       <div className="flex-1 min-w-0" />
 
-      {/* Centred on the window, not on the space left over between the side
-          blocks. Those differ in width (app name on the left vs repo pill plus
-          the room reserved for the OS window controls on the right), so a
-          flex-centred group ended up visibly off-centre on Windows. */}
+      {/* Centred on the window, not between the side blocks: those differ in
+          width, so the group sat off-centre. */}
       <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[42%]">
         <DragRegion draggable={false} ref={branchRef} className="relative min-w-0">
           <button

@@ -14,9 +14,7 @@ describe('classifyGitError', () => {
     );
   });
 
-  // An ssh key, not a credential: signing in cannot replace a key the server
-  // refused, and offering it anyway sent people through a dialog with no
-  // bearing on their problem.
+  // An ssh key problem: signing in cannot help, so no sign-in action.
   it('classifies an SSH permission denial as a key problem, with no sign-in offered', () => {
     const r = classifyGitError('git@github.com: Permission denied (publickey).');
     expect(r.kind).toBe('sshKey');
@@ -86,9 +84,7 @@ describe('classifyGitError', () => {
     expect(r.action).toBeUndefined();
   });
 
-  // Taken verbatim from git when signing with a passphrase-protected key that
-  // the agent does not hold. Fails fast rather than hanging, but must still
-  // point the user somewhere.
+  // Verbatim git output for a passphrase-protected key the agent does not hold.
   it('treats a locked signing key as a key problem', () => {
     const r = classifyGitError(
       'error: Enter passphrase for "/home/j/.ssh/id_ed25519": Load key: incorrect passphrase supplied to decrypt private key?\nfatal: failed to write commit object',

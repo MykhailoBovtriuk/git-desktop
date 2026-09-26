@@ -3,9 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
-// Removes `crossorigin` attributes from generated <script>/<link> tags.
-// Electron's file:// protocol fails to load module scripts with crossorigin attributes,
-// causing a blank screen in packaged builds.
+// Strip `crossorigin` from generated tags: file:// fails to load module scripts
+// with it, leaving a blank screen.
 const removeCrossorigin = {
   name: 'remove-crossorigin',
   transformIndexHtml(html: string) {

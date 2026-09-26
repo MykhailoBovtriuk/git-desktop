@@ -20,10 +20,8 @@ describe('wrap', () => {
     expect(result).toEqual({ error: 'boom', code: 'GIT_ERROR' });
   });
 
-  // Regression: validators throw synchronously inside the handler callback.
-  // With `fn()` called before .then/.catch are attached, the exception escaped
-  // the envelope and Electron delivered a mangled rejected promise instead of
-  // { error, code }.
+  // Regression: a validator's synchronous throw escaped the envelope instead of
+  // becoming { error, code }.
   it('converts synchronous throws into the error envelope', async () => {
     const result = await wrap(() => {
       throw new Error('Invalid argument: hash must be a commit hash');
@@ -47,9 +45,8 @@ describe('registered IPC channels', () => {
     return [...new Set(handle.mock.calls.map(c => c[0] as string))].sort();
   };
 
-  // Pushed from main to the renderer rather than invoked, so they have no
-  // ipcMain.handle to match against. 'repo:changed' stays off this list only
-  // because its prefix is not in the pattern below.
+  // Pushed to the renderer, not invoked, so no ipcMain.handle; 'repo:changed'
+  // does not match the pattern.
   const PUSH_EVENTS = new Set(['account:changed', 'app:update-progress']);
 
   const channelsInFiles = (...relPaths: string[]) => {

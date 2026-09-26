@@ -7,9 +7,8 @@ import { useSettingsStore } from '../stores/settings-store';
 export const STARTUP_CHECK_DELAY_MS = 3000;
 
 export function useUpdateCheck() {
-  // Progress is pushed whether or not the modal is open — the user may close
-  // it and watch the download from Settings — so the subscription lives here,
-  // for the app's lifetime, rather than in either surface.
+  // Progress is pushed whether or not the modal is open, so the subscription
+  // lives for the app's lifetime.
   useEffect(() => updateApi.onProgress(p => useUpdateStore.getState().setProgress(p)), []);
 
   // Read once rather than subscribed: switching the setting on later is not

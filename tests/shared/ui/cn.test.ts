@@ -19,7 +19,6 @@ describe('cn', () => {
   });
 
   it('filters out empty string', () => {
-    // filter(Boolean) treats '' as falsy
     expect(cn('foo', '', 'bar')).toBe('foo bar');
   });
 

@@ -45,11 +45,7 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
     });
 }
 
-/**
- * The commit HEAD actually points at, for UI that answers "where am I?".
- * getLog cannot serve that: it is sorted across every branch, so its first
- * entry is whichever branch was touched last, not the user's own position.
- */
+/** The commit HEAD points at. Not getLog()[0]: the log spans every branch. */
 export async function getHeadCommit(ctx: GitContext): Promise<string | null> {
   if (!(await ctx.hasHead())) return null;
   const out = await ctx.ensureRepo().raw(['rev-parse', '--short', 'HEAD']);

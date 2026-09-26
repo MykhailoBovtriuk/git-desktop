@@ -1,12 +1,5 @@
-// The one place the app names its icons. Call sites import from here, never
-// from react-icons directly, so the underlying set can be swapped without
-// touching a dozen components.
-//
-// `Fi` is Feather: a single outline set at one stroke weight, which is what
-// keeps every icon in the UI looking like it came from the same family. The
-// glyph literals these replaced (↻ ⚙ ⓘ + − × 📋 ↩ ✕) could not: each came
-// from whatever system font the OS picked, at its own size and weight, and the
-// emoji ones ignored colour entirely.
+// The one place the app names its icons, so the set can be swapped; Feather
+// keeps every icon in one style.
 export {
   FiRefreshCw as RefreshIcon,
   FiSettings as SettingsIcon,
@@ -15,9 +8,7 @@ export {
   FiMinus as UnstageIcon,
   FiX as DiscardIcon,
   FiUser as UserIcon,
-  // Two names for one glyph, on purpose: in the stash list it means "apply",
-  // in a file row it means "copy". Naming the copy button StashApplyIcon at the
-  // call site would read worse than this duplicate line does here.
+  // One glyph under two names: "apply" in the stash list, "copy" in a file row.
   FiCopy as StashApplyIcon,
   FiCopy as CopyIcon,
   FiCheck as CheckIcon,

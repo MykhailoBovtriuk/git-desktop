@@ -158,9 +158,8 @@ describe('token store', () => {
     expect(await store.accountForHost('bitbucket.org')).not.toBeNull();
   });
 
-  // `git credential` is addressed by protocol and host, and nothing here ever
-  // rewrites a remote URL to carry a username — so a second account on a host
-  // is one git could never be told to prefer. Signing in again replaces it.
+  // `git credential` addresses by host, so signing in again on the same host
+  // replaces the account.
   it('holds one account per host, the newest one', async () => {
     await store.saveCredential({
       ...credential('github.com'),
@@ -214,9 +213,7 @@ describe('token store', () => {
     expect(await store.getFreshToken('github.com')).toBe('legacy-token');
   });
 
-  // The build in between keyed accounts by `host|login` and kept a map of
-  // repository bindings. Both collapse to one account per host rather than
-  // signing the user out on upgrade.
+  // `host|login` ids and repository bindings collapse to one account per host.
   it('collapses the host|login file a later build wrote', async () => {
     const entry = (login: string, token: string) => ({
       id: `github.com|${login}`,

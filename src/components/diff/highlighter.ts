@@ -4,9 +4,8 @@ import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 let instance: Promise<HighlighterCore> | null = null;
 
 /**
- * Themes ship up front (a few KB) so the theme toggle never waits on imports;
- * the 13 grammars are ~80-180 KB each and load on demand — all of them up
- * front cost ~1 MB to open a .txt diff.
+ * Themes load up front so the theme toggle never waits; grammars (~80-180 KB
+ * each) load on demand.
  */
 function getCore(): Promise<HighlighterCore> {
   if (!instance) {

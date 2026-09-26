@@ -9,9 +9,8 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // The codebase deliberately uses the classic fetch-in-effect pattern
-      // (setLoading(true) → await → setState). Migrating to derived state /
-      // suspense is a separate refactor, not a lint fix.
+      // The codebase deliberately uses fetch-in-effect; moving off it is a
+      // separate refactor.
       'react-hooks/set-state-in-effect': 'off',
     },
   },

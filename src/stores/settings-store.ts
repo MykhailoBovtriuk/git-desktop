@@ -11,9 +11,8 @@ export type AutoRefreshMs = (typeof AUTO_REFRESH_OPTIONS)[number];
 export const LANGUAGES = ['uk', 'nl', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-// Language deliberately lives in i18next, not here: its LanguageDetector
-// already persists the choice and owns the browser-locale fallback, so a copy
-// in this store would be a second source of truth that can drift.
+// Language lives in i18next, which already persists it; a copy here would
+// drift.
 interface SettingsState {
   theme: ThemePreference;
   autoRefreshMs: AutoRefreshMs;

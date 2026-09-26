@@ -66,11 +66,9 @@ describe('Accordion', () => {
         <span>content</span>
       </Accordion>,
     );
-    // When badge is undefined, the header should only contain the title span and
-    // the arrow indicator span — no extra badge span. (children are not rendered
-    // while closed.)
+    // Without a badge the header holds only the title and the arrow (children
+    // are not rendered while closed).
     const spans = container.querySelectorAll('span');
-    // title span + arrow span = 2; no extra badge span
     expect(spans).toHaveLength(2);
   });
 

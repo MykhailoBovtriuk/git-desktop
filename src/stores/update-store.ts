@@ -6,17 +6,8 @@ import { errorMessage } from '../lib/error-message';
 import type { UpdateCheckResult, UpdatePhase, UpdateProgress } from '../types';
 
 /**
- * Where the update conversation stands.
- *
- * Not persisted: the main process owns every fact here — which release exists,
- * what was downloaded, whether this build can install anything at all. What
- * the user decided (skip this one, check automatically) lives in the settings
- * store instead, because that is a preference rather than a state.
- *
- * Errors are kept as the message the main process sent — 'offline',
- * 'rate-limited', 'no-asset' and friends are tokens the UI translates. Keeping
- * translation out of here is what lets the same error read differently in a
- * modal and in Settings.
+ * Update state; not persisted, the main process owns the facts and settings
+ * hold preferences. Errors stay as tokens the UI translates.
  */
 interface UpdateState {
   phase: UpdatePhase;

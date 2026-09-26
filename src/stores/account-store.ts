@@ -11,11 +11,8 @@ import type {
 import { errorMessage } from '../lib/error-message';
 
 /**
- * Signed-in accounts, and the sign-in conversation.
- *
- * Not persisted: the main process owns the accounts, because it owns the
- * tokens. A copy here that outlived a sign-out would show a user as connected
- * to a service they can no longer reach.
+ * Signed-in accounts and the sign-in flow. Not persisted: the main process owns
+ * accounts and tokens.
  */
 interface SignInTarget {
   host: string;
@@ -35,20 +32,16 @@ interface AccountState {
   error: string | null;
   busy: boolean;
   /**
-   * Repositories whose sign-in prompt the user dismissed. In memory on purpose:
-   * "not now" is an answer about this session, not a permanent preference.
+   * Repositories whose sign-in prompt was dismissed; in memory only, since "not
+   * now" lasts one session.
    */
   dismissedRepos: Set<string>;
 
   /** The account for the open repository's host, as far as the renderer knows. */
   current: ProviderAccount | null;
   /**
-   * What authenticates the open repository's remote. Null until the main
-   * process has answered — the UI shows nothing rather than flashing a sign-in
-   * offer it may be about to withdraw.
-   *
-   * Cached rather than asked per render: answering it runs `git credential
-   * fill`, which reaches into the OS keychain.
+   * What authenticates the open repository's remote; null until known. Cached:
+   * the lookup reaches into the OS keychain.
    */
   authSource: AuthSource | null;
 
@@ -115,11 +108,8 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
     set({ busy: true, error: null });
     try {
       const info = await accountApi.providersFor(host);
-      // A host we recognise skips the picker: choosing "GitHub" for github.com
-      // is not a decision worth asking about. But recognising a host is not the
-      // same as being able to sign in to it — a build with no GitLab client id
-      // knows what gitlab.com is and still cannot open a browser flow for it,
-      // and sending the user there produced a dialog whose only button failed.
+      // A recognised host skips the picker, but only if this build can actually
+      // sign in to it.
       const offered = info.options.some(o => o.id === info.providerId);
       const onlyToken = info.options.length === 1 && info.options[0]?.id === 'token';
       set({

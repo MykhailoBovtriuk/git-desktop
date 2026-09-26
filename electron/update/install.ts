@@ -3,20 +3,16 @@ import { spawn } from 'child_process';
 import fs from 'fs/promises';
 
 /**
- * Long enough for the installer to be up, short enough that the app does not
- * look stuck. Quitting is not optional on Windows: NSIS cannot replace files
- * this process is holding open.
+ * Long enough for the installer to be up. Quitting is mandatory on Windows:
+ * NSIS cannot replace open files.
  */
 const QUIT_DELAY_MS = 1_000;
 /** macOS gets a moment longer: the dmg is still mounting behind the dialog. */
 const MAC_QUIT_DELAY_MS = 2_000;
 
 /**
- * Hand the downloaded artifact to the platform that knows what to do with it.
- *
- * Only Windows and macOS lead anywhere: a .deb needs root and an AppImage is a
- * file the user moves themselves, so on Linux the honest ending is showing the
- * file and staying out of the way.
+ * Hand the artifact to the platform. Linux only reveals the file: a .deb needs
+ * root and an AppImage is moved by hand.
  */
 export async function launchInstaller(
   filePath: string,

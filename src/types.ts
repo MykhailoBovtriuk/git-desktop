@@ -93,9 +93,8 @@ export type ThemePreference = 'dark' | 'light' | 'system';
 export type ResolvedTheme = 'dark' | 'light';
 
 /**
- * Every hosting service the app knows how to sign in to. `token` is the
- * catch-all: an arbitrary self-hosted server cannot have an OAuth app
- * registered for it in advance, so it takes a personal access token instead.
+ * Every hosting service the app can sign in to; `token` is the catch-all
+ * personal access token.
  */
 export type ProviderId =
   | 'github'
@@ -108,20 +107,16 @@ export type ProviderId =
   | 'token';
 
 /**
- * A signed-in account, as the renderer sees it. Deliberately carries no token:
- * access and refresh tokens never leave the main process.
+ * A signed-in account as the renderer sees it; tokens never leave the main
+ * process.
  */
 export interface ProviderAccount {
   /**
-   * Stable identity of this account: the host.
-   *
-   * `git credential` addresses a credential by protocol and host, so a second
-   * account on the same host is one git cannot be told to prefer. One host,
-   * one account — signing in again replaces it.
+   * The host: `git credential` addresses by host, so there is one account per
+   * host.
    */
   id: string;
   providerId: ProviderId;
-  /** Host of the remote this account authenticates. */
   host: string;
   /** Brand name for headings: "GitHub", "GitLab", "Azure DevOps". Never translated. */
   displayName: string;
@@ -141,10 +136,8 @@ export interface ProviderOption {
   /** True for self-hosted variants, where the user supplies the server address. */
   needsHost: boolean;
   /**
-   * True when this build has no client id for the provider, so the user has to
-   * bring one from an app registered on their own instance. Distinct from
-   * `needsHost`: Codeberg needs an address from nobody, but a company's own
-   * Gitea needs both.
+   * True when the user must bring their own client id. Distinct from
+   * `needsHost`: Codeberg needs neither address nor id.
    */
   needsClientId: boolean;
   /** Where to create a token, for the manual path. */
@@ -152,18 +145,13 @@ export interface ProviderOption {
 }
 
 /**
- * How git authenticates to a remote. An ssh remote uses a key, so neither a
- * stored token nor a sign-in offer has anything to do there.
+ * How git authenticates to a remote; ssh uses a key, so a token is irrelevant.
  */
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
 
 /**
- * What actually authenticates this repository's remote — the question the UI
- * needs answered before it offers a sign-in nobody needs.
- *
- * `system` is the common case on a machine somebody has worked on for years:
- * the credential is in the OS store, put there by git or another tool, and this
- * app neither created it nor may remove it.
+ * What authenticates this repository's remote. `system` is a credential in the
+ * OS store that the app did not create and may not remove.
  */
 export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
 
@@ -182,11 +170,8 @@ export interface Toast {
 }
 
 /**
- * A release worth offering, as the renderer needs it.
- *
- * `assetName` is null when nothing is built for this platform and
- * architecture — the UI then links to the release page instead of pretending
- * it can download something.
+ * A release worth offering. `assetName` is null when nothing is built for this
+ * platform; the UI links to the release page.
  */
 export interface UpdateInfo {
   /** Without the leading v: '1.2.0'. */
@@ -202,10 +187,7 @@ export interface UpdateInfo {
   prerelease: boolean;
 }
 
-/**
- * `skipped` is a check that never reached the network: a dev run, where an
- * installer must not be launched over the real install anyway.
- */
+/** `skipped`: a dev run, where the check never reaches the network. */
 export type UpdateStatus = 'up-to-date' | 'available' | 'skipped';
 
 export interface UpdateCheckResult {

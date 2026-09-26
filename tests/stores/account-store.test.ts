@@ -102,10 +102,8 @@ describe('account store', () => {
     expect(useAccountStore.getState().phase).toBe('browser');
   });
 
-  // Recognising a host is not the same as being able to sign in to it: a build
-  // with no GitLab client id knows what gitlab.com is and cannot open a browser
-  // flow for it. Sending the user there produced a dialog whose only button
-  // failed with "No OAuth client id available".
+  // A recognised host is not enough: without a client id the only button would
+  // fail.
   it('does not send the user to a browser flow this build cannot start', async () => {
     api.providersFor.mockResolvedValue({
       host: 'gitlab.com',
@@ -224,9 +222,8 @@ describe('account store', () => {
   });
 
   describe('the account shown for the open repository', () => {
-    // Signing in finishes in the main process and arrives over
-    // account:changed. Reloading only the account list left the footer — which
-    // names the account for this host — still saying nobody was signed in.
+    // Regression: reloading only the account list left the footer saying nobody
+    // was signed in.
     it('points at whoever is signed in to the host', async () => {
       await useAccountStore.getState().loadAccounts();
       expect(useAccountStore.getState().current).toBeNull();

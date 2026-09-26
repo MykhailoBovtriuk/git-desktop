@@ -4,13 +4,8 @@ import { promisify } from 'util';
 const run = promisify(execFile);
 
 /**
- * The host a remote URL points at, which is the key everything about
- * authentication hangs off: which provider to offer, which account applies,
- * which credential git will ask for.
- *
- * Both remote forms have to work. `git@host:path` is not a URL — it is scp
- * syntax, and `new URL()` parses it as the "git" scheme with an empty host —
- * so it needs its own branch rather than a lenient parser.
+ * The host a remote URL points at. `git@host:path` is scp syntax, not a URL, so
+ * it gets its own branch.
  */
 
 /** scp-like syntax: [user@]host:path, where the part after ":" is not a port. */
@@ -35,9 +30,8 @@ export function hostFromRemoteUrl(remoteUrl: string | null | undefined): string 
 }
 
 /**
- * Hosts are compared, stored and shown, so they need one spelling. Case is
- * folded because DNS is case-insensitive while our lookups are not; a trailing
- * dot is the fully-qualified form of the same name.
+ * One spelling per host: lowercase (DNS is case-insensitive) and without the
+ * trailing dot.
  */
 function normalize(host: string): string {
   const lower = host.toLowerCase();
@@ -45,13 +39,8 @@ function normalize(host: string): string {
 }
 
 /**
- * How git will authenticate to a remote — which decides whether signing in can
- * help at all.
- *
- * An ssh remote never carries a token: it authenticates with a key, so both the
- * sign-in offer and the stored credential are beside the point there. Treating
- * every remote the same is what had the app asking people to sign in to
- * repositories where signing in changes nothing.
+ * How git authenticates to a remote. An ssh remote uses a key, so a sign-in
+ * offer is pointless there.
  */
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
 
@@ -72,16 +61,8 @@ export function isNetworkHost(host: string | null): host is string {
 }
 
 /**
- * What an SSH host actually resolves to.
- *
- * People with more than one account on the same service give each a nickname
- * in ~/.ssh/config — `git@github-work:org/repo.git` — and git resolves it
- * before connecting. Taking the nickname at face value means never recognising
- * the service, so the app would silently offer nothing to sign in to.
- *
- * `ssh -G` performs exactly the resolution git relies on and opens no
- * connection. Results are cached: the config does not change mid-session, and
- * this runs on every repository open.
+ * What an SSH host alias from ~/.ssh/config resolves to, via `ssh -G` (no
+ * connection). Cached: the config does not change mid-session.
  */
 const aliasCache = new Map<string, string>();
 
@@ -133,11 +114,8 @@ export async function resolveRemote(
 }
 
 /**
- * The remote URL of a repository on disk, preferring `origin`.
- *
- * Read here rather than taken from the renderer: this address is handed to
- * `git ls-remote`, and a value that travelled through the UI is a value
- * somebody could have changed on the way.
+ * The remote URL of a repository, preferring `origin`. Read here, not taken
+ * from the renderer, since it is passed to `git ls-remote`.
  */
 export async function originUrlFor(repoRoot: string): Promise<string | null> {
   try {

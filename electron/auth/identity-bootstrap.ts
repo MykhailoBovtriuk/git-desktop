@@ -15,11 +15,8 @@ async function readGlobal(key: string): Promise<string> {
 }
 
 /**
- * Whether git has an author to attribute a commit to at all.
- *
- * Asked per repository rather than globally so a local override counts, and
- * asked as one boolean rather than a resolved identity because the only thing
- * the UI does with the answer is refuse to let a commit fail.
+ * Whether git has an author to commit as. Asked per repository so a local
+ * override counts.
  */
 export async function hasIdentity(repoRoot: string): Promise<boolean> {
   try {
@@ -31,13 +28,8 @@ export async function hasIdentity(repoRoot: string): Promise<boolean> {
 }
 
 /**
- * Give git a name and email to commit as, taken from the account that just
- * signed in.
- *
- * Only writes what is missing. Silently replacing an address the user chose —
- * one that routes their commits to the right identity on a work host, say —
- * would be taking a decision that is not ours to take, and it would be
- * invisible until commits started showing up attributed to the wrong person.
+ * Give git a name and email from the account that just signed in. Only writes
+ * what is missing, never replaces the user's choice.
  */
 export async function ensureGlobalIdentity(account: ProviderAccount): Promise<void> {
   const [name, email] = await Promise.all([readGlobal('user.name'), readGlobal('user.email')]);

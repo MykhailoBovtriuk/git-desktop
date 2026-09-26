@@ -18,12 +18,8 @@ export class OAuthError extends Error {
 }
 
 /**
- * A JSON GET against a provider API.
- *
- * `Accept` is per-call because providers disagree: GitHub wants its versioned
- * media type, everyone else wants plain JSON. A null token means an anonymous
- * call — the update check has no account behind it, and an empty bearer would
- * earn a 401 rather than the public answer it is after.
+ * A JSON GET against a provider API. A null token means an anonymous call: an
+ * empty bearer would earn a 401.
  */
 export async function getJson<T>(
   url: string,
@@ -44,11 +40,8 @@ export async function getJson<T>(
 }
 
 /**
- * The token endpoint, for both the initial code exchange and refreshes.
- *
- * GitHub answers HTTP 200 with `{"error":"bad_verification_code"}` on failure,
- * so the status alone is not a verdict — the body has to be inspected. Getting
- * this wrong means a failed sign-in looks like a successful one.
+ * The token endpoint, for code exchange and refreshes. GitHub answers 200 with
+ * an error body, so the body decides success, not the status.
  */
 export interface TokenResponse {
   accessToken: string;
@@ -97,11 +90,7 @@ export async function postToken(
 }
 
 /**
- * An avatar as a data: URI.
- *
- * The renderer's CSP allows `img-src 'self' data: app:` and nothing remote, so
- * a plain avatar URL would simply not render. Fetching here keeps the policy
- * strict instead of widening it for a 32-pixel picture.
+ * An avatar as a data: URI, since the renderer's CSP allows no remote images.
  */
 const MAX_AVATAR_BYTES = 256 * 1024;
 

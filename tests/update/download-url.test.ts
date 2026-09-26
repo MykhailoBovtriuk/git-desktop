@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { isAllowedDownloadUrl } from '../../electron/update/assets';
 
-// The updater never fetches a URL just because the GitHub API handed it over,
-// so this allowlist is the one thing standing between a spoofed response and
-// an installer downloaded from somewhere else entirely.
+// This allowlist is all that stops a spoofed API response from pointing the
+// download elsewhere.
 describe('isAllowedDownloadUrl', () => {
   it('allows the download URLs releases of this project actually have', () => {
     for (const url of [

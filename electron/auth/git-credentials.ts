@@ -5,7 +5,6 @@ import { providerById } from './providers/registry';
 /**
  * Values we are willing to write, per platform. A credential helper is a
  * command git executes, so this is an allowlist rather than a free-text field.
- * Carried over unchanged from the settings screen this replaced.
  */
 const ALLOWED_HELPERS: Record<string, string[]> = {
   darwin: ['osxkeychain'],
@@ -30,12 +29,8 @@ function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<s
 }
 
 /**
- * Make sure git has somewhere to keep credentials.
- *
- * Without a configured helper, `git credential approve` succeeds and stores
- * nothing — a silent no-op that would leave every push failing after an
- * apparently successful sign-in. Returns the helper in effect, or null when the
- * platform offers none we trust.
+ * Make sure git has a credential helper; without one `git credential approve`
+ * silently stores nothing. Returns the helper, or null if none is trusted.
  */
 export async function ensureCredentialHelper(): Promise<string | null> {
   const existing = await run(['config', '--global', '--get', 'credential.helper'])
@@ -67,11 +62,8 @@ function describe(host: string, username: string, password?: string): string {
 }
 
 /**
- * Hand the token to the system credential store, so plain `git push`
- * authenticates on its own.
- *
- * The token goes in over stdin rather than argv: an argument list is visible to
- * every process on the machine via `ps`.
+ * Hand the token to the system credential store so plain `git push` works. Sent
+ * over stdin, not argv, which `ps` exposes.
  */
 export async function approveCredentials(
   host: string,
@@ -83,15 +75,8 @@ export async function approveCredentials(
 }
 
 /**
- * Whether git can already authenticate to a host on its own.
- *
- * The answer decides whether offering a sign-in is help or noise. On a machine
- * someone has been working on for years the system helper already holds the
- * credential, and the app used to ask anyway — a prompt whose only honest
- * outcome was "you did not need this".
- *
- * `GIT_TERMINAL_PROMPT=0` and no askpass, so an unanswered lookup fails
- * immediately instead of trying to ask a terminal that is not there.
+ * Whether git can already authenticate to a host on its own, so a sign-in is
+ * not offered needlessly. No prompts: an unanswered lookup fails fast.
  */
 export async function hasStoredCredential(host: string): Promise<boolean> {
   const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };

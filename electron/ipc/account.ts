@@ -38,9 +38,8 @@ function assertHost(value: unknown): asserts value is string {
 }
 
 /**
- * A username or token on its way to `git credential`, where the protocol is one
- * `key=value` per line. A newline inside a value there is not a typo — it is a
- * second field nobody asked for.
+ * A value for `git credential`, which is one `key=value` per line: a newline
+ * would inject a second field.
  */
 function assertCredentialField(value: unknown, name: string): asserts value is string {
   assertString(value, name);
@@ -50,12 +49,8 @@ function assertCredentialField(value: unknown, name: string): asserts value is s
 }
 
 /**
- * Who a pasted token belongs to — and, more to the point, whether it works at
- * all.
- *
- * Nothing is stored before this resolves. An unchecked token makes the app
- * claim a sign-in it has no evidence for, and writes that claim into the system
- * credential store, where the next `git push` trips over it.
+ * Who a pasted token belongs to, and whether it works at all. Nothing is stored
+ * before this resolves.
  */
 async function accountFromToken(
   host: string,
@@ -101,9 +96,8 @@ async function accountFromToken(
 }
 
 /**
- * Everything that has to happen once a token is in hand, whichever route it
- * arrived by. Kept in one place so the browser flow and the pasted-token flow
- * cannot drift apart on, say, whether identity gets bootstrapped.
+ * Everything that happens once a token is in hand, shared by the browser and
+ * pasted-token flows.
  */
 async function adoptAccount(
   account: ProviderAccount,
@@ -189,17 +183,8 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   );
 
   /**
-   * What authenticates this remote — which decides both whether to offer a
-   * sign-in and what to say when there is nothing to offer.
-   *
-   * One answer rather than a yes/no, because the interesting cases are not
-   * "needs signing in": an ssh remote goes by key, and the usual state on a
-   * machine somebody has worked on for years is a credential already sitting in
-   * the OS store. Asking them to sign in there was noise with no outcome, and
-   * saying nothing at all read as "no account" rather than "you are fine".
-   *
-   * Order matters: ssh is settled before the keychain is touched at all, so an
-   * ssh repository never provokes a credential lookup it has no use for.
+   * What authenticates this remote: ssh, an app account, the system keychain,
+   * or nothing. Ssh is settled first so it never triggers a keychain lookup.
    */
   ipcMain.handle('account:auth-source', (_e, host: unknown, protocol: unknown) =>
     wrap(async (): Promise<AuthSource> => {
@@ -242,9 +227,8 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
         assertCredentialField(token, 'token');
         const repo = typeof repoPath === 'string' && repoPath ? repoPath : null;
         const account = await accountFromToken(host, login, token, repo);
-        // No expiry is known for a hand-made token, and there is nothing to
-        // refresh it with — so it is stored as non-expiring and simply stops
-        // working when the user revokes it.
+        // A hand-made token has no known expiry and nothing to refresh it with,
+        // so it is stored as non-expiring.
         return adoptAccount(account, token, null, null, '', null);
       }),
   );

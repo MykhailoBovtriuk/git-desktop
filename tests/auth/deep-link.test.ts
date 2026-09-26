@@ -113,11 +113,8 @@ describe('registerProtocol', () => {
 
   beforeEach(() => setAsDefault.mockClear());
 
-  // A plain `electron .` runs inside Electron's own bundle, and claiming a
-  // scheme there points the OS at `com.github.Electron` — an identifier several
-  // shipped apps carry a copy of. The callback lands in one of those, and the
-  // preference is system-wide and sticky, so it takes the installed app's
-  // callback with it.
+  // A plain `electron .` would point the scheme at `com.github.Electron`,
+  // stealing the callback from the installed app.
   it('claims nothing on macOS from a bundle that does not declare the scheme', () => {
     asPlatform('darwin', bundle(false), () => deepLink.registerProtocol());
     expect(setAsDefault).not.toHaveBeenCalled();

@@ -3,9 +3,8 @@ import path from 'path';
 
 const DEBOUNCE_MS = 250;
 
-// We watch the .git *directory* rather than these files directly because git
-// replaces index and HEAD by atomic rename, which detaches a file-level
-// fs.watch from the new inode — a directory watch keeps firing across the swap.
+// Watch the .git directory, not the files: git replaces index and HEAD by
+// atomic rename, which breaks a file watch.
 const RELEVANT_TOP_LEVEL = new Set([
   'HEAD',
   'index',

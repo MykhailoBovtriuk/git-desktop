@@ -3,9 +3,8 @@ import { accountForHost, getFreshToken } from '../auth/token-store';
 import { resolveRemoteHost } from '../auth/remote-host';
 
 /**
- * The origin URL, or null for a repository with no remote. Needed to tell an
- * SSH remote from an HTTPS one — they fail authentication for entirely
- * different reasons and the advice differs accordingly.
+ * The origin URL, or null without a remote. SSH and HTTPS fail authentication
+ * for different reasons.
  */
 export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
   const remotes = await ctx.ensureRepo().getRemotes(true);
@@ -14,12 +13,8 @@ export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
 }
 
 /**
- * Make sure the credential git is about to read is still valid.
- *
- * Bitbucket and GitLab tokens last two hours and Entra ID about one, so without
- * this a session that started fine begins failing mid-afternoon with an
- * authentication error the user cannot act on. `getFreshToken` rewrites the
- * system credential when it renews, which is what git actually reads.
+ * Refresh a short-lived token before git reads it; `getFreshToken` rewrites the
+ * system credential on renewal.
  */
 async function refreshCredentialIfNeeded(ctx: GitContext): Promise<void> {
   try {

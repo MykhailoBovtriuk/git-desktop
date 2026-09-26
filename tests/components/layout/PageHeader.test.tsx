@@ -18,9 +18,7 @@ describe('PageHeader', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  // The header used to carry a close icon beside the back link. Both left the
-  // same screen and differed only in how far, which is a choice with nothing at
-  // stake either way — so back is the whole exit now.
+  // The back link is the only exit now; the close icon is gone.
   it('offers no second way out of the screen', () => {
     render(<PageHeader crumbs={crumbs} onBack={vi.fn()} />);
 

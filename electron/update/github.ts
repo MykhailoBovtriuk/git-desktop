@@ -4,11 +4,8 @@ import { assetNameFor, isAllowedDownloadUrl, type LinuxPackage } from './assets'
 import type { UpdateInfo } from '../../src/types';
 
 /**
- * The releases of this project, as the update check sees them.
- *
- * The list endpoint rather than /releases/latest: only a list can honour the
- * pre-release preference, and only a list can find the release matching the
- * running version, which is what "reinstall" needs.
+ * The releases of this project. The list endpoint, not /releases/latest: needed
+ * for pre-releases and for reinstalling.
  */
 const RELEASES_URL = 'https://api.github.com/repos/MykhailoBovtriuk/git-desktop/releases?per_page=20';
 const ACCEPT = 'application/vnd.github+json';
@@ -23,11 +20,8 @@ const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
 const NOTES_LIMIT = 4_000;
 
 /**
- * Why a check failed, in a form the renderer can translate.
- *
- * The IPC envelope carries only a message string, so the reason *is* the
- * message: the store maps 'offline' and 'rate-limited' onto their own wording
- * and shows anything else as it came.
+ * Why a check failed, as a message the renderer can translate ('offline',
+ * 'rate-limited'); anything else is shown as-is.
  */
 export type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
 
@@ -159,12 +153,8 @@ function toUpdateInfo(release: GithubRelease, opts: LookupOptions): UpdateInfo |
 }
 
 /**
- * The newest release worth offering, plus the one currently installed.
- *
- * Whether `latest` is actually an update is the caller's question — this only
- * reports what is published. The array is ranked rather than trusted in the
- * order it arrives: GitHub sorts by creation date, so a patch cut from an old
- * branch can land at the top.
+ * The newest release worth offering, plus the one installed. Ranked by version:
+ * GitHub sorts by creation date.
  */
 export async function lookupReleases(opts: LookupOptions): Promise<ReleaseLookup> {
   const releases = await fetchReleases(opts.force);

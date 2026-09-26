@@ -1,7 +1,6 @@
 /**
- * Joins class names without resolving Tailwind conflicts: stylesheet order
- * decides which of `py-1 py-1.5` wins, not argument order. Never override a
- * component's padding or sizing via `className`; add a prop instead.
+ * Joins class names without resolving Tailwind conflicts: override padding or
+ * sizing via a prop, never `className`.
  */
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');

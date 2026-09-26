@@ -353,7 +353,7 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
   });
 
-  // P4.26 — partial refresh: one failing loader must not discard the segments
+  // Partial refresh: one failing loader must not discard the segments
   // that succeeded, and refresh itself must resolve (not reject).
   it('refresh keeps successful segments when one loader fails', async () => {
     const { gitApi } = await import('../../src/api/git-api');
@@ -375,7 +375,7 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().lastRefreshError).toBeNull();
   });
 
-  // P4.25 — operation lock: a busyOperation marker is set for the duration of a
+  // Operation lock: a busyOperation marker is set for the duration of a
   // tracked operation so auto-refresh can stand aside.
   it('runOperation sets busyOperation while running and clears it after', async () => {
     let observed: string | null = 'unset';
@@ -400,7 +400,6 @@ describe('repo-store', () => {
     expect(result).toBe('42 files');
   });
 
-  // P4.28 — pagination / load more
   it('loadLog caps to a page and flags hasMoreCommits when a full page+1 is returned', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.getLog as any).mockResolvedValueOnce(makeCommits(LOG_PAGE_SIZE + 1));
@@ -437,17 +436,15 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().hasMoreCommits).toBe(false);
   });
 
-  // With `git log --all --topo-order --skip=N`, a new commit landing at the top
-  // shifts the window down by one, so the next page overlaps the last loaded
-  // commit. Dedupe-on-append keeps the list free of duplicate keys (React) and
-  // duplicate rows without needing exact offset arithmetic.
+  // With `--skip=N` a new commit shifts the page, so the last commit repeats;
+  // dedupe-on-append handles it.
   it('loadMoreCommits drops commits already present (dedupe on append)', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     const existing = makeCommits(5); // h0..h4
     useRepoStore.setState({ commits: existing, hasMoreCommits: true } as any);
     const dupOfLast = { ...existing[4] }; // h4 re-appears at the top of the page
-    const h5 = { ...makeCommits(6)[5] }; // h5
-    const h6 = { ...makeCommits(7)[6] }; // h6
+    const h5 = { ...makeCommits(6)[5] };
+    const h6 = { ...makeCommits(7)[6] };
     (gitApi.getLog as any).mockResolvedValueOnce([dupOfLast, h5, h6]);
 
     await useRepoStore.getState().loadMoreCommits();
@@ -465,7 +462,6 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().commits).toHaveLength(5);
   });
 
-  // P4.31 — publish branch (set upstream)
   it('publishBranch pushes the current branch upstream to origin', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo', currentBranch: 'feature' } as any);
@@ -489,7 +485,7 @@ const deferred = <T>() => {
   return { promise, resolve, reject };
 };
 
-// Phase 2 — every loader captures a generation token; responses that resolve
+// Every loader captures a generation token; responses that resolve
 // after the repo was switched or a mutation ran must be discarded.
 describe('repo-store race conditions', () => {
   beforeEach(() => {
@@ -573,7 +569,7 @@ describe('repo-store race conditions', () => {
   });
 });
 
-// Phase 2 — after a mutation, everything the mutation may have changed must
+// After a mutation, everything the mutation may have changed must
 // be reloaded, and failure paths must still leave the UI in sync.
 describe('repo-store state consistency', () => {
   beforeEach(() => {
@@ -652,9 +648,8 @@ describe('creating a branch', () => {
     expect(gitApi.createBranch).toHaveBeenCalledWith('feature/login');
   });
 
-  // The order is the whole behaviour: the new branch sits on the same commit,
-  // so a stash taken after the switch would set the work aside on the *new*
-  // branch — the opposite of leaving it behind.
+  // Order matters: stashing after the switch would park the work on the new
+  // branch.
   it('stashes against the branch being left, before switching', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     const calls: string[] = [];
@@ -694,10 +689,8 @@ describe('sign-in prompt on opening a repository', () => {
     authSource.mockResolvedValue('none');
   });
 
-  // Regression: the store rehydrates and reopens the last repository well
-  // before the first account:list returns. Giving up when the list was not in
-  // yet meant the prompt never appeared for the repo already open — that is,
-  // on every single launch.
+  // Regression: at startup the repository reopens before account:list arrives,
+  // and the prompt was lost.
   it('waits for the account list instead of skipping the prompt', async () => {
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
@@ -719,10 +712,8 @@ describe('sign-in prompt on opening a repository', () => {
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
-  // An ssh remote authenticates with a key: a token has nothing to do there,
-  // and asking anyway is the prompt people met on repositories that already
-  // worked perfectly well. The answer is still fetched — the footer says what
-  // *is* authenticating the remote, and 'ssh' is one of the things it says.
+  // An ssh remote uses a key: no prompt, but the answer is still fetched for
+  // the footer.
   it('says nothing for an ssh remote, but still learns what authenticates it', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.openRepo as any).mockResolvedValue({

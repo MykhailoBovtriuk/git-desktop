@@ -44,9 +44,8 @@ export function FileList({
   selectedFile,
 }: FileListProps) {
   const { t } = useTranslation('staging');
-  // Copying moves nothing on screen, so without a mark the click looks like it
-  // did nothing at all. A toast would be louder than everything around it:
-  // staging says nothing on success either, it just shows the file elsewhere.
+  // Copying changes nothing on screen, so a quiet mark shows the click landed;
+  // a toast would be too loud.
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

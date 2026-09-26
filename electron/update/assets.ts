@@ -1,11 +1,6 @@
 /**
- * Which release asset belongs to the machine this copy is running on.
- *
- * The names below mirror the `artifactName` templates in
- * `electron-builder.yml`, which deliberately carry no version number. That
- * coupling is the price of stable download URLs; an unknown combination
- * resolves to `null` so the UI falls back to the release page instead of
- * guessing at a file that may not exist.
+ * Which release asset fits this machine. Names mirror the `artifactName`
+ * templates in electron-builder.yml; unknown combos yield null.
  */
 export type LinuxPackage = 'AppImage' | 'deb';
 
@@ -33,13 +28,8 @@ export function assetNameFor(
 }
 
 /**
- * Whether this Linux copy came out of the AppImage or out of the .deb.
- *
- * The AppImage runtime exports APPIMAGE (the absolute path to the image
- * itself) and APPDIR, and mounts the payload under /tmp/.mount_XXXXXX — the
- * execPath check catches a launcher that cleared the environment. Everything
- * else is dpkg's /opt install. Guessing wrong only means the wrong file is
- * revealed in a folder, since neither format installs itself.
+ * Whether this Linux copy is the AppImage or the .deb, judged by
+ * APPIMAGE/APPDIR and the execPath.
  */
 export function linuxPackageFormat(
   env: NodeJS.ProcessEnv = process.env,
@@ -51,23 +41,14 @@ export function linuxPackageFormat(
 }
 
 /**
- * Where a download may come from.
- *
- * `browser_download_url` arrives from the network, so it is checked against
- * the one prefix releases of this project can live at before a byte is
- * fetched — and the file it lands under is named from the table above, never
- * from the API's own `name`, so no response can steer a write elsewhere.
- * GitHub redirects the download to its object storage; only the entry point is
- * pinned, because that is the part a spoofed response could choose.
+ * Where a download may come from: `browser_download_url` must match this
+ * prefix, and the file name comes from our table, never from the API.
  */
 const DOWNLOAD_PREFIX = 'https://github.com/MykhailoBovtriuk/git-desktop/releases/download/';
 
 /**
- * The URL an asset of a given release lives at.
- *
- * Built here rather than taken from the API response: the tag is already known
- * to be a version and the name comes from the table above, so the result is
- * allowed by construction.
+ * An asset's URL, built from a validated tag and a name from the table rather
+ * than taken from the API response.
  */
 export function downloadUrlFor(tag: string, assetName: string): string {
   return `${DOWNLOAD_PREFIX}${encodeURIComponent(tag)}/${encodeURIComponent(assetName)}`;

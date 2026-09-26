@@ -99,9 +99,8 @@ describe('Footer', () => {
     expect(screen.getByText('a1b2c3d')).toBeTruthy();
   });
 
-  // An ssh remote authenticates with a key. Offering a sign-in there was an
-  // offer the app could not keep, and it is where "why am I logging in at
-  // all?" came from. Silence was not much better — it read as "no account".
+  // An ssh remote authenticates with a key: no sign-in offer, but no silence
+  // either.
   it('names the ssh key instead of offering a sign-in', () => {
     setup({ account: null, remoteProtocol: 'ssh', authSource: 'ssh' });
     render(<Footer />);

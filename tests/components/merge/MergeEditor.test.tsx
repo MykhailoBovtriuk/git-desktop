@@ -52,9 +52,8 @@ beforeEach(() => {
 const saveButton = () => screen.getByText('saveMarkResolved').closest('button')!;
 
 describe('MergeEditor save guard', () => {
-  // Regression: while readFile was in flight, segs fell back to [] so
-  // remaining === 0 and Save was enabled — clicking it wrote rebuild([]) = ''
-  // over the user's file and marked it resolved.
+  // Regression: while readFile was in flight Save was enabled and overwrote the
+  // file with ''.
   it('disables Save while the file content is still loading', async () => {
     vi.mocked(gitApi.readFile).mockReturnValue(new Promise(() => {}));
     render(<MergeEditor />);

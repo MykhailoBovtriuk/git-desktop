@@ -42,10 +42,8 @@ export function CommitForm() {
   }, [merging]);
 
   const hasStaged = status.staged.length > 0;
-  // git refuses outright when neither the repository nor the global config
-  // names an author. Catching it here beats letting the user type a message and
-  // discover it only after pressing Commit. Unknown (not loaded yet) must never
-  // block: only a definite "no" from git means committing would actually fail.
+  // git refuses to commit without an author, so warn before the user types.
+  // Unknown (not loaded yet) never blocks.
   const hasIdentity = identityKnown !== false;
   const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading && hasIdentity;
 

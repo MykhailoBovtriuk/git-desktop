@@ -30,9 +30,8 @@ index abc..def 100644
     expect(diffs[0].hunks[0].lines.some(l => l.type === 'remove')).toBe(true);
   });
 
-  // Regression: inside a hunk, a removed line whose content starts with "--"
-  // renders in the diff as "---…" and was dropped by the header guards,
-  // shifting all following line numbers by one. Same for added "++…" lines.
+  // Regression: a removed "--…" or added "++…" line was taken for a header,
+  // shifting line numbers.
   it('keeps removed lines whose content starts with --', () => {
     const raw = `diff --git a/counter.c b/counter.c
 index abc..def 100644

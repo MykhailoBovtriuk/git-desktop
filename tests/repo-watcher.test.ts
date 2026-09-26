@@ -32,9 +32,8 @@ afterEach(() => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-// Attach the watcher, then let the OS drain any startup events it emits for the
-// just-created .git dir (macOS FSEvents replays recent activity on attach) and
-// clear the spy — so each test observes only the change it makes next.
+// Attach, drain startup events (macOS FSEvents replays recent activity) and
+// clear the spy.
 const arm = async (root: string, onChange: ReturnType<typeof vi.fn>) => {
   watcher!.watch(root);
   await sleep(450); // > DEBOUNCE_MS, so any startup-triggered callback lands

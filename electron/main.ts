@@ -25,9 +25,8 @@ const MIME_TYPES: Record<string, string> = {
   '.otf': 'font/otf',
 };
 
-// Register custom protocol BEFORE app.ready so it has privileged status.
-// Loading the renderer via `app://` instead of `file://` is required because
-// Chromium treats each file:// URL as a unique origin which breaks ES module loading.
+// Register the custom protocol before app.ready. `app://` instead of `file://`:
+// Chromium gives each file:// URL its own origin, which breaks ES modules.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',
@@ -44,9 +43,8 @@ const iconPath = path.join(__dirname, '../../build/icon.png');
 
 let mainWindow: BrowserWindow | null = null;
 
-// Both must happen before app.ready: the protocol registration writes the
-// registry entry Windows consults, and losing the single-instance race means
-// this process exists only to forward its arguments to the running copy.
+// Both before app.ready: protocol registration writes the Windows registry, and
+// losing the single-instance race means just forwarding args.
 registerProtocol();
 
 const isPrimaryInstance = initDeepLinks(url => {
@@ -166,9 +164,8 @@ app.whenReady().then(() => {
     }
   });
 
-  // Strict CSP for production only. In dev the renderer is served by the Vite
-  // dev server (HMR over ws), which a strict policy would break — so we leave
-  // dev unrestricted and lock down the packaged app where it actually matters.
+  // Strict CSP in production only: in dev it would break the Vite dev server
+  // and HMR.
   if (!process.env.VITE_DEV_SERVER_URL) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       callback({

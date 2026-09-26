@@ -70,7 +70,6 @@ export function Sidebar() {
           </Accordion>
         </div>
 
-        {/* Stash accordion — flex-1 when open */}
         <div
           className={`flex flex-col min-h-0 overflow-hidden border-t-2 border-surface1 ${stashOpen ? 'flex-1' : 'shrink-0'}`}
         >
@@ -101,7 +100,6 @@ export function Sidebar() {
 
         <div className="border-t-2 border-surface1 shrink-0" />
 
-        {/* History + Graph */}
         <div className="flex flex-col shrink-0 mt-auto">
           <button
             onClick={() => setActiveView('history')}
@@ -119,9 +117,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Its own column, not an overlay on the panel's edge: at right-0 it sat
-          on top of the 8px scrollbar of the file lists, so the scrollbar could
-          not be grabbed. */}
+      {/* Its own column, not an overlay: at right-0 it covered the file lists'
+          scrollbar. */}
       <div
         role="separator"
         aria-orientation="vertical"

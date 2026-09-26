@@ -148,9 +148,7 @@ describe('hasStoredCredential', () => {
     expect(find('credential fill')?.stdin).toBe('protocol=https\nhost=github.com\n\n');
   });
 
-  // An empty password is what an askpass stub hands back; it is not a
-  // credential, and treating it as one would silence the sign-in offer for
-  // exactly the user who needs it.
+  // An empty password from an askpass stub is not a credential.
   it('is false when the answer carries no password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=\n';
     await expect(credentials.hasStoredCredential('github.com')).resolves.toBe(false);

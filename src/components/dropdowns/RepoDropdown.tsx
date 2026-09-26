@@ -38,9 +38,7 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
     await runAction(() => openDialog(), { title: t('addRepository') });
   };
 
-  // Only the open repository needs a confirmation: removing it also closes it
-  // and drops the user back on the welcome screen. Removing any other entry is
-  // undone by re-adding it, so it would only be a nag.
+  // Only the open repository needs confirmation: removing it also closes it.
   const handleRemove = async (path: string) => {
     if (path === repoPath) {
       const ok = await requestConfirm({

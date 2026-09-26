@@ -11,11 +11,8 @@ const USER_AGENT = 'git-desktop';
 const PROGRESS_INTERVAL_MS = 200;
 
 /**
- * The name the installer is saved under.
- *
- * Release assets deliberately carry no version, which keeps their URLs stable
- * but would make two downloads in the Downloads folder indistinguishable — and
- * would collide with whatever the user fetched from the release page by hand.
+ * The name the installer is saved under, with the version added, since release
+ * asset names carry none.
  */
 export function versionedFileName(assetName: string, version: string): string {
   const ext = path.extname(assetName);
@@ -33,11 +30,8 @@ export interface DownloadRequest {
 }
 
 /**
- * Fetch an installer to disk, reporting progress as it goes.
- *
- * The bytes land in a `.part` file that is renamed only once the last one
- * arrives, so a half-written installer can never be handed to the shell — an
- * interrupted download leaves nothing behind at all.
+ * Download an installer, reporting progress. Bytes go to a `.part` file renamed
+ * only at the end, so no partial installer is left.
  */
 export async function downloadFile(req: DownloadRequest): Promise<void> {
   if (!isAllowedDownloadUrl(req.url)) {
@@ -82,9 +76,8 @@ export async function downloadFile(req: DownloadRequest): Promise<void> {
     const body = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
     await pipeline(body, counter, createWriteStream(part));
 
-    // No checksums are published for these releases, so the size from the
-    // release metadata is the only corroboration TLS gets. A truncated body
-    // that ended cleanly would otherwise reach the user as an installer.
+    // No checksums are published, so the size from the release metadata is the
+    // only corroboration; a truncated body must not pass.
     if (req.expectedSize > 0 && received !== req.expectedSize) {
       throw new Error(`Downloaded ${received} bytes, expected ${req.expectedSize}`);
     }

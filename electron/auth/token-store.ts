@@ -8,14 +8,8 @@ import { approveCredentials, gitUsernameFor } from './git-credentials';
 import { accountIdFor } from './account-id';
 
 /**
- * Where signed-in accounts live, keyed by host — github.com, a work GitLab and
- * Azure DevOps coexist as a matter of course, but one host holds one account,
- * because that is all `git credential` can address (see `account-id`).
- *
- * Tokens are encrypted with the OS keychain via safeStorage. When that is
- * unavailable (a Linux box with no keyring), nothing is written to disk at all:
- * a plaintext token in a JSON file under the user's home is worse than asking
- * them to sign in again next launch.
+ * Signed-in accounts, one per host. Tokens are encrypted via safeStorage;
+ * without a keyring nothing is written to disk.
  */
 export interface StoredCredential {
   /** The host. */
@@ -85,10 +79,8 @@ async function load(): Promise<void> {
     const raw = await fs.readFile(storeFile(), 'utf8');
     const parsed = JSON.parse(raw) as
       PersistedEntry[] | { accounts: PersistedEntry[]; bindings?: Record<string, string> };
-    // Two older formats: a bare array, and one with a `bindings` map back when
-    // a host could hold several accounts. Read both rather than silently
-    // signing the user out on upgrade; `host|login` ids collapse to the host,
-    // and the first entry for a host wins.
+    // Older formats (a bare array; `host|login` ids with bindings) are read so
+    // an upgrade does not sign the user out.
     const entries = Array.isArray(parsed) ? parsed : parsed.accounts;
     for (const entry of entries ?? []) {
       const accessToken = decrypt(entry.accessTokenEnc);
@@ -144,7 +136,6 @@ export async function listAccounts(): Promise<ProviderAccount[]> {
   return [...memory.values()].map(c => c.account);
 }
 
-/** The account signed in to this host, if any. */
 export async function accountForHost(host: string): Promise<ProviderAccount | null> {
   await load();
   return memory.get(accountIdFor(host))?.account ?? null;
@@ -160,13 +151,8 @@ export async function clearCredential(accountId: string): Promise<ProviderAccoun
 }
 
 /**
- * A usable access token for a host, refreshing it first when it is about to
- * expire.
- *
- * This is the piece that makes short-lived providers work at all: Bitbucket and
- * GitLab tokens last two hours and Entra ID about one, so "store it once and
- * forget" would leave push failing an hour into the session with an
- * authentication error the user has no way to interpret.
+ * A usable access token for a host, refreshed shortly before it expires;
+ * Bitbucket, GitLab and Entra ID tokens last one to two hours.
  */
 export async function getFreshToken(accountId: string): Promise<string | null> {
   await load();

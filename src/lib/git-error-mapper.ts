@@ -18,11 +18,8 @@ export interface ClassifiedGitError {
 
 const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> = [
   { kind: 'notRepo', re: /not a git repository/i },
-  // Before `auth`, and deliberately without a sign-in action: an ssh remote
-  // authenticates with a key, so a stored token cannot fix any of these. The
-  // app used to offer sign-in here anyway, sending people through a dialog
-  // that could not have helped. A locked or deleted key surfaces on fetch and
-  // push and, because commits are signed with the same key, on commit too.
+  // Before `auth` and without a sign-in action: a token cannot fix an ssh key
+  // problem.
   {
     kind: 'sshKey',
     re: /permission denied \(publickey\)|enter passphrase for|incorrect passphrase|couldn't load public key|identity file .* not accessible|host key verification failed/i,

@@ -85,9 +85,7 @@ describe('CommitForm', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  // There is no maximum: git does not impose one, and neither does the commit
-  // handler. The counter must stay purely informational however long the
-  // message gets — never a warning, never a block.
+  // No maximum: the counter is informational only, never a warning or a block.
   it('counter keeps counting past any threshold and never turns into a warning', () => {
     setupMocks({ staged: ['file.ts'] });
     render(<CommitForm />);
