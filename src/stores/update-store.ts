@@ -85,7 +85,7 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
       if (get().cancelRequested) {
         // Cancelling is not a failure: it lands back where the download started.
         set({
-          phase: get().result?.latest ? 'available' : 'idle',
+          phase: get().result?.status === 'available' ? 'available' : 'idle',
           progress: null,
           error: null,
           cancelRequested: false,
