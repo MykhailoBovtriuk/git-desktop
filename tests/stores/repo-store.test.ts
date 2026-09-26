@@ -66,6 +66,7 @@ const authSource = vi.fn(async (_host: string, _protocol: string | null) => 'non
 vi.mock('../../src/api/account-api', () => ({ accountApi: { authSource } }));
 
 const { useRepoStore, LOG_PAGE_SIZE } = await import('../../src/stores/repo-store');
+const { getLocalStorage } = await import('../../src/lib/storage');
 
 const makeCommits = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
@@ -755,5 +756,37 @@ describe('sign-in prompt on opening a repository', () => {
     await new Promise(r => setTimeout(r, 0));
 
     expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+});
+
+describe('restoring saved repositories', () => {
+  beforeEach(() => {
+    useRepoStore.setState({ repoPath: null, recentRepos: [] } as any);
+    vi.clearAllMocks();
+  });
+
+  const restore = async (saved: unknown) => {
+    getLocalStorage().setItem('git-desktop-repo', JSON.stringify({ state: saved, version: 0 }));
+    await useRepoStore.persist.rehydrate();
+  };
+
+  // Older builds saved other shapes here; one non-string entry used to crash
+  // every screen that shows a repository name.
+  it('keeps only paths from a recent list written by an older build', async () => {
+    await restore({
+      repoPath: null,
+      recentRepos: ['/tmp/a', { path: '/tmp/b' }, null, 42, '/tmp/c'],
+    });
+
+    expect(useRepoStore.getState().recentRepos).toEqual(['/tmp/a', '/tmp/c']);
+  });
+
+  it('does not try to reopen a saved repository that is not a path', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    await restore({ repoPath: { path: '/tmp/a' }, recentRepos: [] });
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(useRepoStore.getState().repoPath).toBeNull();
+    expect(gitApi.openRepo).not.toHaveBeenCalled();
   });
 });
