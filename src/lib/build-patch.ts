@@ -1,16 +1,6 @@
-// Extract a single hunk from a one-file unified diff into a minimal, valid
-// patch that `git apply` can apply on its own — the basis for hunk-level
-// staging.
-//
-// We slice the hunk verbatim from the original diff text rather than
-// re-synthesising it from parsed DiffHunk/DiffLine data, because parse-diff
-// intentionally drops the "\ No newline at end of file" marker and normalises
-// away byte-level details (CRLF, tabs). Slicing preserves the diff exactly, so
-// `git apply --cached` never rejects a reconstructed-but-subtly-wrong patch.
-//
-// `rawDiff` is the output of `git diff [--cached] -- <file>` for a single file
-// (what DiffViewer already fetches). `hunkIndex` is the 0-based position of the
-// hunk among that file's hunks — the same order DiffViewer renders them.
+// Extract one hunk from a single-file diff into a patch `git apply` accepts,
+// for hunk-level staging. Sliced verbatim, since parse-diff drops byte-level
+// details. `hunkIndex` is 0-based in DiffViewer order.
 export function buildHunkPatch(rawDiff: string, hunkIndex: number): string {
   const lines = rawDiff.split('\n');
 

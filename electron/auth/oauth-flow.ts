@@ -25,9 +25,8 @@ interface PendingFlow {
 }
 
 /**
- * A browser round trip is slow but not unbounded; ten minutes is long enough
- * for a password manager and a 2FA prompt, short enough that an abandoned
- * `state` cannot be replayed the next day.
+ * Ten minutes: enough for a password manager and 2FA, short enough that an
+ * abandoned `state` cannot be replayed later.
  */
 const STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -51,9 +50,8 @@ export interface BeginOptions {
 }
 
 /**
- * Builds the authorize URL and remembers what has to match when the browser
- * comes back. Does not open anything — the caller decides that, which keeps
- * this module testable without Electron.
+ * Builds the authorize URL and remembers what must match on return. Opens
+ * nothing, so the module stays testable without Electron.
  */
 export function beginSignIn(opts: BeginOptions): string {
   const { provider, host } = opts;
@@ -104,13 +102,8 @@ export interface SignInResult {
 }
 
 /**
- * Finishes the flow from the URL the deep link delivered.
- *
- * The `state` check is the only thing standing between this app and a code
- * somebody else obtained: without it, any process able to open a
- * `git-desktop-auth://` URL could hand us an account we would then store as the
- * user's own. It is therefore single-use and time-limited, and cleared before
- * any network call so a failed exchange cannot be retried with the same value.
+ * Finishes the flow from the deep-link URL. `state` is single-use, time-limited
+ * and cleared before any network call, so a foreign code is never accepted.
  */
 export async function completeSignIn(callbackUrl: string): Promise<SignInResult> {
   const flow = pending;
@@ -154,7 +147,7 @@ export async function completeSignIn(callbackUrl: string): Promise<SignInResult>
 
   const token = await postToken(provider.endpoints(flow.host).tokenUrl, params);
   const fetched = await provider.fetchAccount(flow.host, token.accessToken);
-  const account: ProviderAccount = { ...fetched, id: accountIdFor(flow.host, fetched.login) };
+  const account: ProviderAccount = { ...fetched, id: accountIdFor(flow.host) };
 
   return { account, token, clientId: flow.clientId, clientSecret: flow.clientSecret };
 }
@@ -187,9 +180,8 @@ function challengeFor(verifier: string): string {
 }
 
 /**
- * Constant-time comparison. The values are opaque UUIDs rather than secrets an
- * attacker can grind at, but a length-leaking `===` on a security check is the
- * kind of shortcut that ages badly.
+ * Constant-time comparison: a length-leaking `===` has no place in a security
+ * check.
  */
 function statesMatch(a: string, b: string): boolean {
   const bufA = Buffer.from(a);

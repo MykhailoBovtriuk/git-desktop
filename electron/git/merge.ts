@@ -10,9 +10,8 @@ export async function merge(
     await ctx.ensureRepo().merge([branch]);
     return { success: true, conflicts: [] };
   } catch (err) {
-    // Derive conflicting files from status (string paths) rather than the
-    // error shape: simple-git's err.git.conflicts holds objects, and a retry
-    // while already mid-conflict throws an error with no conflict info at all.
+    // Conflicting files come from status: simple-git's error shape is
+    // unreliable, especially on a retry mid-conflict.
     const conflicts = (await ctx.ensureRepo().status()).conflicted;
     if (conflicts.length) {
       return { success: false, conflicts };

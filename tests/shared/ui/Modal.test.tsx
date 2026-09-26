@@ -70,7 +70,6 @@ describe('Modal', () => {
     expect(container.querySelector('.justify-end')).toBeNull();
   });
 
-  // P3.21 — accessibility
   it('exposes the dialog role and aria-modal', () => {
     render(<Modal title="T">y</Modal>);
     const dialog = screen.getByRole('dialog');

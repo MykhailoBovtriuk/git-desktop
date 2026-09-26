@@ -13,11 +13,13 @@ import { MergeEditor } from '../merge/MergeEditor';
 import { MergeConflictModal } from '../merge/MergeConflictModal';
 import { RebaseBanner } from '../rebase/RebaseBanner';
 import { CheckoutConflictModal } from '../checkout/CheckoutConflictModal';
+import { NewBranchModal } from '../branches/NewBranchModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
 import { AboutView } from '../about/AboutView';
 import { SignInModal } from '../account/SignInModal';
+import { UpdateModal } from '../update/UpdateModal';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
@@ -47,9 +49,8 @@ export function Shell() {
   const showsOverlay = isOverlayView(activeView);
 
   if (!repoPath) {
-    // There is no footer without a repository, so the welcome screen carries
-    // its own entry points into Settings/About — otherwise they'd be
-    // unreachable for a first-run user.
+    // Without a repository there is no footer, so the welcome screen links to
+    // Settings/About itself.
     return (
       <>
         {showsOverlay ? (
@@ -62,6 +63,7 @@ export function Shell() {
         <Toast />
         <ConfirmDialog />
         <SignInModal />
+        <UpdateModal />
       </>
     );
   }
@@ -90,8 +92,10 @@ export function Shell() {
       <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
+      <NewBranchModal />
       <ConfirmDialog />
       <SignInModal />
+      <UpdateModal />
     </div>
   );
 }

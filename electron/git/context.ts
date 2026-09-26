@@ -4,16 +4,9 @@ import path from 'path';
 
 export const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
-// A GUI app has no TTY: without these, any fetch/pull/push that needs
-// credentials hangs forever on an invisible prompt. GIT_TERMINAL_PROMPT=0
-// forbids terminal prompts and GIT_ASKPASS=echo makes the askpass round-trip
-// return immediately (echo prints the prompt, not a password), so the
-// operation fails fast with an auth error instead of hanging.
-//
-// GIT_TERMINAL_PROMPT=0 must stay even once the app can prompt for credentials
-// itself: an in-app prompt replaces GIT_ASKPASS, while this flag is what stops
-// git falling back to a terminal that will never answer. Dropping it as "no
-// longer needed" brings the indefinite hang straight back.
+// A GUI app has no TTY: GIT_TERMINAL_PROMPT=0 and GIT_ASKPASS=echo make auth
+// failures fail fast instead of hanging. Keep GIT_TERMINAL_PROMPT=0 even with
+// an in-app prompt.
 export function credentialSafeEnv(): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -27,14 +20,9 @@ export class GitContext {
   repoPath: string | null = null;
 
   createGit(dir: string): SimpleGit {
-    // simple-git's .env(object) REPLACES the child env, so the merge over
-    // process.env in credentialSafeEnv() is what keeps PATH/HOME intact.
-    // The `unsafe` opt-ins exist to guard against attacker-controlled values;
-    // ours are hardcoded ('echo' for askpass, 'true' as rebase editor) and the
-    // inherited env may legitimately carry GIT_EDITOR from the user's shell.
-    // allowUnsafeSshCommand is needed only to *remove* core.sshCommand: builds
-    // that had the profiles feature wrote it into repositories, and clearing an
-    // identity has to be able to take it back out. Nothing here ever sets it.
+    // simple-git's .env() replaces the child env, hence the merge over
+    // process.env. Our unsafe values are hardcoded; allowUnsafeSshCommand is
+    // only for removing core.sshCommand.
     return simpleGit({
       baseDir: dir,
       unsafe: {

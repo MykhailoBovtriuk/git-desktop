@@ -130,7 +130,7 @@ npm run test:watch    # watch mode
 The suite (690+ tests) covers:
 
 - `GitService` against a real Git repo (temp dir + actual `git init`)
-- The auth stack: OAuth flow, token store, provider registry, deep links
+- The auth stack: OAuth flow, credential verification, token store, provider registry, deep links
 - Diff parser, patch builder, commit graph layout
 - Zustand stores and the shared UI components
 - i18n parity across the English, Ukrainian and Dutch resources
@@ -218,7 +218,7 @@ git-desktop/
 │   │                            #   (history, status, branches, remote, merge, rebase, stash, files)
 │   ├── git-service.ts           # Thin facade the IPC layer calls into
 │   ├── repo-watcher.ts          # fs.watch on .git → pushes repo:changed to the renderer
-│   └── auth/                    # Sign-in: OAuth engine, token store, deep links, git credentials
+│   └── auth/                    # Sign-in: OAuth engine, credential check, token store, deep links, git credentials
 │       └── providers/           # One file per hosting service (GitHub, GitLab, Azure, …)
 ├── src/                         # Renderer process (React + browser APIs)
 │   ├── main.tsx                 # React root
@@ -291,7 +291,7 @@ git-desktop/
 - **3-panel merge editor** — CURRENT / RESULT / INCOMING panes reading real conflict sides from the Git index (`:2:path`, `:3:path`), "Use this" buttons, write-back to disk before marking resolved
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
-- **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — see [Authentication](#-authentication)
+- **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a verified personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — and the app only asks when git cannot already authenticate on its own — see [Authentication](#-authentication)
 - **Localization** — English, Ukrainian and Dutch, switchable in Settings and remembered across restarts; new installs start in English
 - **Auto-refresh** — event-driven via `fs.watch` on `.git` (debounced 300 ms), so external `git` activity shows up almost instantly; a configurable poll (off / 10 s / 30 s / 60 s) picks up plain file edits
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
@@ -309,10 +309,22 @@ rebase, cherry-pick, and tag management.
 
 ## 🔐 Authentication
 
-Opening a repository whose remote you are not signed in to offers a sign-in.
-The browser handles it and redirects back through `git-desktop-auth://oauth`;
-the token is encrypted with the OS keychain and handed to `git credential`, so
-ordinary `git push` and `git pull` authenticate without any further setup.
+Signing in does one job: it puts a credential where git can read it, so
+`push`/`pull`/`fetch` work from a window that has no terminal to prompt from.
+The browser handles the flow and redirects back through
+`git-desktop-auth://oauth`; the token is encrypted with the OS keychain and
+handed to `git credential`, so ordinary `git push` and `git pull` authenticate
+without any further setup.
+
+Because that is the only job, the app asks only when it would help. Opening a
+repository prompts when the remote is `https`, no account is signed in to the
+host, and git cannot already authenticate to it through the system credential
+helper. An `ssh` remote never prompts — it authenticates with a key.
+
+Every token is verified before anything is stored: against the host's API where
+there is one, and otherwise against the repository's own remote, on the same
+Smart HTTP endpoint `git fetch` begins with. A token that fails leaves no
+account and no keychain entry behind.
 
 | Provider                   | Flow                         | Needs a client secret                 |
 | -------------------------- | ---------------------------- | ------------------------------------- |
@@ -326,9 +338,26 @@ ordinary `git push` and `git pull` authenticate without any further setup.
 | Anything else              | personal access token        | —                                     |
 
 You are signed in **per host**, so GitHub, a work GitLab and Azure DevOps can be
-active at the same time; signing out of one leaves the others alone. Providers
-whose tokens expire (Bitbucket, GitLab, Entra ID) are refreshed automatically
-before the next network operation.
+active at the same time; signing out of one leaves the others alone. One host
+holds one account — `git credential` addresses a credential by host, so a
+second account there is one git could never be told to prefer — and signing in
+again replaces it. Providers whose tokens expire (Bitbucket, GitLab, Entra ID)
+are refreshed automatically before the next network operation.
+
+**Running the browser flow in development (macOS).** macOS routes a URL scheme
+by bundle identifier, and `electron .` runs inside Electron's own bundle,
+`com.github.Electron` — an identifier several shipped apps carry a copy of, so
+a development run can neither receive the callback nor claim it without handing
+the scheme to a stray Electron system-wide. `npm run dev:electron` therefore
+launches through `scripts/dev-electron.mjs`, which clones `Electron.app` into
+`.dev-bundle/` under `com.gitdesktop.app.dev` with the scheme in its
+`Info.plist` (an APFS clone, so it is instant and costs no disk). The callback
+then reaches the running dev process like it would any installed app.
+
+One scheme cannot have two owners: while you develop, `git-desktop-auth://`
+points at the dev bundle, and opening the installed Git Desktop once points it
+back. GitHub matches `redirect_uri` against the registered value, so a separate
+development scheme is not an option.
 
 **Building your own copy.** Client ids are baked in at build time from
 `OAUTH_GITHUB_ID`, `OAUTH_GITHUB_SECRET`, `OAUTH_GITLAB_ID`, `OAUTH_AZURE_ID`,

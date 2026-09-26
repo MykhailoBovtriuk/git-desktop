@@ -5,24 +5,22 @@ import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { Button, TextInput, UserIcon } from '../../shared/ui';
 
-/**
- * Every server this user is signed in to, one row each.
- *
- * A list rather than a single account because being signed in to github.com, a
- * work GitLab and Azure DevOps at once is the normal case, not an edge one —
- * and signing out of one must visibly not touch the others.
- */
+/** Every server this user is signed in to, one row each. */
 export function AccountsSection() {
   const { t } = useTranslation('account');
-  const { accounts, persistent, openSignIn, signOut } = useAccountStore(
+  const { accounts, authSource, persistent, openSignIn, signOut } = useAccountStore(
     useShallow(s => ({
       accounts: s.accounts,
+      authSource: s.authSource,
       persistent: s.persistent,
       openSignIn: s.openSignIn,
       signOut: s.signOut,
     })),
   );
   const remoteHost = useRepoStore(s => s.remoteHost);
+  // Only the open repository's server: `git credential` cannot enumerate hosts.
+  const external =
+    remoteHost && (authSource === 'system' || authSource === 'ssh') ? authSource : null;
   const [adding, setAdding] = useState(false);
   const [host, setHost] = useState('');
 
@@ -67,7 +65,21 @@ export function AccountsSection() {
             </Button>
           </div>
         ))}
+
+        {external && (
+          <div className="bg-mantle/50 rounded p-3 flex items-center gap-3">
+            <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
+            <div className="min-w-0">
+              <p className="text-subtext text-sm truncate">{remoteHost}</p>
+              <p className="text-subtext text-xs truncate">
+                {t(external === 'ssh' ? 'section.viaSsh' : 'section.viaSystem')}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {external && <p className="text-subtext text-xs mt-2">{t('section.externalHint')}</p>}
 
       {adding ? (
         <div className="flex items-center gap-2 mt-3">
@@ -101,9 +113,7 @@ export function AccountsSection() {
         </Button>
       )}
 
-      {/* A machine with no OS keychain cannot keep a token safely, and the app
-          refuses to write one in the clear — so say the session is all there is
-          rather than letting the user find out at the next launch. */}
+      {/* Without an OS keychain tokens last this session only; say so up front. */}
       {!persistent && <p className="text-yellow text-xs mt-3">{t('section.notPersistent')}</p>}
     </section>
   );

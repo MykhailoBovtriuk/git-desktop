@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('react-i18next', () => ({
@@ -26,7 +26,7 @@ const repoState: any = {
   mergeState: null,
   merging: false,
 };
-const uiState: any = { addToast: vi.fn(), requestConfirm: vi.fn() };
+const uiState: any = { addToast: vi.fn(), requestConfirm: vi.fn(), openNewBranch: vi.fn() };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -59,5 +59,31 @@ describe('BranchDropdown merge lock', () => {
     repoState.mergeState = { sourceBranch: 'f', targetBranch: 'main', conflictingFiles: ['a'] };
     const { container } = render(<BranchDropdown onClose={() => {}} />);
     expect(panel(container).className).toContain('pointer-events-none');
+  });
+});
+
+describe('BranchDropdown new branch', () => {
+  it('opens the new-branch dialog and closes the dropdown', () => {
+    const onClose = vi.fn();
+    render(<BranchDropdown onClose={onClose} />);
+
+    fireEvent.click(screen.getByText('new'));
+    expect(uiState.openNewBranch).toHaveBeenCalledTimes(1);
+    // The dialog is mounted outside the dropdown, which would otherwise sit on
+    // top of it.
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Typing a name that matches nothing is exactly when you want to create it,
+  // so the row the action lives in must not be filtered away with the list.
+  it('offers new even when the filter matches no local branch', () => {
+    render(<BranchDropdown onClose={() => {}} />);
+
+    fireEvent.change(screen.getByPlaceholderText('searchPlaceholder'), {
+      target: { value: 'nothing-matches-this' },
+    });
+
+    expect(screen.queryByText('main')).toBeNull();
+    expect(screen.getByText('new')).toBeTruthy();
   });
 });

@@ -52,9 +52,8 @@ function subscribeToSystemTheme(onChange: () => void): () => void {
 }
 
 /**
- * Reactive counterpart of the media query, for components that need the
- * resolved theme (not just the preference) to re-render — the diff highlighter
- * has to re-tokenize when 'system' flips.
+ * The resolved theme, reactive, for components that must re-render when
+ * 'system' flips.
  */
 export function useSystemPrefersDark(): boolean {
   return useSyncExternalStore(

@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import type { UpdateProgress } from '../src/types';
 
 const ALLOWED_CHANNELS = new Set<string>([
   'git:open-repo',
@@ -15,6 +16,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:pull',
   'git:push',
   'git:push-set-upstream',
+  'git:create-branch',
   'git:checkout',
   'git:checkout-force',
   'git:merge',
@@ -49,15 +51,17 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:get-conflict-sides',
   'account:list',
   'account:providers',
-  'account:for-repo',
-  'account:bind',
-  'account:unbind',
+  'account:auth-source',
   'account:sign-in',
   'account:sign-in-token',
   'account:open-token-help',
   'account:cancel-sign-in',
   'account:sign-out',
   'app:get-version',
+  'app:check-for-update',
+  'app:download-update',
+  'app:cancel-update-download',
+  'app:install-update',
   'shell:open-external',
   'window:set-titlebar-overlay',
 ]);
@@ -80,6 +84,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = () => cb();
     ipcRenderer.on('account:changed', listener);
     return () => ipcRenderer.removeListener('account:changed', listener);
+  },
+  // The only push that carries a payload: asking back for the byte count on
+  // every frame of a 140 MB download would be a round trip per repaint.
+  onUpdateProgress: (cb: (progress: UpdateProgress) => void) => {
+    const listener = (_e: IpcRendererEvent, progress: UpdateProgress) => cb(progress);
+    ipcRenderer.on('app:update-progress', listener);
+    return () => ipcRenderer.removeListener('app:update-progress', listener);
   },
   platform: process.platform,
 });

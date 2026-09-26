@@ -11,14 +11,23 @@ export type AutoRefreshMs = (typeof AUTO_REFRESH_OPTIONS)[number];
 export const LANGUAGES = ['uk', 'nl', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-// Language deliberately lives in i18next, not here: its LanguageDetector
-// already persists the choice and owns the browser-locale fallback, so a copy
-// in this store would be a second source of truth that can drift.
+// Language lives in i18next, which already persists it; a copy here would
+// drift.
 interface SettingsState {
   theme: ThemePreference;
   autoRefreshMs: AutoRefreshMs;
+  autoCheckUpdates: boolean;
+  includePrereleases: boolean;
+  /**
+   * A version the user chose not to hear about again. Cleared by asking for a
+   * check explicitly, which is what that button means.
+   */
+  skippedVersion: string | null;
   setTheme: (theme: ThemePreference) => void;
   setAutoRefreshMs: (ms: AutoRefreshMs) => void;
+  setAutoCheckUpdates: (enabled: boolean) => void;
+  setIncludePrereleases: (enabled: boolean) => void;
+  setSkippedVersion: (version: string | null) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -26,9 +35,15 @@ export const useSettingsStore = create<SettingsState>()(
     set => ({
       theme: 'system',
       autoRefreshMs: 60_000,
+      autoCheckUpdates: true,
+      includePrereleases: false,
+      skippedVersion: null,
 
       setTheme: theme => set({ theme }),
       setAutoRefreshMs: autoRefreshMs => set({ autoRefreshMs }),
+      setAutoCheckUpdates: autoCheckUpdates => set({ autoCheckUpdates }),
+      setIncludePrereleases: includePrereleases => set({ includePrereleases }),
+      setSkippedVersion: skippedVersion => set({ skippedVersion }),
     }),
     {
       name: 'git-desktop-settings',

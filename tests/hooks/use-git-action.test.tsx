@@ -11,7 +11,11 @@ vi.mock('react-i18next', () => ({
 import { useGitAction } from '../../src/hooks/use-git-action';
 import { useUiStore } from '../../src/stores/ui-store';
 import { useAccountStore } from '../../src/stores/account-store';
-import { CheckoutConflictError, MergeConflictError, useRepoStore } from '../../src/stores/repo-store';
+import {
+  CheckoutConflictError,
+  MergeConflictError,
+  useRepoStore,
+} from '../../src/stores/repo-store';
 
 const lastToast = () => {
   const { toasts } = useUiStore.getState();
@@ -21,7 +25,7 @@ const lastToast = () => {
 describe('useGitAction', () => {
   beforeEach(() => {
     useUiStore.setState({ toasts: [] });
-    useRepoStore.setState({ remoteHost: null });
+    useRepoStore.setState({ remoteHost: null, remoteProtocol: null });
   });
 
   it('returns true on success and shows the success toast when given one', async () => {
@@ -85,7 +89,7 @@ describe('useGitAction', () => {
   // The hook used to take only `kind` from classifyGitError and drop `action`,
   // so an auth failure reached the user as a dead end with nowhere to go.
   it('offers a way out of an authentication failure', async () => {
-    useRepoStore.setState({ remoteHost: 'github.com' });
+    useRepoStore.setState({ remoteHost: 'github.com', remoteProtocol: 'https' });
     const openSignIn = vi.fn().mockResolvedValue(undefined);
     useAccountStore.setState({ openSignIn });
     const { result } = renderHook(() => useGitAction());

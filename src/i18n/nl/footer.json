@@ -9,6 +9,7 @@
   "publishBranch": "Branch publiceren",
   "error": {
     "auth": "Kon niet authenticeren bij de remote. Log in om verder te gaan.",
+    "sshKey": "De remote heeft je SSH-sleutel geweigerd. Controleer of de sleutel geladen is (ssh-add -l) en aan je account is toegevoegd.",
     "noUpstream": "Deze branch heeft nog geen upstream. Publiceer hem om te pushen.",
     "conflict": "Er zijn eerst conflicten op te lossen.",
     "uncommitted": "Je hebt niet-gecommitte wijzigingen die zouden worden overschreven. Commit of stash ze eerst.",
@@ -19,6 +20,10 @@
   },
   "signIn": "Inloggen",
   "account": {
-    "signedInAs": "Ingelogd als {{name}} op {{host}}"
+    "signedInAs": "Ingelogd als {{name}} op {{host}}",
+    "viaSystem": "systeemsleutelhanger",
+    "viaSsh": "ssh-sleutel",
+    "viaSystemHint": "Git authenticeert bij deze server met een credential die al in je systeemopslag staat. Deze app heeft hem niet aangemaakt.",
+    "viaSshHint": "Deze remote gebruikt SSH, dus git authenticeert met je sleutel. Inloggen verandert hier niets."
   }
 }

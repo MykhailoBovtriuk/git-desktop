@@ -6,14 +6,19 @@ import { wrap } from './wrap';
 export function registerStashHandlers(git: GitService) {
   ipcMain.handle('git:get-stash-list', () => wrap(() => git.getStashList()));
 
-  ipcMain.handle('git:stash-save', (_e, message?: string, staged?: boolean) =>
-    wrap(() => {
-      assertOptionalString(message, 'message');
-      if (staged !== undefined && typeof staged !== 'boolean') {
-        throw new Error('Invalid argument: staged must be a boolean');
-      }
-      return git.stashSave(message, staged ?? false).then(() => null);
-    }),
+  ipcMain.handle(
+    'git:stash-save',
+    (_e, message?: string, staged?: boolean, includeUntracked?: boolean) =>
+      wrap(() => {
+        assertOptionalString(message, 'message');
+        if (staged !== undefined && typeof staged !== 'boolean') {
+          throw new Error('Invalid argument: staged must be a boolean');
+        }
+        if (includeUntracked !== undefined && typeof includeUntracked !== 'boolean') {
+          throw new Error('Invalid argument: includeUntracked must be a boolean');
+        }
+        return git.stashSave(message, staged ?? false, includeUntracked ?? false).then(() => null);
+      }),
   );
 
   ipcMain.handle('git:get-stash-top', () => wrap(() => git.getStashTop()));

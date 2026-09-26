@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   hostFromRemoteUrl,
   isNetworkHost,
+  protocolFromRemoteUrl,
   resetAliasCache,
   resolveRemoteHost,
 } from '../../electron/auth/remote-host';
@@ -53,9 +54,8 @@ describe('resolveRemoteHost', () => {
     expect(await resolveRemoteHost('git@gitlab.com:g/r.git')).toBe('gitlab.com');
   });
 
-  // Regression: people with two accounts on one service give each a nickname in
-  // ~/.ssh/config. Judging "is this a host" by whether it contains a dot threw
-  // those remotes away, so the app never offered to sign in to them at all.
+  // Regression: SSH aliases from ~/.ssh/config were discarded for lacking a
+  // dot.
   it('resolves an ssh config nickname to the host behind it', async () => {
     // `ssh -G` on an unknown name echoes it back, which is the safe fallback;
     // a name that really is configured resolves to its hostname.
@@ -67,5 +67,27 @@ describe('resolveRemoteHost', () => {
     expect(await resolveRemoteHost('/srv/git/repo.git')).toBeNull();
     expect(await resolveRemoteHost('../sibling-repo')).toBeNull();
     expect(await resolveRemoteHost(null)).toBeNull();
+  });
+});
+
+describe('protocolFromRemoteUrl', () => {
+  it('reads scp syntax as ssh', () => {
+    expect(protocolFromRemoteUrl('git@github.com:owner/repo.git')).toBe('ssh');
+    expect(protocolFromRemoteUrl('github-work:owner/repo.git')).toBe('ssh');
+  });
+
+  it('reads explicit schemes', () => {
+    expect(protocolFromRemoteUrl('ssh://git@github.com/owner/repo.git')).toBe('ssh');
+    expect(protocolFromRemoteUrl('https://github.com/owner/repo.git')).toBe('https');
+    expect(protocolFromRemoteUrl('http://git.example.com/owner/repo.git')).toBe('https');
+  });
+
+  // Nothing a stored token applies to, so the sign-in offer must stay away.
+  it('calls anything else neither', () => {
+    expect(protocolFromRemoteUrl('git://github.com/owner/repo.git')).toBe('other');
+    expect(protocolFromRemoteUrl('file:///srv/repo.git')).toBe('other');
+    expect(protocolFromRemoteUrl('/srv/repo.git')).toBe('other');
+    expect(protocolFromRemoteUrl('')).toBeNull();
+    expect(protocolFromRemoteUrl(null)).toBeNull();
   });
 });

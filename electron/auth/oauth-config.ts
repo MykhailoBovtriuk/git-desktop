@@ -3,18 +3,8 @@ import path from 'path';
 import type { ProviderId } from '../../src/types';
 
 /**
- * The OAuth client ids this build carries, and the two client secrets that
- * cannot be avoided.
- *
- * `tsc` performs no compile-time substitution, so the values are written as
- * JSON beside the compiled main process by `scripts/gen-oauth-config.mjs` and
- * read here at startup. The environment wins over the file so a developer can
- * override a packaged value without rebuilding.
- *
- * GitHub and Bitbucket need a secret because neither offers PKCE to desktop
- * clients; anyone can extract it from an installer, exactly as they can from
- * GitHub Desktop. It is not a password — it is useless without an
- * authorization code the user granted explicitly.
+ * OAuth client ids and secrets from `scripts/gen-oauth-config.mjs` output; env
+ * overrides. GitHub and Bitbucket need a secret: no PKCE for desktop clients.
  */
 export interface ProviderKeys {
   clientId: string;
@@ -55,8 +45,7 @@ function readVar(name: string): string {
 
 /**
  * Keys for a provider, or null when this build has none. Self-hosted providers
- * always return null here: their app is registered on the user's own instance,
- * so the client id arrives with the server address instead.
+ * always get null: their client id comes from the user.
  */
 export function keysFor(id: ProviderId): ProviderKeys | null {
   const names = ENV_NAMES[id];

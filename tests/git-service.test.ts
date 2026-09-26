@@ -123,6 +123,73 @@ describe('GitService', () => {
     expect(content).toBe('hello');
   });
 
+  it('createBranch creates a branch at HEAD and switches to it', async () => {
+    await git.openRepo(tmpDir);
+    await git.createBranch('feature/login');
+
+    const branches = await git.getBranches();
+    expect(branches.find(b => b.current)!.name).toBe('feature/login');
+    expect(await git.getHeadCommit()).toBe(
+      execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim(),
+    );
+  });
+
+  // The new branch sits on the same commit, so switching to it must not touch
+  // the working tree — that is what "bring my changes" relies on.
+  it('createBranch carries uncommitted work over, staged and unstaged alike', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+    execSync('git add file.txt', { cwd: tmpDir });
+
+    await git.createBranch('feature/wip');
+
+    const status = await git.getStatus();
+    expect(status.staged.map(f => f.path)).toEqual(['file.txt']);
+    expect(status.unstaged.map(f => f.path)).toEqual(['fresh.txt']);
+    expect(fs.readFileSync(path.join(tmpDir, 'fresh.txt'), 'utf8')).toBe('brand new');
+  });
+
+  it('createBranch refuses a name that is already taken', async () => {
+    await git.openRepo(tmpDir);
+    await git.createBranch('feature/login');
+    execSync('git checkout -q -', { cwd: tmpDir });
+
+    await expect(git.createBranch('feature/login')).rejects.toThrow();
+  });
+
+  // Without -u untracked files stay in the tree, so "leave my changes" would
+  // bring them along.
+  it('stashSave takes untracked files too when asked', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+
+    await git.stashSave('WIP on main', false, true);
+
+    const status = await git.getStatus();
+    expect(status.staged).toEqual([]);
+    expect(status.unstaged).toEqual([]);
+    expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(false);
+  });
+
+  it('stashSave leaves untracked files alone by default', async () => {
+    await git.openRepo(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
+    fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
+
+    await git.stashSave('WIP on main');
+
+    expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(true);
+  });
+
+  // git rejects the combination outright; catching it here names the reason
+  // rather than surfacing git's own wording about incompatible options.
+  it('stashSave refuses to combine staged-only with untracked', async () => {
+    await git.openRepo(tmpDir);
+    await expect(git.stashSave('nope', true, true)).rejects.toThrow(/mutually exclusive/i);
+  });
+
   it('checkout switches branch', async () => {
     await git.openRepo(tmpDir);
     execSync('git checkout -b develop', { cwd: tmpDir });
@@ -177,7 +244,6 @@ describe('GitService', () => {
     expect(diff).toBe('');
   });
 
-  // P4.31 — upstream tracking / publish flow
   it('getBranches reports no tracking for a branch without an upstream', async () => {
     await git.openRepo(tmpDir);
     const current = (await git.getBranches()).find(b => b.current)!;
@@ -285,7 +351,6 @@ describe('rebase lifecycle', () => {
     await expect(git.continueRebase()).rejects.toThrow();
     expect(await git.isRebasing()).toBe(true);
 
-    // Resolve and continue.
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'resolved');
     execSync('git add file.txt', { cwd: tmpDir });
     await git.continueRebase();
@@ -359,9 +424,8 @@ describe('readFile/writeFile path guards', () => {
     expect(await git.readFile('.gitignore')).toBe('node_modules\n');
   });
 
-  // Writing into .git/ (hooks, config) means arbitrary code execution on the
-  // next git command — the guard must reject it even though the path is
-  // lexically inside the repo.
+  // Writing into .git/ means code execution on the next git command, even
+  // though the path is inside the repo.
   it('rejects writes into .git', async () => {
     await expect(git.writeFile('.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
     expect(fs.existsSync(path.join(tmpDir, '.git', 'hooks', 'pre-commit'))).toBe(false);

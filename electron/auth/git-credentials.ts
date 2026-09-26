@@ -5,7 +5,6 @@ import { providerById } from './providers/registry';
 /**
  * Values we are willing to write, per platform. A credential helper is a
  * command git executes, so this is an allowlist rather than a free-text field.
- * Carried over unchanged from the settings screen this replaced.
  */
 const ALLOWED_HELPERS: Record<string, string[]> = {
   darwin: ['osxkeychain'],
@@ -17,9 +16,9 @@ export function allowedHelpers(platform: string = process.platform): string[] {
   return ALLOWED_HELPERS[platform] ?? [];
 }
 
-function run(args: string[], stdin?: string): Promise<string> {
+function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = execFile('git', args, (err, stdout) => {
+    const child = execFile('git', args, { env: env ?? process.env }, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout);
     });
@@ -30,12 +29,8 @@ function run(args: string[], stdin?: string): Promise<string> {
 }
 
 /**
- * Make sure git has somewhere to keep credentials.
- *
- * Without a configured helper, `git credential approve` succeeds and stores
- * nothing — a silent no-op that would leave every push failing after an
- * apparently successful sign-in. Returns the helper in effect, or null when the
- * platform offers none we trust.
+ * Make sure git has a credential helper; without one `git credential approve`
+ * silently stores nothing. Returns the helper, or null if none is trusted.
  */
 export async function ensureCredentialHelper(): Promise<string | null> {
   const existing = await run(['config', '--global', '--get', 'credential.helper'])
@@ -67,11 +62,8 @@ function describe(host: string, username: string, password?: string): string {
 }
 
 /**
- * Hand the token to the system credential store, so plain `git push`
- * authenticates on its own.
- *
- * The token goes in over stdin rather than argv: an argument list is visible to
- * every process on the machine via `ps`.
+ * Hand the token to the system credential store so plain `git push` works. Sent
+ * over stdin, not argv, which `ps` exposes.
  */
 export async function approveCredentials(
   host: string,
@@ -80,6 +72,20 @@ export async function approveCredentials(
 ): Promise<void> {
   await ensureCredentialHelper();
   await run(['credential', 'approve'], describe(host, username, token));
+}
+
+/**
+ * Whether git can already authenticate to a host on its own, so a sign-in is
+ * not offered needlessly. No prompts: an unanswered lookup fails fast.
+ */
+export async function hasStoredCredential(host: string): Promise<boolean> {
+  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  delete env.GIT_ASKPASS;
+  delete env.SSH_ASKPASS;
+  const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
+    () => '',
+  );
+  return /^password=.+/m.test(out);
 }
 
 /** Forget a stored credential. Best effort: a helper may have nothing to erase. */

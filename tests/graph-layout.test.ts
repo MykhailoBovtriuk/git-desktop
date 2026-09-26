@@ -60,10 +60,8 @@ describe('computeLayout', () => {
   });
 
   describe('shared parent across branches (lane leak)', () => {
-    // History: merge commit `m` joins `a` (first parent) and `b`;
-    // `b` also descends from `a`. With the leak, `a` ends up occupying
-    // two lanes at once: lane 0 (assigned by `m`) and lane 1 (assigned
-    // unconditionally by `b` as its first parent).
+    // Merge `m` joins `a` and `b`, and `b` descends from `a`; with the leak `a`
+    // occupies lanes 0 and 1.
     const commits = [
       makeCommit('m', ['a', 'b']),
       makeCommit('b', ['a']),
@@ -100,9 +98,7 @@ describe('computeLayout', () => {
     });
 
     it('lane count stays minimal after the branches rejoin', () => {
-      // A second, independent merge after the first one has fully
-      // resolved. With the leak, `a` still occupies lane 1, so `m2`
-      // is pushed out to lane 2 even though lanes 0-1 suffice.
+      // A second, independent merge: with the leak `m2` is pushed to lane 2.
       const extended = [
         makeCommit('m', ['a', 'b']),
         makeCommit('b', ['a']),

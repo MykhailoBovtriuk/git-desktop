@@ -2,9 +2,8 @@
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// `t` must be referentially stable across renders (as in real i18next) —
-// HistoryView lists it in effect deps, and a fresh function per render would
-// re-fire the effect on every rerender.
+// `t` must be stable across renders, as in real i18next, or HistoryView's
+// effect refires.
 const stableT = (k: string) => k;
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: stableT }),

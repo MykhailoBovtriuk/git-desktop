@@ -63,9 +63,8 @@ describe('StashView', () => {
   });
 });
 
-// Regression: selection is a bare index — after a drop every index shifts and
-// the selection silently pointed at a DIFFERENT stash (worse: drop+save keeps
-// the length, so even the length-based diff refetch missed the swap).
+// Regression: the selection was a bare index, so after a drop it pointed at a
+// different stash.
 describe('StashView selection stability', () => {
   const stash = (msg: string, date: string) => ({ index: 0, message: msg, branch: 'main', date });
 

@@ -9,9 +9,8 @@ import { tokenProvider } from './token';
 import type { ProviderDefinition } from './types';
 
 /**
- * Order matters twice: it decides which provider claims a host when two list
- * it, and it is the order the sign-in picker shows. Hosted services first,
- * self-hosted variants after, the manual fallback last.
+ * Order decides which provider claims a shared host and the order in the
+ * sign-in picker.
  */
 const PROVIDERS: ProviderDefinition[] = [
   github,
@@ -33,9 +32,8 @@ export function providerById(id: ProviderId): ProviderDefinition | null {
 }
 
 /**
- * The provider that owns a host, or null when nobody claims it — which is the
- * signal to ask the user, not an error. Most Git servers in the world are
- * somebody's self-hosted instance.
+ * The provider that owns a host, or null when nobody claims it; that means
+ * asking the user, not an error.
  */
 export function providerForHost(host: string): ProviderDefinition | null {
   const needle = host.toLowerCase();
@@ -43,15 +41,12 @@ export function providerForHost(host: string): ProviderDefinition | null {
 }
 
 /**
- * A provider is offerable when the build can actually complete its flow.
- * Self-hosted variants and the token fallback always can: they need no baked-in
- * key, or they take one from the user along with the server address.
+ * A provider is offerable when this build can complete its flow; self-hosted
+ * variants and the token fallback always can.
  */
 export function isConfigured(id: ProviderId): boolean {
-  // Self-hosted services register their OAuth app on the user's own instance,
-  // so a client id arrives with the server address rather than from the build.
-  // Gitea belongs here too: leaving it out hid Codeberg and every self-hosted
-  // Forgejo from a build with no Gitea key, which is most builds.
+  // Self-hosted services (Gitea included) register their OAuth app on the
+  // user's instance, so the client id comes with the server address.
   if (NO_BAKED_KEY_NEEDED.has(id)) return true;
   return keysFor(id) !== null;
 }

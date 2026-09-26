@@ -61,9 +61,8 @@ export async function unstageFiles(ctx: GitContext, paths: string[]): Promise<vo
   try {
     await git.raw(['restore', '--staged', '--', ...paths]);
   } catch (err) {
-    // `restore --staged` restores the index from HEAD, which does not exist
-    // in an empty repo (unborn HEAD). Dropping the entries from the index
-    // is the equivalent operation there; the working-tree files are kept.
+    // An unborn HEAD has nothing to restore from, so the entries are dropped
+    // from the index; working-tree files are kept.
     if (await ctx.hasHead()) throw err;
     await git.raw(['rm', '--cached', '--quiet', '--', ...paths]);
   }

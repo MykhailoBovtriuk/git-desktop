@@ -1,11 +1,14 @@
-import type { Commit, Branch, GitStatus, StashEntry } from '../types';
+import type { Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
 import { invoke } from './invoke';
 
 type StatusResult = GitStatus & { ahead: number; behind: number };
 
 export const gitApi = {
   openRepo: (path: string) =>
-    invoke<{ root: string; remoteHost: string | null }>('git:open-repo', path),
+    invoke<{ root: string; remoteHost: string | null; remoteProtocol: RemoteProtocol | null }>(
+      'git:open-repo',
+      path,
+    ),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
@@ -20,6 +23,7 @@ export const gitApi = {
   push: () => invoke<null>('git:push'),
   pushSetUpstream: (remote: string, branch: string) =>
     invoke<null>('git:push-set-upstream', remote, branch),
+  createBranch: (name: string) => invoke<null>('git:create-branch', name),
   checkout: (branch: string) => invoke<null>('git:checkout', branch),
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
   merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
@@ -52,8 +56,8 @@ export const gitApi = {
   getConflictSides: (p: string) =>
     invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
   getStashList: () => invoke<StashEntry[]>('git:get-stash-list'),
-  stashSave: (message?: string, staged?: boolean) =>
-    invoke<null>('git:stash-save', message, staged),
+  stashSave: (message?: string, staged?: boolean, includeUntracked?: boolean) =>
+    invoke<null>('git:stash-save', message, staged, includeUntracked),
   getStashTop: () => invoke<string | null>('git:get-stash-top'),
   stashApply: (index: number) => invoke<null>('git:stash-apply', index),
   stashPop: (index: number) => invoke<null>('git:stash-pop', index),

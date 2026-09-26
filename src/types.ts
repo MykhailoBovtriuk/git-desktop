@@ -93,9 +93,8 @@ export type ThemePreference = 'dark' | 'light' | 'system';
 export type ResolvedTheme = 'dark' | 'light';
 
 /**
- * Every hosting service the app knows how to sign in to. `token` is the
- * catch-all: an arbitrary self-hosted server cannot have an OAuth app
- * registered for it in advance, so it takes a personal access token instead.
+ * Every hosting service the app can sign in to; `token` is the catch-all
+ * personal access token.
  */
 export type ProviderId =
   | 'github'
@@ -108,20 +107,16 @@ export type ProviderId =
   | 'token';
 
 /**
- * A signed-in account, as the renderer sees it. Deliberately carries no token:
- * access and refresh tokens never leave the main process.
+ * A signed-in account as the renderer sees it; tokens never leave the main
+ * process.
  */
 export interface ProviderAccount {
   /**
-   * Stable identity of this account, `host|login`.
-   *
-   * Accounts are keyed by this rather than by host because one host commonly
-   * carries several: a personal and a work GitHub account differ only by who
-   * signed in. Keying by host silently merged them.
+   * The host: `git credential` addresses by host, so there is one account per
+   * host.
    */
   id: string;
   providerId: ProviderId;
-  /** Host of the remote this account authenticates. */
   host: string;
   /** Brand name for headings: "GitHub", "GitLab", "Azure DevOps". Never translated. */
   displayName: string;
@@ -141,25 +136,28 @@ export interface ProviderOption {
   /** True for self-hosted variants, where the user supplies the server address. */
   needsHost: boolean;
   /**
-   * True when this build has no client id for the provider, so the user has to
-   * bring one from an app registered on their own instance. Distinct from
-   * `needsHost`: Codeberg needs an address from nobody, but a company's own
-   * Gitea needs both.
+   * True when the user must bring their own client id. Distinct from
+   * `needsHost`: Codeberg needs neither address nor id.
    */
   needsClientId: boolean;
   /** Where to create a token, for the manual path. */
   tokenHelpUrl: string | null;
 }
 
+/**
+ * How git authenticates to a remote; ssh uses a key, so a token is irrelevant.
+ */
+export type RemoteProtocol = 'ssh' | 'https' | 'other';
+
+/**
+ * What authenticates this repository's remote. `system` is a credential in the
+ * OS store that the app did not create and may not remove.
+ */
+export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
+
 export type SignInPhase =
-  /** Several accounts already exist on this host — which one is this repo? */
-  | 'pick-account'
   /** Nobody claims this host — which service does it run? */
-  | 'choose'
-  | 'browser'
-  | 'waiting'
-  | 'token'
-  | 'error';
+  'choose' | 'browser' | 'waiting' | 'token' | 'error';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -171,10 +169,63 @@ export interface Toast {
   action?: { label: string; onClick: () => void };
 }
 
+/**
+ * A release worth offering. `assetName` is null when nothing is built for this
+ * platform; the UI links to the release page.
+ */
+export interface UpdateInfo {
+  /** Without the leading v: '1.2.0'. */
+  version: string;
+  /** As tagged: 'v1.2.0'. */
+  tag: string;
+  notes: string;
+  publishedAt: string | null;
+  releaseUrl: string;
+  assetName: string | null;
+  /** Bytes, 0 when the release did not say. */
+  assetSize: number;
+  prerelease: boolean;
+}
+
+/** `skipped`: a dev run, where the check never reaches the network. */
+export type UpdateStatus = 'up-to-date' | 'available' | 'skipped';
+
+export interface UpdateCheckResult {
+  status: UpdateStatus;
+  currentVersion: string;
+  latest: UpdateInfo | null;
+  /** The release matching the running version, for reinstalling it. */
+  current: UpdateInfo | null;
+  /** False in a dev run: downloading and installing are refused. */
+  canInstall: boolean;
+  checkedAt: number;
+}
+
+export interface UpdateProgress {
+  version: string;
+  receivedBytes: number;
+  /** 0 when the server sent no Content-Length. */
+  totalBytes: number;
+  percent: number;
+  bytesPerSecond: number;
+}
+
+export interface DownloadedUpdate {
+  version: string;
+  filePath: string;
+}
+
+export type UpdatePhase =
+  /** Nothing asked for yet, or the last answer was "up to date". */
+  'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
+
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
   onGitChanged: (cb: () => void) => () => void;
   onAccountChanged: (cb: () => void) => () => void;
+  // Unlike the two above, this one carries a payload: the renderer draws the
+  // progress bar from it rather than asking back for the numbers.
+  onUpdateProgress: (cb: (progress: UpdateProgress) => void) => () => void;
   platform: string;
 }
 

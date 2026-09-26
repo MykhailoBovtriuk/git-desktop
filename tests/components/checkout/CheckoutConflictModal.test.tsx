@@ -30,9 +30,7 @@ beforeEach(() => {
 });
 
 describe('CheckoutConflictModal double-submit protection', () => {
-  // Regression: buttons stayed active while the async action ran — a double
-  // click fired the action twice and always showed a success toast even for
-  // the second no-op run.
+  // Regression: a double click ran the action twice while it was in flight.
   it('disables all action buttons while an action is in flight', async () => {
     repoState.stashAndCheckout.mockReturnValue(new Promise(() => {}));
     render(<CheckoutConflictModal />);

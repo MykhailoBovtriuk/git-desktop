@@ -1,13 +1,19 @@
 import type { StoreApi } from 'zustand';
-import type { Commit, Branch, GitStatus, AheadBehind, MergeState, StashEntry } from '../../types';
+import type {
+  Commit,
+  Branch,
+  GitStatus,
+  AheadBehind,
+  MergeState,
+  RemoteProtocol,
+  StashEntry,
+} from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
 
 export interface RepoState {
-  // Generation counter: bumped when the repo is switched or a mutating
-  // operation starts/ends. Every loader captures it before its request and
-  // discards the response if the generation moved on — stale data from a
-  // previous repo or from before a mutation never overwrites fresh state.
+  // Generation counter, bumped on repo switch and around mutations; loaders
+  // discard responses from an older generation.
   epoch: number;
   busyCount: number;
   repoPath: string | null;
@@ -38,6 +44,8 @@ export interface RepoState {
   openRepo: (path: string) => Promise<void>;
   /** Host of the open repository's remote, or null for a local-only repo. */
   remoteHost: string | null;
+  /** How that remote authenticates — only an https one a token can help with. */
+  remoteProtocol: RemoteProtocol | null;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
    * answer must never block a commit, only a definite "no" does.
@@ -68,6 +76,11 @@ export interface RepoState {
   cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
+  /**
+   * Create a branch here and switch to it; `changes` is 'bring' (keep the work)
+   * or 'leave' (stash it first).
+   */
+  createBranch: (name: string, changes: 'bring' | 'leave') => Promise<void>;
   deleteBranch: (branch: string, force?: boolean) => Promise<void>;
   deleteRemoteBranch: (remote: string, branch: string) => Promise<void>;
   abortMerge: () => Promise<void>;

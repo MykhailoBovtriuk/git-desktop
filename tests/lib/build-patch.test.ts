@@ -37,7 +37,6 @@ describe('buildHunkPatch', () => {
     const first = buildHunkPatch(TWO_HUNK, 0);
     expect(first).toContain('-line2');
     expect(first).toContain('+LINE2');
-    // Second hunk content must be absent.
     expect(first).not.toContain('@@ -10,2 +10,3 @@');
     expect(first).not.toContain('+inserted');
 

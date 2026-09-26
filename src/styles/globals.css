@@ -1,8 +1,7 @@
 @import 'tailwindcss';
 
-/* `inline` substitutes the variable into every utility instead of freezing the
-   value at build time, so flipping `data-theme` on <html> repaints the whole
-   app without regenerating any CSS. */
+/* `inline` substitutes the variables into utilities, so flipping `data-theme`
+   repaints without regenerating CSS. */
 @theme inline {
   --color-base: var(--gd-base);
   --color-mantle: var(--gd-mantle);
@@ -78,9 +77,8 @@ body {
   color: var(--gd-text);
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
-  /* No global `user-select: none`: a Git client must let users copy commit
-     hashes, file paths, diff lines and error text. Chrome (titlebar, sidebar,
-     footer) opts out locally with the `select-none` utility instead. */
+  /* No global `user-select: none`: users must be able to copy hashes, paths and
+     diffs. Chrome opts out with `select-none`. */
 }
 
 ::-webkit-scrollbar {

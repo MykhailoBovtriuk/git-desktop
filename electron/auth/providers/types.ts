@@ -10,10 +10,8 @@ export interface OAuthEndpoints {
 }
 
 /**
- * One hosting service. Everything that differs between GitHub, GitLab, Azure
- * DevOps and the rest lives in one of these records, so the sign-in engine
- * itself has no per-provider branches and a ninth service is a new file rather
- * than an edit to five existing ones.
+ * One hosting service. Everything provider-specific lives here, so the sign-in
+ * engine has no per-provider branches.
  */
 export interface ProviderDefinition {
   id: ProviderId;
@@ -22,18 +20,14 @@ export interface ProviderDefinition {
   /** Hosts this provider owns outright. Empty means the user supplies the address. */
   knownHosts: string[];
   /**
-   * PKCE instead of a client secret. Decides both what the authorize URL
-   * carries and whether this build needs a secret baked in at all.
+   * PKCE instead of a client secret; decides both the authorize URL and whether
+   * the build needs a secret.
    */
   usesPkce: boolean;
   scopes: string[];
   /** Scope separator: OAuth says space, GitLab and GitHub both accept it. */
   endpoints: (host: string) => OAuthEndpoints;
-  /**
-   * Token → normalised account. The only place a provider's API shape lives.
-   * The storage id is stamped by the caller: which key an account is filed
-   * under is the store's business, not the provider's.
-   */
+  /** Token → normalised account. The storage id is stamped by the caller. */
   fetchAccount: (host: string, token: string) => Promise<FetchedAccount>;
   /**
    * The username git should send alongside the token. Azure DevOps ignores it

@@ -3,11 +3,8 @@ import { wrap } from './wrap';
 import { assertString } from '../ipc-validators';
 
 /**
- * Everything the app is allowed to open, and nothing else.
- *
- * Origins come from the entries themselves and are compared with `URL.origin`,
- * so a lookalike host such as "docs.github.com.evil.com" never matches — its
- * origin belongs to the attacker, not to us.
+ * Everything the app may open. Compared by `URL.origin`, so lookalike hosts
+ * never match.
  */
 const EXTERNAL_PREFIXES = [
   'https://github.com/MykhailoBovtriuk/git-desktop',
@@ -50,9 +47,8 @@ export function registerAppHandlers(options: AppHandlerOptions = {}) {
     }),
   );
 
-  // Windows/Linux draw the window controls themselves, into a strip whose
-  // colours are fixed at construction time — so a theme switch has to push the
-  // new colours back into the native overlay or the buttons stay dark.
+  // Windows/Linux draw the window controls with colours fixed at creation, so a
+  // theme switch pushes new ones to the overlay.
   ipcMain.handle('window:set-titlebar-overlay', (_e, color: string, symbolColor: string) =>
     wrap(async () => {
       if (process.platform === 'darwin') return null;

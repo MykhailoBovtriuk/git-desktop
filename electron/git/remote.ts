@@ -1,11 +1,10 @@
 import { GitContext } from './context';
-import { accountsForHost, boundAccount, getFreshToken } from '../auth/token-store';
+import { accountForHost, getFreshToken } from '../auth/token-store';
 import { resolveRemoteHost } from '../auth/remote-host';
 
 /**
- * The origin URL, or null for a repository with no remote. Needed to tell an
- * SSH remote from an HTTPS one — they fail authentication for entirely
- * different reasons and the advice differs accordingly.
+ * The origin URL, or null without a remote. SSH and HTTPS fail authentication
+ * for different reasons.
  */
 export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
   const remotes = await ctx.ensureRepo().getRemotes(true);
@@ -14,24 +13,15 @@ export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
 }
 
 /**
- * Make sure the credential git is about to read is still valid.
- *
- * Bitbucket and GitLab tokens last two hours and Entra ID about one, so without
- * this a session that started fine begins failing mid-afternoon with an
- * authentication error the user cannot act on. `getFreshToken` rewrites the
- * system credential when it renews, which is what git actually reads.
+ * Refresh a short-lived token before git reads it; `getFreshToken` rewrites the
+ * system credential on renewal.
  */
 async function refreshCredentialIfNeeded(ctx: GitContext): Promise<void> {
   try {
     const host = await resolveRemoteHost(await getRemoteUrl(ctx));
-    const repoPath = ctx.getRepoPath();
-    if (!host || !repoPath) return;
-    // The account this repository was bound to, falling back to the only one
-    // on the host. With several and no choice made, refreshing an arbitrary
-    // one would hand git the wrong identity.
-    const bound = await boundAccount(repoPath);
-    const candidates = bound ? [bound] : await accountsForHost(host);
-    if (candidates.length === 1) await getFreshToken(candidates[0].id);
+    if (!host) return;
+    const account = await accountForHost(host);
+    if (account) await getFreshToken(account.id);
   } catch {
     // Refreshing is an optimisation over letting git fail; never a reason to
     // block the operation the user asked for.

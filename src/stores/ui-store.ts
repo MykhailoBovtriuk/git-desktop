@@ -24,10 +24,16 @@ interface UiState {
   activeMergeFile: string | null;
   toasts: Toast[];
   selectedStash: number | null;
+  /**
+   * The new-branch dialog. Kept here rather than in the branch dropdown because
+   * the dropdown closes the moment it is opened.
+   */
+  newBranchOpen: boolean;
   setActiveView: (view: ActiveView) => void;
   openOverlayView: (view: OverlayView) => void;
   overlayBack: () => void;
-  closeOverlayView: () => void;
+  openNewBranch: () => void;
+  closeNewBranch: () => void;
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null, area?: SelectedFileArea) => void;
   setActiveMergeFile: (path: string | null) => void;
@@ -54,6 +60,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   activeMergeFile: null,
   toasts: [],
   selectedStash: null,
+  newBranchOpen: false,
 
   setActiveView: view => set({ activeView: view }),
   // Settings/About cover the whole content area, so leaving them has to restore
@@ -84,7 +91,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
       if (stack.length === 0) return { activeView: s.previousView, overlayStack: [] };
       return { activeView: stack[stack.length - 1], overlayStack: stack.slice(0, -1) };
     }),
-  closeOverlayView: () => set(s => ({ activeView: s.previousView, overlayStack: [] })),
+  openNewBranch: () => set({ newBranchOpen: true }),
+  closeNewBranch: () => set({ newBranchOpen: false }),
   setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
     set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),

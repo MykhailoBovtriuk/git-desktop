@@ -14,9 +14,8 @@ vi.mock('../../../src/stores/repo-store', () => ({
   CheckoutConflictError: class CheckoutConflictError extends Error {},
   MergeConflictError: class MergeConflictError extends Error {},
 }));
-// Render every row: jsdom has no layout, so the real virtualizer sees a
-// zero-height viewport and renders nothing. These tests cover hunk slicing and
-// line rendering, not virtualization.
+// Render every row: jsdom has no layout, so the real virtualizer renders
+// nothing.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getTotalSize: () => count * 16,

@@ -2,11 +2,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { providerById } from '../../../electron/auth/providers/registry';
 
 /**
- * One test per provider, against a recorded response shape.
- *
- * These are the only places a provider's API vocabulary is translated into the
- * app's, so they are the only places a rename upstream can silently produce an
- * account with a blank name or, worse, a blank commit email.
+ * The only place provider API shapes are translated, so an upstream rename
+ * would surface here as a blank name or email.
  */
 function stubJson(routes: Record<string, unknown>) {
   vi.stubGlobal(

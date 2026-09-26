@@ -2,10 +2,8 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-// Guards the two things that silently break localization:
-// 1. the locales drifting apart (a key added to one language only),
-// 2. Ukrainian plural keys missing _few/_many — i18next then falls back to
-//    English for counts like 2-4 and 5-20 even in the uk locale.
+// Guards locale parity and Ukrainian _few/_many plural keys, without which
+// i18next falls back to English.
 
 const I18N_DIR = path.resolve(__dirname, '../../src/i18n');
 const LANGS = ['en', 'uk', 'nl'] as const;

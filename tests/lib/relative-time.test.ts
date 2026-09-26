@@ -18,7 +18,6 @@ describe('relativeTime', () => {
     vi.useRealTimers();
   });
 
-  // ── future / boundary ────────────────────────────────────────────────────
 
   it('returns "now" for a future date (diff < 0)', () => {
     const future = new Date(FROZEN_NOW + 5_000).toISOString();
@@ -29,7 +28,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(0))).toBe('now');
   });
 
-  // ── secs < 60 → "now" ────────────────────────────────────────────────────
 
   it('returns "now" for 30 seconds ago', () => {
     expect(relativeTime(msAgo(30_000))).toBe('now');
@@ -39,7 +37,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(59_000))).toBe('now');
   });
 
-  // ── mins < 60 → Xm ago ──────────────────────────────────────────────────
 
   it('returns "1m ago" for exactly 60 seconds ago', () => {
     // secs=60, mins=1, hrs=0 → mins < 60 branch
@@ -51,14 +48,10 @@ describe('relativeTime', () => {
   });
 
   it('returns "65m ago" for 65 minutes ago (floor, not rounded to hours)', () => {
-    // 65 min = 3900s → secs=3900, mins=65, hrs=1 (but mins < 60 is false, hrs < 24 is true)
-    // Wait — 65 mins: mins=65, so mins < 60 is FALSE → falls through to hrs branch
-    // hrs = floor(65/60) = 1 → hrs < 24 → "1h ago"
-    // So 65m is actually "1h ago". The boundary for Xm ago is mins=1..59 only.
+    // mins=65 falls through to the hours branch: Xm ago covers 1..59 only.
     expect(relativeTime(msAgo(65 * 60_000))).toBe('1h ago');
   });
 
-  // ── hrs < 24 → Xh ago ───────────────────────────────────────────────────
 
   it('returns "1h ago" for exactly 60 minutes ago', () => {
     // secs=3600, mins=60, hrs=1 → hrs < 24 → "1h ago"
@@ -69,7 +62,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(23 * 60 * 60_000))).toBe('23h ago');
   });
 
-  // ── days < 30 → Xd ago ──────────────────────────────────────────────────
 
   it('returns "yesterday" for exactly 24 hours ago (numeric: auto)', () => {
     expect(relativeTime(msAgo(24 * 60 * 60_000))).toBe('yesterday');
@@ -79,7 +71,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(29 * 24 * 60 * 60_000))).toBe('29d ago');
   });
 
-  // ── months < 12 → Xmo ago ───────────────────────────────────────────────
 
   it('returns "last mo." for exactly 30 days ago (numeric: auto)', () => {
     // days=30, months=floor(30/30)=1 → months < 12
@@ -91,7 +82,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(335 * 24 * 60 * 60_000))).toBe('11mo ago');
   });
 
-  // ── years ────────────────────────────────────────────────────────────────
 
   it('returns "last yr." for exactly 365 days ago (numeric: auto)', () => {
     // days=365, months=floor(365/30)=12 → months < 12 is FALSE → floor(12/12)=1
@@ -103,7 +93,6 @@ describe('relativeTime', () => {
     expect(relativeTime(msAgo(730 * 24 * 60 * 60_000))).toBe('2y ago');
   });
 
-  // ── localization ─────────────────────────────────────────────────────────
   // Regression: output was hardcoded English ("3m ago") even in the uk locale.
 
   it('localizes minutes for uk', () => {

@@ -106,19 +106,17 @@ describe('useAutoRefresh', () => {
     expect(onGitChanged).toHaveBeenCalledTimes(1);
   });
 
-  // P4.25 — auto-refresh must stand aside while a tracked git operation is in
+  // Auto-refresh must stand aside while a tracked git operation is in
   // flight, so it never interleaves a stale snapshot mid-commit/checkout/merge.
   it('skips refresh while an operation is busy', () => {
     withRepo();
     mockGetState.mockReturnValue({ refresh: mockRefresh, busyOperation: 'commit' } as any);
     renderHook(() => useAutoRefresh());
 
-    // Event path is guarded.
     gitChangedCb!();
     vi.advanceTimersByTime(300);
     expect(mockRefresh).not.toHaveBeenCalled();
 
-    // Fallback poll is guarded too.
     vi.advanceTimersByTime(60_000);
     expect(mockRefresh).not.toHaveBeenCalled();
   });

@@ -1,8 +1,5 @@
 /**
- * The key an account is filed under.
- *
- * Its own module so the token store and the sign-in flow can both use it
- * without importing each other — they already point the other way, and a cycle
- * between the two would be a trap for whoever touches them next.
+ * Accounts are keyed by host alone: `git credential` addresses by protocol and
+ * host, so two accounts on one host could not be told apart.
  */
-export const accountIdFor = (host: string, login: string): string => `${host}|${login}`;
+export const accountIdFor = (host: string): string => host;

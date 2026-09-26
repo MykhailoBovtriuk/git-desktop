@@ -16,9 +16,22 @@ export async function getStashList(ctx: GitContext): Promise<StashEntry[]> {
     });
 }
 
-export async function stashSave(ctx: GitContext, message?: string, staged = false): Promise<void> {
+/**
+ * `includeUntracked` also stashes untracked files, which `getStatus` counts as
+ * changes. Exclusive with `staged`: git rejects `--staged -u`.
+ */
+export async function stashSave(
+  ctx: GitContext,
+  message?: string,
+  staged = false,
+  includeUntracked = false,
+): Promise<void> {
+  if (staged && includeUntracked) {
+    throw new Error('stashSave: staged and includeUntracked are mutually exclusive');
+  }
   const args = ['stash', 'push'];
   if (staged) args.push('--staged');
+  if (includeUntracked) args.push('-u');
   if (message?.trim()) args.push('-m', message.trim());
   await ctx.ensureRepo().raw(args);
 }

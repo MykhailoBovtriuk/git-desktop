@@ -1,14 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bakes the OAuth client ids (and the two secrets that cannot be avoided) into
- * the build.
- *
- * `tsc` performs no substitution, so the values cannot live in a .ts file the
- * way a Vite `define` would allow. They are written as JSON next to the compiled
- * main process instead, which electron-builder already ships via `dist-electron/**`.
- *
- * Missing values are not an error: a fork without secrets still builds and runs,
- * it simply offers personal-access-token sign-in instead of the browser flow.
+ * Bakes OAuth client ids (and two secrets) into the build as JSON next to the
+ * compiled main process. Missing values fall back to token sign-in.
  */
 import fs from 'fs';
 import path from 'path';
