@@ -153,6 +153,24 @@ describe('download', () => {
     expect(useUpdateStore.getState().error).toBeNull();
   });
 
+  // Reinstalling the running version: `latest` is that same release, so a
+  // cancel must not turn "up to date" into an offer to update to itself.
+  it('returns to up to date when a reinstall is cancelled', async () => {
+    useUpdateStore.setState({
+      result: result({ status: 'up-to-date', currentVersion: '1.2.0', current: info('1.2.0') }),
+    });
+    vi.mocked(updateApi.cancelDownload).mockResolvedValue(null);
+    vi.mocked(updateApi.download).mockImplementation(async () => {
+      await useUpdateStore.getState().cancelDownload();
+      throw new Error('Update download cancelled');
+    });
+
+    await useUpdateStore.getState().startDownload('1.2.0');
+
+    expect(useUpdateStore.getState().phase).toBe('idle');
+    expect(useUpdateStore.getState().error).toBeNull();
+  });
+
   it('keeps a real download failure', async () => {
     vi.mocked(updateApi.download).mockRejectedValue(new Error('no-asset'));
 
