@@ -79,19 +79,23 @@ describe('launchInstaller', () => {
     expect(quit).not.toHaveBeenCalled();
   });
 
-  it('makes an AppImage executable, shows it, and keeps running', async () => {
-    const file = await fileNamed('git-desktop-x86_64-1.2.0.AppImage');
+  // Windows has no execute bits, so the mode check means nothing there.
+  it.skipIf(process.platform === 'win32')(
+    'makes an AppImage executable, shows it, and keeps running',
+    async () => {
+      const file = await fileNamed('git-desktop-x86_64-1.2.0.AppImage');
 
-    await launchInstaller(file, 'linux');
+      await launchInstaller(file, 'linux');
 
-    expect((await fs.stat(file)).mode & 0o111).toBeTruthy();
-    expect(showItemInFolder).toHaveBeenCalledWith(file);
-    vi.advanceTimersByTime(5_000);
-    expect(quit).not.toHaveBeenCalled();
-  });
+      expect((await fs.stat(file)).mode & 0o111).toBeTruthy();
+      expect(showItemInFolder).toHaveBeenCalledWith(file);
+      vi.advanceTimersByTime(5_000);
+      expect(quit).not.toHaveBeenCalled();
+    },
+  );
 
   // A .deb needs root; pretending to install it would fail silently.
-  it('only shows a deb', async () => {
+  it.skipIf(process.platform === 'win32')('only shows a deb', async () => {
     const file = await fileNamed('git-desktop-amd64-1.2.0.deb');
 
     await launchInstaller(file, 'linux');

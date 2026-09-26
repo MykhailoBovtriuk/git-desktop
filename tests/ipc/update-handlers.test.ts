@@ -1,5 +1,9 @@
+import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { UpdateInfo } from '../../src/types';
+
+// Built the way the handler builds it: backslashes on Windows.
+const DOWNLOADED = path.join('/tmp/downloads', 'Git-Desktop-arm64-1.2.0.dmg');
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => Promise<unknown>>(),
@@ -140,7 +144,7 @@ describe('app:download-update', () => {
     );
     expect(data).toEqual({
       version: '1.2.0',
-      filePath: '/tmp/downloads/Git-Desktop-arm64-1.2.0.dmg',
+      filePath: DOWNLOADED,
     });
     expect(mocks.send).toHaveBeenCalledWith('app:update-progress', {
       version: '1.2.0',
@@ -192,7 +196,7 @@ describe('app:install-update and app:cancel-update-download', () => {
     const { error } = await call('app:install-update');
 
     expect(error).toBeUndefined();
-    expect(mocks.launchInstaller).toHaveBeenCalledWith('/tmp/downloads/Git-Desktop-arm64-1.2.0.dmg');
+    expect(mocks.launchInstaller).toHaveBeenCalledWith(DOWNLOADED);
   });
 
   it('treats cancelling nothing as a no-op, not a failure', async () => {
