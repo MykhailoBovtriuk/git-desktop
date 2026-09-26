@@ -36,8 +36,15 @@ export const useRepoStore = create<RepoState>()(
       partialize: s => ({ repoPath: s.repoPath, recentRepos: s.recentRepos }),
       onRehydrateStorage: () => state => {
         if (!state) return;
-        state.recentRepos = (state.recentRepos ?? []).filter(Boolean);
-        if (!state.repoPath) return;
+        // Older builds saved other shapes here; anything but a path would
+        // crash every screen that shows a repository name.
+        const isPath = (v: unknown): v is string => typeof v === 'string' && v !== '';
+        const recent: unknown = state.recentRepos;
+        state.recentRepos = Array.isArray(recent) ? recent.filter(isPath) : [];
+        if (!isPath(state.repoPath)) {
+          state.repoPath = null;
+          return;
+        }
         const path = state.repoPath;
         setTimeout(() => {
           useRepoStore
