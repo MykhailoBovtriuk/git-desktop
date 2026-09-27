@@ -156,8 +156,6 @@ describe('BranchDropdown pull and push', () => {
 });
 
 describe('BranchDropdown fetch', () => {
-  // Fetch fills the remote section, so it sits on its header — shown even
-  // before the first fetch brought any remote branch.
   it('fetches from the remote section header and stays open', async () => {
     const onClose = vi.fn();
     render(<BranchDropdown onClose={onClose} />);

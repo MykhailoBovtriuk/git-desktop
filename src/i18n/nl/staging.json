@@ -10,7 +10,6 @@
   "noChanges": "Geen wijzigingen",
   "discardConfirm": "Wijzigingen aan \"{{name}}\" verwerpen? Dit kan niet ongedaan worden gemaakt.",
   "discardUntrackedConfirm": "Het niet-getrackte \"{{name}}\" verwijderen? Het bestand wordt definitief verwijderd.",
-  "untracked": "Niet-getrackt (nieuw)",
   "committed": "Gecommit",
   "commitFailed": "Committen mislukt",
   "commitCreated": "Commit gemaakt: {{summary}}",

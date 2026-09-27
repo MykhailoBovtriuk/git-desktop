@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { DropdownItem, DropdownRow } from '../../../src/shared/ui/DropdownItem';
 
 describe('DropdownItem', () => {
-  // The inset, rounded hover every dropdown list shares.
   it('renders an inset rounded row', () => {
     render(<DropdownItem>Fetch</DropdownItem>);
     expect(screen.getByRole('button', { name: 'Fetch' })).toHaveClass('px-2', 'rounded', 'text-sm');

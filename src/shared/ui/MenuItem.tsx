@@ -10,7 +10,7 @@ export function MenuItem({ tone = 'default', className, ...rest }: MenuItemProps
     <button
       {...rest}
       className={cn(
-        'block w-full text-left px-3 py-1.5 text-xs cursor-pointer transition-colors hover:bg-surface1',
+        'flex items-center justify-between w-full text-left px-3 py-1.5 text-xs cursor-pointer transition-colors hover:bg-surface1',
         tone === 'danger' ? 'text-red' : 'text-text',
         className,
       )}

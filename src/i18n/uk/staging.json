@@ -10,7 +10,6 @@
   "noChanges": "Змін немає",
   "discardConfirm": "Відкинути зміни у «{{name}}»? Цю дію неможливо скасувати.",
   "discardUntrackedConfirm": "Видалити неіндексований «{{name}}»? Файл буде видалено назавжди.",
-  "untracked": "Неіндексований (новий)",
   "committed": "Закомічено",
   "commitFailed": "Помилка коміту",
   "commitCreated": "Створено коміт: {{summary}}",

@@ -74,18 +74,14 @@ export function BranchItem({
         <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
         {onPull && (
           <MenuItem onClick={onPull}>
-            <span className="flex justify-between">
-              <span>{t('pull')}</span>
-              {behind > 0 && <span className="text-subtext">↓{behind}</span>}
-            </span>
+            <span>{t('pull')}</span>
+            {behind > 0 && <span className="text-subtext">↓{behind}</span>}
           </MenuItem>
         )}
         {onPush && (
           <MenuItem onClick={onPush}>
-            <span className="flex justify-between">
-              <span>{t('push')}</span>
-              {ahead > 0 && <span className="text-blue">↑{ahead}</span>}
-            </span>
+            <span>{t('push')}</span>
+            {ahead > 0 && <span className="text-blue">↑{ahead}</span>}
           </MenuItem>
         )}
         {onPublish && <MenuItem onClick={onPublish}>{t('publishBranch')}</MenuItem>}

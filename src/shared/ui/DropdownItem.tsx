@@ -7,11 +7,9 @@ const ROW =
   'flex items-center justify-between w-full px-2 py-1.5 rounded text-sm transition-colors';
 
 export interface DropdownItemProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** 'accent' for a row that adds something rather than picks it. */
   tone?: 'default' | 'accent';
 }
 
-/** A whole-row action in a DropdownPanel. */
 export function DropdownItem({ tone = 'default', className, ...rest }: DropdownItemProps) {
   return (
     <button

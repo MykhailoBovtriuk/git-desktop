@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { selectSignInHost } from '../../stores/repo/selectors';
 import { useUiStore } from '../../stores/ui-store';
 import { useAccountStore } from '../../stores/account-store';
 import { UserIcon } from '../../shared/ui';
@@ -9,22 +10,15 @@ import { useRemoteSync } from '../../hooks/use-remote-sync';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const { remoteHost, remoteProtocol, headCommit, aheadBehind } = useRepoStore(
-    useShallow(s => ({
-      remoteHost: s.remoteHost,
-      remoteProtocol: s.remoteProtocol,
-      headCommit: s.headCommit,
-      aheadBehind: s.aheadBehind,
-    })),
+  const { headCommit, aheadBehind } = useRepoStore(
+    useShallow(s => ({ headCommit: s.headCommit, aheadBehind: s.aheadBehind })),
   );
+  const signInHost = useRepoStore(selectSignInHost);
   const openOverlayView = useUiStore(s => s.openOverlayView);
   const { run, loading: syncing } = useRemoteSync();
   const { account, authSource, openSignIn } = useAccountStore(
     useShallow(s => ({ account: s.current, authSource: s.authSource, openSignIn: s.openSignIn })),
   );
-  // A token only ever reaches an https remote. Offering to sign in for an ssh
-  // one — or for no remote at all — is an offer that cannot be kept.
-  const signInHost = remoteProtocol === 'https' ? remoteHost : null;
 
   const hash = headCommit ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;

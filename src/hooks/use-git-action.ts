@@ -2,29 +2,31 @@ import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../stores/ui-store';
 import { useAccountStore } from '../stores/account-store';
 import { CheckoutConflictError, MergeConflictError, useRepoStore } from '../stores/repo-store';
+import { selectSignInHost } from '../stores/repo/selectors';
 import { classifyGitError } from '../lib/git-error-mapper';
 import { errorMessage } from '../lib/error-message';
 
-interface GitActionOptions {
+interface GitActionOptions<T> {
+  /** Error toast title; also the success one unless `successTitle` is given. */
   title: string;
-  success?: string;
+  successTitle?: string;
+  success?: string | ((result: T) => string);
 }
 
 export function useGitAction() {
   const { t } = useTranslation('footer');
   const addToast = useUiStore(s => s.addToast);
   const openSignIn = useAccountStore(s => s.openSignIn);
-  const remoteHost = useRepoStore(s => s.remoteHost);
-  const remoteProtocol = useRepoStore(s => s.remoteProtocol);
-  // A stored token authenticates an https remote and nothing else, so an ssh
-  // repository gets the message without an offer that could not have helped.
-  const signInHost = remoteProtocol === 'https' ? remoteHost : null;
+  const signInHost = useRepoStore(selectSignInHost);
+  const currentBranch = useRepoStore(s => s.currentBranch);
+  const publishBranch = useRepoStore(s => s.publishBranch);
 
-  return async (fn: () => Promise<unknown>, opts: GitActionOptions): Promise<boolean> => {
+  const run = async <T>(fn: () => Promise<T>, opts: GitActionOptions<T>): Promise<boolean> => {
     try {
-      await fn();
-      if (opts.success) {
-        addToast({ variant: 'success', title: opts.title, message: opts.success });
+      const result = await fn();
+      const message = typeof opts.success === 'function' ? opts.success(result) : opts.success;
+      if (message) {
+        addToast({ variant: 'success', title: opts.successTitle ?? opts.title, message });
       }
       return true;
     } catch (err: unknown) {
@@ -34,18 +36,29 @@ export function useGitAction() {
       const raw = errorMessage(err);
       const { kind, action } = classifyGitError(err);
       const friendly = t(`error.${kind}`);
+      const publishLabel = t('sync:publishBranch');
       addToast({
         variant: 'error',
         title: opts.title,
         message: friendly || raw,
-        // An auth failure is a dead end without somewhere to go: offer the
-        // sign-in that would fix it, already aimed at the right server.
         action:
-          action === 'signIn' && signInHost
-            ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
-            : undefined,
+          action === 'publishBranch' && currentBranch
+            ? {
+                label: publishLabel,
+                onClick: () =>
+                  void run(publishBranch, {
+                    title: t('sync:failed', { op: publishLabel }),
+                    successTitle: publishLabel,
+                    success: t('sync:success', { op: publishLabel }),
+                  }),
+              }
+            : action === 'signIn' && signInHost
+              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
+              : undefined,
       });
       return false;
     }
   };
+
+  return run;
 }
