@@ -88,7 +88,7 @@ describe('repo-store', () => {
       branches: [],
       currentBranch: '',
       status: { staged: [], unstaged: [] },
-      aheadBehind: { ahead: 0, behind: 0 },
+      aheadBehind: { ahead: 0, behind: 0, upstream: null },
       mergeState: null,
       hasMoreCommits: false,
       loadingMoreCommits: false,

@@ -1,10 +1,8 @@
 {
   "cancel": "Annuleren",
-  "confirm": "Bevestigen",
   "back": "Terug",
   "error": "Fout",
   "loading": "Laden...",
-  "retry": "Opnieuw proberen",
   "done": "Klaar",
   "history": "Geschiedenis",
   "graph": "Graaf",
@@ -14,8 +12,5 @@
   "loadingMore": "Laden...",
   "settings": "Instellingen",
   "about": "Over",
-  "save": "Opslaan",
-  "edit": "Bewerken",
-  "delete": "Verwijderen",
   "resizeSidebar": "Zijbalkbreedte aanpassen"
 }

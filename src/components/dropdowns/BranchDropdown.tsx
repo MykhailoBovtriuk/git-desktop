@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/ui-store';
 import { DropdownPanel, SectionLabel, TextInput, cn } from '../../shared/ui';
 import { BranchItem } from './BranchItem';
 import { useBranchActions } from './useBranchActions';
+import { useRemoteSync, type SyncOp } from '../../hooks/use-remote-sync';
 import type { Branch } from '../../types';
 
 interface BranchDropdownProps {
@@ -16,9 +17,16 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
   const { t } = useTranslation('branches');
   const [search, setSearch] = useState('');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const { branches, mergeState, merging } = useRepoStore(
-    useShallow(s => ({ branches: s.branches, mergeState: s.mergeState, merging: s.merging })),
+  const { branches, mergeState, merging, aheadBehind, remoteHost } = useRepoStore(
+    useShallow(s => ({
+      branches: s.branches,
+      mergeState: s.mergeState,
+      merging: s.merging,
+      aheadBehind: s.aheadBehind,
+      remoteHost: s.remoteHost,
+    })),
   );
+  const { run, loading } = useRemoteSync();
   const openNewBranch = useUiStore(s => s.openNewBranch);
   const { checkout, merge, rebase, handle, confirmDeleteLocal, confirmDeleteRemote } =
     useBranchActions(onClose);
@@ -29,6 +37,12 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
 
   const toggleMenu = (name: string) => setOpenMenu(prev => (prev === name ? null : name));
 
+  const syncable = (b: Branch) => !!remoteHost && b.current && !b.remote;
+  const runAndClose = (op: SyncOp) => {
+    onClose();
+    void run(op);
+  };
+
   const renderItem = (b: Branch) => (
     <BranchItem
       key={b.name}
@@ -37,6 +51,11 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       isRemote={b.remote}
       contextOpen={openMenu === b.name}
       onToggleContext={() => toggleMenu(b.name)}
+      onPull={syncable(b) && aheadBehind.upstream ? () => runAndClose('pull') : undefined}
+      onPush={syncable(b) && aheadBehind.upstream ? () => runAndClose('push') : undefined}
+      onPublish={syncable(b) && !aheadBehind.upstream ? () => runAndClose('publish') : undefined}
+      ahead={b.current ? aheadBehind.ahead : 0}
+      behind={b.current ? aheadBehind.behind : 0}
       onCheckout={() => handle(() => checkout(b.name), t('switchedTo', { name: b.name }))}
       onMerge={() => handle(() => merge(b.name), t('merged', { name: b.name }))}
       onRebase={() => handle(() => rebase(b.name), t('rebasedOnto', { name: b.name }))}
@@ -76,9 +95,22 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
         </div>
         {local.map(renderItem)}
 
-        {remote.length > 0 && (
+        {/* Fetch is what fills this section, so its header shows whenever
+            there is a remote — even before the first fetch brought anything. */}
+        {(remoteHost || remote.length > 0) && (
           <>
-            <SectionLabel className="mt-1">{t('remote')}</SectionLabel>
+            <div className="flex items-center justify-between mt-1">
+              <SectionLabel>{t('remote')}</SectionLabel>
+              {remoteHost && (
+                <button
+                  onClick={() => void run('fetch')}
+                  disabled={!!loading}
+                  className="text-blue text-xs hover:underline disabled:opacity-60 disabled:no-underline px-2 py-1"
+                >
+                  {loading === 'fetch' ? t('fetching') : t('fetch')}
+                </button>
+              )}
+            </div>
             {remote.map(renderItem)}
           </>
         )}

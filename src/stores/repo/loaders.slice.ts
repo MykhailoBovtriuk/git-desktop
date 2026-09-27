@@ -29,7 +29,7 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
   branches: [],
   currentBranch: '',
   status: { staged: [], unstaged: [] },
-  aheadBehind: { ahead: 0, behind: 0 },
+  aheadBehind: { ahead: 0, behind: 0, upstream: null },
   merging: false,
   rebasing: false,
   stashes: [],
@@ -97,7 +97,7 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
     if (get().epoch !== startedEpoch) return;
     set({
       status: { staged: result.staged, unstaged: result.unstaged },
-      aheadBehind: { ahead: result.ahead, behind: result.behind },
+      aheadBehind: { ahead: result.ahead, behind: result.behind, upstream: result.upstream },
       merging,
       rebasing,
     });

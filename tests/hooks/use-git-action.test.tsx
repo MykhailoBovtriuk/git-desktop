@@ -25,7 +25,21 @@ const lastToast = () => {
 describe('useGitAction', () => {
   beforeEach(() => {
     useUiStore.setState({ toasts: [] });
-    useRepoStore.setState({ remoteHost: null, remoteProtocol: null });
+    useRepoStore.setState({ remoteHost: null, remoteProtocol: null, currentBranch: 'main' });
+  });
+
+  it('builds the success message from the result when given a function', async () => {
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.resolve('Fast-forward'), {
+      title: 'Pull failed',
+      successTitle: 'Pull',
+      success: out => `done: ${out}`,
+    });
+    expect(lastToast()).toMatchObject({
+      variant: 'success',
+      title: 'Pull',
+      message: 'done: Fast-forward',
+    });
   });
 
   it('returns true on success and shows the success toast when given one', async () => {
@@ -121,6 +135,32 @@ describe('useGitAction', () => {
   it('leaves other failures without an action button', async () => {
     const { result } = renderHook(() => useGitAction());
     await result.current(() => Promise.reject(new Error('some unrelated failure')), {
+      title: 'Push',
+    });
+    expect(lastToast().action).toBeUndefined();
+  });
+
+  // The classifier knew the fix all along; the hook used to drop it.
+  it('offers to publish a branch that has no upstream', async () => {
+    const publishBranch = vi.fn().mockResolvedValue(undefined);
+    useRepoStore.setState({ publishBranch });
+    const { result } = renderHook(() => useGitAction());
+
+    await result.current(
+      () => Promise.reject(new Error('fatal: The current branch main has no upstream branch.')),
+      { title: 'Push' },
+    );
+
+    const toast = lastToast();
+    expect(toast.action?.label).toBe('friendly:sync:publishBranch');
+    toast.action!.onClick();
+    await vi.waitFor(() => expect(publishBranch).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not offer to publish on a detached HEAD', async () => {
+    useRepoStore.setState({ currentBranch: '' });
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.reject(new Error('has no upstream branch')), {
       title: 'Push',
     });
     expect(lastToast().action).toBeUndefined();

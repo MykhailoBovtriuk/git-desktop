@@ -261,6 +261,21 @@ describe('GitService', () => {
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
 
+  it('getStatus reports no upstream for an unpublished branch', async () => {
+    await git.openRepo(tmpDir);
+    expect((await git.getStatus()).upstream).toBeNull();
+  });
+
+  it('getStatus reports the upstream of a published branch', async () => {
+    const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-remote-'));
+    execSync('git init --bare', { cwd: remoteDir });
+    execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
+    execSync('git push -u origin HEAD', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    expect((await git.getStatus()).upstream).toMatch(/^origin\//);
+    fs.rmSync(remoteDir, { recursive: true, force: true });
+  });
+
   it('pushSetUpstream publishes a branch and sets its upstream', async () => {
     const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-remote-'));
     execSync('git init --bare', { cwd: remoteDir });

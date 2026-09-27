@@ -8,8 +8,11 @@ const run = promisify(execFile);
  * it gets its own branch.
  */
 
-/** scp-like syntax: [user@]host:path, where the part after ":" is not a port. */
-const SCP_LIKE = /^(?:[^@/]+@)?([^:/]+):(?!\/)/;
+/**
+ * scp-like syntax: [user@]host:path, where the part after ":" is not a port.
+ * A slash of either kind after ":" rules out a Windows drive path (`C:\repo`).
+ */
+const SCP_LIKE = /^(?:[^@/]+@)?([^:/]+):(?![\\/])/;
 
 export function hostFromRemoteUrl(remoteUrl: string | null | undefined): string | null {
   if (!remoteUrl) return null;
@@ -72,13 +75,13 @@ async function resolveSshAlias(host: string): Promise<string> {
 
   let resolved = host;
   try {
-    const { stdout } = await run('ssh', ['-G', host]);
+    const { stdout } = await run('ssh', ['-G', host], { timeout: 3000 });
     const line = stdout.split('\n').find(l => l.startsWith('hostname '));
     const value = line?.slice('hostname '.length).trim();
     if (value) resolved = value.toLowerCase();
   } catch {
-    // No ssh on PATH, or a host it cannot parse: the original is the best
-    // answer available, and a wrong guess here is worse than none.
+    // No ssh on PATH, a host it cannot parse, or no answer in time: the
+    // original is the best answer available, and a wrong guess is worse.
   }
   aliasCache.set(host, resolved);
   return resolved;

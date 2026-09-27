@@ -10,6 +10,16 @@ describe('MenuItem', () => {
     expect(btn).toHaveClass('w-full', 'text-left', 'text-xs');
   });
 
+  it('lays its children out as a row', () => {
+    render(
+      <MenuItem>
+        <span>Pull</span>
+        <span>↓2</span>
+      </MenuItem>,
+    );
+    expect(screen.getByRole('button')).toHaveClass('flex', 'justify-between');
+  });
+
   it('applies destructive tint', () => {
     render(<MenuItem tone="danger">Delete</MenuItem>);
     expect(screen.getByRole('button')).toHaveClass('text-red');

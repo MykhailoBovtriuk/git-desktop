@@ -1,4 +1,6 @@
-export function wrap<T>(fn: () => Promise<T>) {
+import type { IpcResult } from '../../src/types';
+
+export function wrap<T>(fn: () => Promise<T>): Promise<IpcResult<T>> {
   return Promise.resolve()
     .then(fn)
     .then(data => ({ data }))

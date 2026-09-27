@@ -8,6 +8,7 @@ export { Modal, type ModalProps } from './Modal';
 export { ListItem, type ListItemProps } from './ListItem';
 export { DropdownPanel, type DropdownPanelProps } from './DropdownPanel';
 export { MenuItem, type MenuItemProps } from './MenuItem';
+export { DropdownItem, DropdownRow, type DropdownItemProps } from './DropdownItem';
 export { ContextMenu, type ContextMenuProps } from './ContextMenu';
 export { FilePathList, type FilePathListProps } from './FilePathList';
 export { SectionLabel } from './SectionLabel';

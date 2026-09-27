@@ -66,6 +66,9 @@ describe('resolveRemoteHost', () => {
   it('treats a local path as no host at all', async () => {
     expect(await resolveRemoteHost('/srv/git/repo.git')).toBeNull();
     expect(await resolveRemoteHost('../sibling-repo')).toBeNull();
+    // A Windows drive letter is not an scp host named "c".
+    expect(await resolveRemoteHost('C:\\Users\\me\\repo.git')).toBeNull();
+    expect(await resolveRemoteHost('C:/Users/me/repo.git')).toBeNull();
     expect(await resolveRemoteHost(null)).toBeNull();
   });
 });
@@ -87,6 +90,7 @@ describe('protocolFromRemoteUrl', () => {
     expect(protocolFromRemoteUrl('git://github.com/owner/repo.git')).toBe('other');
     expect(protocolFromRemoteUrl('file:///srv/repo.git')).toBe('other');
     expect(protocolFromRemoteUrl('/srv/repo.git')).toBe('other');
+    expect(protocolFromRemoteUrl('C:\\Users\\me\\repo.git')).toBe('other');
     expect(protocolFromRemoteUrl('')).toBeNull();
     expect(protocolFromRemoteUrl(null)).toBeNull();
   });
