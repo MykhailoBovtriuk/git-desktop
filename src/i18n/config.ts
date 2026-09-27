@@ -17,6 +17,7 @@ import enSettings from './en/settings.json';
 import enAbout from './en/about.json';
 import enAccount from './en/account.json';
 import enUpdate from './en/update.json';
+import enSync from './en/sync.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -33,6 +34,7 @@ import ukSettings from './uk/settings.json';
 import ukAbout from './uk/about.json';
 import ukAccount from './uk/account.json';
 import ukUpdate from './uk/update.json';
+import ukSync from './uk/sync.json';
 
 import nlCommon from './nl/common.json';
 import nlStaging from './nl/staging.json';
@@ -49,6 +51,7 @@ import nlSettings from './nl/settings.json';
 import nlAbout from './nl/about.json';
 import nlAccount from './nl/account.json';
 import nlUpdate from './nl/update.json';
+import nlSync from './nl/sync.json';
 
 i18n
   .use(LanguageDetector)
@@ -73,6 +76,7 @@ i18n
         about: enAbout,
         account: enAccount,
         update: enUpdate,
+        sync: enSync,
       },
       uk: {
         common: ukCommon,
@@ -90,6 +94,7 @@ i18n
         about: ukAbout,
         account: ukAccount,
         update: ukUpdate,
+        sync: ukSync,
       },
       nl: {
         common: nlCommon,
@@ -107,6 +112,7 @@ i18n
         about: nlAbout,
         account: nlAccount,
         update: nlUpdate,
+        sync: nlSync,
       },
     },
     // No 'navigator': English is the default until the user picks a language,

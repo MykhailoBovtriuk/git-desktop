@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
-import { DropdownPanel } from '../../shared/ui';
+import { DropdownItem, DropdownPanel } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
 import { RepoItem } from './RepoItem';
 
@@ -55,7 +55,7 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
   };
 
   return (
-    <DropdownPanel align="right" width="w-56" className="py-1">
+    <DropdownPanel align="right" width="w-56" className="p-2">
       {repos.map(repo => (
         <RepoItem
           key={repo}
@@ -70,12 +70,9 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
 
       {repos.length > 0 && <div className="border-t border-surface1 my-1" />}
 
-      <button
-        onClick={handleAdd}
-        className="w-full text-left px-3 py-1.5 text-blue text-sm hover:bg-surface1"
-      >
+      <DropdownItem tone="accent" onClick={handleAdd}>
         {t('addRepository')}
-      </button>
+      </DropdownItem>
     </DropdownPanel>
   );
 }

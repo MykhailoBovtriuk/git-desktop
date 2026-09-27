@@ -35,6 +35,9 @@ function setupMocks({
     status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
     merging: false,
     remoteHost: null,
+    currentBranch: 'main',
+    headCommit: 'a1b2c3d',
+    aheadBehind: { ahead: 0, behind: 0, upstream: null },
     hasIdentity,
   };
   const uiState = { addToast: mockAddToast, openOverlayView: vi.fn() };

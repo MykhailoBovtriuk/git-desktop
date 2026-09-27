@@ -1,104 +1,28 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useAccountStore } from '../../stores/account-store';
-import { classifyGitError } from '../../lib/git-error-mapper';
-import { Button, UserIcon } from '../../shared/ui';
+import { UserIcon } from '../../shared/ui';
 import { AppMenuButtons } from './AppMenuButtons';
-import { errorMessage } from '../../lib/error-message';
 
 export function Footer() {
   const { t } = useTranslation('footer');
-  const {
-    currentBranch,
-    remoteHost,
-    remoteProtocol,
-    headCommit,
-    aheadBehind,
-    fetch,
-    pull,
-    push,
-    publishBranch,
-  } = useRepoStore(
+  const { remoteHost, remoteProtocol, headCommit, aheadBehind } = useRepoStore(
     useShallow(s => ({
-      currentBranch: s.currentBranch,
       remoteHost: s.remoteHost,
       remoteProtocol: s.remoteProtocol,
       headCommit: s.headCommit,
       aheadBehind: s.aheadBehind,
-      fetch: s.fetch,
-      pull: s.pull,
-      push: s.push,
-      publishBranch: s.publishBranch,
     })),
   );
-  const { addToast, openOverlayView } = useUiStore(
-    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
-  );
+  const openOverlayView = useUiStore(s => s.openOverlayView);
   const { account, authSource, openSignIn } = useAccountStore(
     useShallow(s => ({ account: s.current, authSource: s.authSource, openSignIn: s.openSignIn })),
   );
-  const [loading, setLoading] = useState<'fetch' | 'pull' | 'push' | null>(null);
   // A token only ever reaches an https remote. Offering to sign in for an ssh
   // one — or for no remote at all — is an offer that cannot be kept.
   const signInHost = remoteProtocol === 'https' ? remoteHost : null;
-
-  // Same classifier as fetch/pull/push: publishing is often the first contact
-  // with authentication.
-  const handlePublish = () => {
-    void publishBranch()
-      .then(() =>
-        addToast({
-          variant: 'success',
-          title: t('publishBranch'),
-          message: t('success', { op: t('push') }),
-        }),
-      )
-      .catch((err: unknown) => {
-        const raw = errorMessage(err);
-        const { kind, action: errAction } = classifyGitError(err);
-        const friendly = t(`error.${kind}`);
-        addToast({
-          variant: 'error',
-          title: t('publishBranch'),
-          message: friendly || raw,
-          action:
-            errAction === 'signIn' && signInHost
-              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
-              : undefined,
-        });
-      });
-  };
-
-  const run = async (op: 'fetch' | 'pull' | 'push', action: () => Promise<unknown>) => {
-    setLoading(op);
-    const label = t(op);
-    try {
-      const result = await action();
-      const msg =
-        op === 'pull' && typeof result === 'string' ? result : t('success', { op: label });
-      addToast({ variant: 'success', title: label, message: msg });
-    } catch (err: unknown) {
-      const raw = errorMessage(err);
-      const { kind, action: errAction } = classifyGitError(err);
-      const friendly = t(`error.${kind}`);
-      addToast({
-        variant: 'error',
-        title: t('failed', { op: label }),
-        message: friendly || raw,
-        action:
-          errAction === 'publishBranch' && currentBranch
-            ? { label: t('publishBranch'), onClick: handlePublish }
-            : errAction === 'signIn' && signInHost
-              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
-              : undefined,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
 
   const hash = headCommit ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
@@ -192,21 +116,6 @@ export function Footer() {
             </span>
           </>
         )}
-      </div>
-
-      <div className="flex items-center gap-1 shrink-0">
-        {(['fetch', 'pull', 'push'] as const).map(op => (
-          <Button
-            key={op}
-            variant="surface"
-            size="sm"
-            disabled={!!loading}
-            onClick={() => run(op, op === 'fetch' ? fetch : op === 'pull' ? pull : push)}
-            className="capitalize"
-          >
-            {loading === op ? '...' : t(op)}
-          </Button>
-        ))}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, MenuItem } from '../../shared/ui';
+import { ContextMenu, DropdownRow, MenuItem } from '../../shared/ui';
 
 interface RepoItemProps {
   name: string;
@@ -24,7 +24,7 @@ export function RepoItem({
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between w-full px-3 py-1.5 hover:bg-surface1 text-sm">
+      <DropdownRow>
         <button onClick={onOpen} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="text-text truncate">{name}</span>
         </button>
@@ -40,7 +40,7 @@ export function RepoItem({
         >
           ⋯
         </button>
-      </div>
+      </DropdownRow>
 
       {/* anchor="panel": this dropdown is right-aligned to the titlebar, so a
           button-anchored menu would land on top of the repo list it belongs to. */}

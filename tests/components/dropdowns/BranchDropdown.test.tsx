@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('react-i18next', () => ({
@@ -11,13 +11,25 @@ vi.mock('../../../src/stores/repo-store', () => ({
   MergeConflictError: class MergeConflictError extends Error {},
 }));
 vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
+vi.mock('../../../src/stores/account-store', () => ({
+  useAccountStore: (sel: any) => sel({ openSignIn: vi.fn() }),
+}));
 
 import { BranchDropdown } from '../../../src/components/dropdowns/BranchDropdown';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 
 const repoState: any = {
-  branches: [{ name: 'main', current: true, remote: false }],
+  branches: [
+    { name: 'main', current: true, remote: false },
+    { name: 'feature', current: false, remote: false },
+  ],
+  aheadBehind: { ahead: 0, behind: 2, upstream: 'origin/main' },
+  remoteHost: 'github.com',
+  pull: vi.fn().mockResolvedValue('Updated'),
+  push: vi.fn().mockResolvedValue(undefined),
+  fetch: vi.fn().mockResolvedValue(undefined),
+  publishBranch: vi.fn().mockResolvedValue(undefined),
   checkout: vi.fn(),
   merge: vi.fn(),
   rebase: vi.fn(),
@@ -32,6 +44,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   repoState.mergeState = null;
   repoState.merging = false;
+  repoState.aheadBehind = { ahead: 0, behind: 2, upstream: 'origin/main' };
+  repoState.remoteHost = 'github.com';
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 });
@@ -85,5 +99,77 @@ describe('BranchDropdown new branch', () => {
 
     expect(screen.queryByText('main')).toBeNull();
     expect(screen.getByText('new')).toBeTruthy();
+  });
+});
+
+const openContext = (name: string) =>
+  fireEvent.click(
+    screen.getByText(name).closest('.relative')!.querySelector('[aria-label="moreActions"]')!,
+  );
+
+describe('BranchDropdown pull and push', () => {
+  it('offers pull right after checkout in the current branch menu', async () => {
+    const onClose = vi.fn();
+    render(<BranchDropdown onClose={onClose} />);
+    openContext('main');
+    const items = screen.getAllByRole('button').map(b => b.textContent);
+    expect(items.indexOf('pull↓2')).toBe(items.indexOf('checkout') + 1);
+    fireEvent.click(screen.getByText('pull'));
+    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(repoState.pull).toHaveBeenCalledTimes(1));
+  });
+
+  it('pushes the current branch', async () => {
+    repoState.aheadBehind = { ahead: 1, behind: 0, upstream: 'origin/main' };
+    render(<BranchDropdown onClose={() => {}} />);
+    openContext('main');
+    expect(screen.getByText('↑1')).toBeTruthy();
+    fireEvent.click(screen.getByText('push'));
+    await waitFor(() => expect(repoState.push).toHaveBeenCalledTimes(1));
+  });
+
+  // git pull and push only ever move HEAD's branch.
+  it('offers neither for another branch', () => {
+    render(<BranchDropdown onClose={() => {}} />);
+    openContext('feature');
+    expect(screen.queryByText('pull')).toBeNull();
+    expect(screen.queryByText('push')).toBeNull();
+  });
+
+  it('offers publish instead before the branch has an upstream', async () => {
+    repoState.aheadBehind = { ahead: 0, behind: 0, upstream: null };
+    render(<BranchDropdown onClose={() => {}} />);
+    openContext('main');
+    expect(screen.queryByText('pull')).toBeNull();
+    expect(screen.queryByText('push')).toBeNull();
+    fireEvent.click(screen.getByText('publishBranch'));
+    await waitFor(() => expect(repoState.publishBranch).toHaveBeenCalledTimes(1));
+  });
+
+  it('offers nothing to sync in a repository without a remote', () => {
+    repoState.remoteHost = null;
+    render(<BranchDropdown onClose={() => {}} />);
+    openContext('main');
+    expect(screen.queryByText('pull')).toBeNull();
+    expect(screen.queryByText('publishBranch')).toBeNull();
+  });
+});
+
+describe('BranchDropdown fetch', () => {
+  // Fetch fills the remote section, so it sits on its header — shown even
+  // before the first fetch brought any remote branch.
+  it('fetches from the remote section header and stays open', async () => {
+    const onClose = vi.fn();
+    render(<BranchDropdown onClose={onClose} />);
+    expect(screen.getByText('remote')).toBeTruthy();
+    fireEvent.click(screen.getByText('fetch'));
+    await waitFor(() => expect(repoState.fetch).toHaveBeenCalledTimes(1));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('has no fetch without a remote', () => {
+    repoState.remoteHost = null;
+    render(<BranchDropdown onClose={() => {}} />);
+    expect(screen.queryByText('fetch')).toBeNull();
   });
 });

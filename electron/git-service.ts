@@ -1,4 +1,4 @@
-import type { Commit, Branch, GitStatus, StashEntry } from '../src/types';
+import type { AheadBehind, Commit, Branch, GitStatus, StashEntry } from '../src/types';
 import { GitContext, credentialSafeEnv } from './git/context';
 import * as history from './git/history';
 import * as status from './git/status';
@@ -34,7 +34,7 @@ export class GitService {
     return history.getFileDiff(this.ctx, hash, filePath);
   }
 
-  getStatus(): Promise<GitStatus & { ahead: number; behind: number }> {
+  getStatus(): Promise<GitStatus & AheadBehind> {
     return status.getStatus(this.ctx);
   }
   stageFiles(paths: string[]): Promise<void> {

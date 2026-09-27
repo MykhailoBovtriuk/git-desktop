@@ -1,13 +1,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import type { GitStatus, FileStatus } from '../../src/types';
+import type { GitStatus, FileStatus, AheadBehind } from '../../src/types';
 import { GitContext } from './context';
 import { readFile } from './files';
 
-export async function getStatus(
-  ctx: GitContext,
-): Promise<GitStatus & { ahead: number; behind: number }> {
+export async function getStatus(ctx: GitContext): Promise<GitStatus & AheadBehind> {
   const status = await ctx.ensureRepo().status();
 
   const staged: FileStatus[] = [];
@@ -36,7 +34,13 @@ export async function getStatus(
     }
   }
 
-  return { staged, unstaged, ahead: status.ahead, behind: status.behind };
+  return {
+    staged,
+    unstaged,
+    ahead: status.ahead,
+    behind: status.behind,
+    upstream: status.tracking ?? null,
+  };
 }
 
 function mapStatus(code: string): FileStatus['status'] {

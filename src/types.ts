@@ -29,6 +29,8 @@ export interface GitStatus {
 export interface AheadBehind {
   ahead: number;
   behind: number;
+  /** Tracking branch, e.g. "origin/main"; null until the branch is published. */
+  upstream: string | null;
 }
 
 export interface MergeState {

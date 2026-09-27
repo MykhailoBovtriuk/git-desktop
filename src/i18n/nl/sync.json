@@ -1,0 +1,8 @@
+{
+  "fetch": "Fetch",
+  "pull": "Pull",
+  "push": "Push",
+  "publishBranch": "Branch publiceren",
+  "success": "{{op}} geslaagd",
+  "failed": "{{op}} mislukt"
+}

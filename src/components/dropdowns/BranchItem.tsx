@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, MenuItem } from '../../shared/ui';
+import { ContextMenu, DropdownRow, MenuItem } from '../../shared/ui';
 
 interface BranchItemProps {
   name: string;
@@ -8,6 +8,13 @@ interface BranchItemProps {
   isRemote: boolean;
   contextOpen: boolean;
   onToggleContext: () => void;
+  // Pull and push move HEAD's branch only, so they come for the current one:
+  // pull/push once it has an upstream, publish before that.
+  onPull?: () => void;
+  onPush?: () => void;
+  onPublish?: () => void;
+  ahead?: number;
+  behind?: number;
   onCheckout: () => void;
   onMerge: () => void;
   onRebase: () => void;
@@ -20,6 +27,11 @@ export function BranchItem({
   isRemote,
   contextOpen,
   onToggleContext,
+  onPull,
+  onPush,
+  onPublish,
+  ahead = 0,
+  behind = 0,
   onCheckout,
   onMerge,
   onRebase,
@@ -30,7 +42,7 @@ export function BranchItem({
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between w-full px-2 py-1.5 rounded hover:bg-surface1 text-sm">
+      <DropdownRow>
         <button
           onClick={() => !current && onCheckout()}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
@@ -52,10 +64,31 @@ export function BranchItem({
         >
           ⋯
         </button>
-      </div>
+      </DropdownRow>
 
-      <ContextMenu open={contextOpen} anchorRef={btnRef} height={152}>
+      <ContextMenu
+        open={contextOpen}
+        anchorRef={btnRef}
+        height={152 + 28 * [onPull, onPush, onPublish].filter(Boolean).length}
+      >
         <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
+        {onPull && (
+          <MenuItem onClick={onPull}>
+            <span className="flex justify-between">
+              <span>{t('pull')}</span>
+              {behind > 0 && <span className="text-subtext">↓{behind}</span>}
+            </span>
+          </MenuItem>
+        )}
+        {onPush && (
+          <MenuItem onClick={onPush}>
+            <span className="flex justify-between">
+              <span>{t('push')}</span>
+              {ahead > 0 && <span className="text-blue">↑{ahead}</span>}
+            </span>
+          </MenuItem>
+        )}
+        {onPublish && <MenuItem onClick={onPublish}>{t('publishBranch')}</MenuItem>}
         <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
         <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
         {!current && (

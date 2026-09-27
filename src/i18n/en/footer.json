@@ -1,12 +1,6 @@
 {
-  "fetch": "Fetch",
-  "pull": "Pull",
-  "push": "Push",
   "ahead": "{{count}} ahead",
   "behind": "{{count}} behind",
-  "success": "{{op}} successful",
-  "failed": "{{op}} failed",
-  "publishBranch": "Publish branch",
   "error": {
     "auth": "Could not authenticate with the remote. Sign in to continue.",
     "sshKey": "The remote refused your SSH key. Check that the key is loaded (ssh-add -l) and added to your account.",

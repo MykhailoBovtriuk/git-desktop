@@ -1,7 +1,7 @@
-import type { Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
+import type { AheadBehind, Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
 import { invoke } from './invoke';
 
-type StatusResult = GitStatus & { ahead: number; behind: number };
+type StatusResult = GitStatus & AheadBehind;
 
 export const gitApi = {
   openRepo: (path: string) =>

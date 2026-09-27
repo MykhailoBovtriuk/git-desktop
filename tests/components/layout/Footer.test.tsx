@@ -5,7 +5,7 @@ import { Footer } from '../../../src/components/layout/Footer';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 import { useAccountStore } from '../../../src/stores/account-store';
-import type { AuthSource, ProviderAccount, RemoteProtocol } from '../../../src/types';
+import type { AheadBehind, AuthSource, ProviderAccount, RemoteProtocol } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -30,6 +30,7 @@ function setup({
   remoteHost = 'github.com' as string | null,
   remoteProtocol = 'https' as RemoteProtocol | null,
   authSource = 'none' as AuthSource | null,
+  aheadBehind = { ahead: 0, behind: 0, upstream: 'origin/feature/login' } as AheadBehind,
 } = {}) {
   const openOverlayView = vi.fn();
   const openSignIn = vi.fn();
@@ -42,7 +43,7 @@ function setup({
     // HEAD's own hash — deliberately not commits[0], which getLog sorts
     // across every branch and so can belong to somebody else's branch.
     headCommit: 'a1b2c3d',
-    aheadBehind: { ahead: 0, behind: 0 },
+    aheadBehind,
     fetch: vi.fn(),
     pull: vi.fn(),
     push: vi.fn(),
@@ -65,6 +66,13 @@ describe('Footer', () => {
     setup();
     render(<Footer />);
     expect(screen.getByText('@MykhailoBovtriuk')).toBeTruthy();
+  });
+
+  it('shows how far the branch is from its upstream', () => {
+    setup({ aheadBehind: { ahead: 2, behind: 3, upstream: 'origin/feature/login' } });
+    render(<Footer />);
+    expect(screen.getByText('↑2')).toBeTruthy();
+    expect(screen.getByText('↓3')).toBeTruthy();
   });
 
   // The branch lives in the titlebar, with the switcher next to it.
