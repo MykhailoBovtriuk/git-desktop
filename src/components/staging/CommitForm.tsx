@@ -6,7 +6,6 @@ import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { gitApi } from '../../api/git-api';
 import { Button, Textarea } from '../../shared/ui';
-import { PushButton } from './PushButton';
 
 export function CommitForm() {
   const { t } = useTranslation('staging');
@@ -104,7 +103,6 @@ export function CommitForm() {
       >
         {loading ? '...' : t('commitButton')}
       </Button>
-      <PushButton />
     </div>
   );
 }

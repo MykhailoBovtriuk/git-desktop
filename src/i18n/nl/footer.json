@@ -1,6 +1,8 @@
 {
-  "ahead": "{{count}} voor",
-  "behind": "{{count}} achter",
+  "ahead": "{{count}} voor — klik om te pushen",
+  "behind": "{{count}} achter — klik om te pullen",
+  "pullFirst_one": "Eerst pullen: de remote heeft {{count}} nieuwe commit",
+  "pullFirst_other": "Eerst pullen: de remote heeft {{count}} nieuwe commits",
   "error": {
     "auth": "Kon niet authenticeren bij de remote. Log in om verder te gaan.",
     "sshKey": "De remote heeft je SSH-sleutel geweigerd. Controleer of de sleutel geladen is (ssh-add -l) en aan je account is toegevoegd.",

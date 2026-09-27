@@ -1,6 +1,8 @@
 {
-  "ahead": "{{count}} ahead",
-  "behind": "{{count}} behind",
+  "ahead": "{{count}} ahead — click to push",
+  "behind": "{{count}} behind — click to pull",
+  "pullFirst_one": "Pull first: the remote has {{count}} new commit",
+  "pullFirst_other": "Pull first: the remote has {{count}} new commits",
   "error": {
     "auth": "Could not authenticate with the remote. Sign in to continue.",
     "sshKey": "The remote refused your SSH key. Check that the key is loaded (ssh-add -l) and added to your account.",
