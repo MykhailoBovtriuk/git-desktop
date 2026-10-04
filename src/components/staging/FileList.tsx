@@ -9,6 +9,7 @@ import {
   StageIcon,
   UnstageIcon,
   DiscardIcon,
+  TruncatedText,
 } from '../../shared/ui';
 
 interface FileListProps {
@@ -80,7 +81,7 @@ export function FileList({
               >
                 {file.status}
               </span>
-              <span className="text-text truncate">{name}</span>
+              <TruncatedText className="text-text">{name}</TruncatedText>
             </div>
 
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

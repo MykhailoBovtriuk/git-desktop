@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
-import { Badge, DragRegion, IconButton, RefreshIcon } from '../../shared/ui';
+import { Badge, DragRegion, IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
 
 export function Titlebar() {
@@ -66,7 +66,7 @@ export function Titlebar() {
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors min-w-0 ${mergeState ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <span className="text-blue shrink-0">●</span>
-            <span className="text-text truncate">{currentBranch || t('noBranch')}</span>
+            <TruncatedText className="text-text">{currentBranch || t('noBranch')}</TruncatedText>
             <span className="text-subtext text-xs shrink-0">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
@@ -97,7 +97,7 @@ export function Titlebar() {
           onClick={() => setRepoOpen(o => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors"
         >
-          <span className="text-text truncate max-w-32">{repoName}</span>
+          <TruncatedText className="text-text max-w-32">{repoName}</TruncatedText>
           <span className="text-subtext text-xs">▼</span>
         </button>
         {repoOpen && <RepoDropdown onClose={() => setRepoOpen(false)} />}

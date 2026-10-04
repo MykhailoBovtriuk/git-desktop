@@ -9,8 +9,10 @@ type LifecycleSlice = Pick<
   | 'epoch'
   | 'busyCount'
   | 'repoPath'
+  | 'remoteUrl'
   | 'remoteHost'
   | 'remoteProtocol'
+  | 'switchRemoteProtocol'
   | 'hasIdentity'
   | 'loadIdentity'
   | 'recentRepos'
@@ -62,6 +64,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   epoch: 0,
   busyCount: 0,
   repoPath: null,
+  remoteUrl: null,
   remoteHost: null,
   remoteProtocol: null,
   hasIdentity: null,
@@ -85,12 +88,23 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     }
   },
 
+  // The dialog that asked shows the new state, sign-in button included; a
+  // browser opening on its own would be one surprise too many.
+  switchRemoteProtocol: async to => {
+    const { url, host, protocol } = await gitApi.switchRemoteProtocol(to);
+    set(s => ({ epoch: s.epoch + 1, remoteUrl: url, remoteHost: host, remoteProtocol: protocol }));
+    const account = useAccountStore.getState();
+    account.refreshCurrent(host);
+    await account.refreshAuthSource(host, protocol);
+  },
+
   openRepo: async path => {
     const opened = await gitApi.openRepo(path);
     const root = opened?.root || path;
     set(s => ({
       epoch: s.epoch + 1,
       repoPath: root,
+      remoteUrl: opened?.remoteUrl ?? null,
       remoteHost: opened?.remoteHost ?? null,
       remoteProtocol: opened?.remoteProtocol ?? null,
       hasIdentity: null,
@@ -137,6 +151,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
       ...(s.repoPath === path
         ? {
             repoPath: null,
+            remoteUrl: null,
             remoteHost: null,
             remoteProtocol: null,
             mergeState: null,

@@ -21,8 +21,8 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       // whether an account applies at all — both travel with the repo rather
       // than costing a second round trip.
       const remoteUrl = await git.getRemoteUrl().catch(() => null);
-      const { host, protocol } = await resolveRemote(remoteUrl);
-      return { root, remoteHost: host, remoteProtocol: protocol };
+      const { url, host, protocol } = await resolveRemote(remoteUrl);
+      return { root, remoteUrl: url, remoteHost: host, remoteProtocol: protocol };
     }),
   );
 

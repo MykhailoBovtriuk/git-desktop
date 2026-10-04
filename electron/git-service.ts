@@ -62,6 +62,9 @@ export class GitService {
   getRemoteUrl(): Promise<string | null> {
     return remote.getRemoteUrl(this.ctx);
   }
+  switchRemoteProtocol(to: 'ssh' | 'https'): ReturnType<typeof remote.switchRemoteProtocol> {
+    return remote.switchRemoteProtocol(this.ctx, to);
+  }
 
   getBranches(): Promise<Branch[]> {
     return branches.getBranches(this.ctx);

@@ -12,5 +12,8 @@
   "loadingMore": "Loading...",
   "settings": "Settings",
   "about": "About",
-  "resizeSidebar": "Resize sidebar"
+  "resizeSidebar": "Resize sidebar",
+  "resizeCommitList": "Resize commit list",
+  "resizeFileList": "Resize file list",
+  "resizeStashList": "Resize stash list"
 }

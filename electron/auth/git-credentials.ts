@@ -75,17 +75,38 @@ export async function approveCredentials(
 }
 
 /**
- * Whether git can already authenticate to a host on its own, so a sign-in is
- * not offered needlessly. No prompts: an unanswered lookup fails fast.
+ * What the credential helper holds for a host, without prompting: an
+ * unanswered lookup fails fast instead of asking a terminal or an askpass.
  */
-export async function hasStoredCredential(host: string): Promise<boolean> {
+async function lookupStored(host: string): Promise<{ username: string; password: string } | null> {
   const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
   delete env.GIT_ASKPASS;
   delete env.SSH_ASKPASS;
   const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
     () => '',
   );
-  return /^password=.+/m.test(out);
+  const password = /^password=(.+)$/m.exec(out)?.[1];
+  if (!password) return null;
+  return { username: /^username=(.*)$/m.exec(out)?.[1] ?? '', password };
+}
+
+/**
+ * Whether git can already authenticate to a host on its own, so a sign-in is
+ * not offered needlessly.
+ */
+export async function hasStoredCredential(host: string): Promise<boolean> {
+  return (await lookupStored(host)) !== null;
+}
+
+/**
+ * Erase whatever the system credential store holds for a host — typically a
+ * stale password that keeps git failing while the app thinks it is covered.
+ */
+export async function forgetStoredCredential(host: string): Promise<boolean> {
+  const stored = await lookupStored(host);
+  if (!stored) return false;
+  await run(['credential', 'reject'], describe(host, stored.username, stored.password));
+  return true;
 }
 
 /** Forget a stored credential. Best effort: a helper may have nothing to erase. */

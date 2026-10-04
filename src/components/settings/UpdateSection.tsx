@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUpdateStore } from '../../stores/update-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { appApi } from '../../api/app-api';
-import { Button, DownloadIcon, Switch } from '../../shared/ui';
+import { Button, DownloadIcon, Switch, TruncatedText } from '../../shared/ui';
 import { updateErrorText } from '../update/update-text';
 
 /**
@@ -145,7 +145,11 @@ export function UpdateSection() {
       <div className="bg-mantle rounded p-3 mt-3 flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="text-text text-sm">{version ? t('currentVersion', { version }) : ''}</p>
-          {status && <p className="text-subtext text-xs truncate">{status}</p>}
+          {status && (
+            <TruncatedText as="p" className="text-subtext text-xs">
+              {status}
+            </TruncatedText>
+          )}
         </div>
         {action}
       </div>

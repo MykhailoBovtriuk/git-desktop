@@ -5,7 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
 import { relativeTime } from '../../lib/relative-time';
-import { Badge } from '../../shared/ui';
+import { Badge, TruncatedText } from '../../shared/ui';
 
 const ROW_H = 28;
 const LANE_W = 20;
@@ -95,11 +95,13 @@ export function CommitGraph() {
                 <span className="text-subtext font-mono text-xs shrink-0">
                   {commit.abbreviatedHash}
                 </span>
-                <span className="text-text text-xs truncate flex-1">{commit.message}</span>
+                <TruncatedText className="text-text text-xs flex-1">{commit.message}</TruncatedText>
                 <div className="flex items-center gap-1 shrink-0">
                   {commit.refs.slice(0, 3).map(ref => (
                     <Badge key={ref} variant="ref">
-                      {ref.replace('HEAD -> ', '').slice(0, 15)}
+                      <TruncatedText className="block max-w-[15ch]">
+                        {ref.replace('HEAD -> ', '')}
+                      </TruncatedText>
                     </Badge>
                   ))}
                 </div>

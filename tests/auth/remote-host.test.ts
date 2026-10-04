@@ -3,6 +3,8 @@ import {
   hostFromRemoteUrl,
   isNetworkHost,
   protocolFromRemoteUrl,
+  httpsUrlFromSshRemote,
+  sshUrlFromHttpsRemote,
   resetAliasCache,
   resolveRemoteHost,
 } from '../../electron/auth/remote-host';
@@ -93,5 +95,48 @@ describe('protocolFromRemoteUrl', () => {
     expect(protocolFromRemoteUrl('C:\\Users\\me\\repo.git')).toBe('other');
     expect(protocolFromRemoteUrl('')).toBeNull();
     expect(protocolFromRemoteUrl(null)).toBeNull();
+  });
+});
+
+describe('httpsUrlFromSshRemote', () => {
+  it('rewrites scp syntax onto the resolved host, keeping the path', () => {
+    expect(httpsUrlFromSshRemote('git@github-work:owner/repo.git', 'github.com')).toBe(
+      'https://github.com/owner/repo.git',
+    );
+  });
+
+  it('rewrites an ssh:// url, dropping the user and the ssh port', () => {
+    expect(
+      httpsUrlFromSshRemote('ssh://git@git.example.com:2222/group/repo.git', 'git.example.com'),
+    ).toBe('https://git.example.com/group/repo.git');
+    expect(httpsUrlFromSshRemote('git+ssh://git@github.com/o/r', 'github.com')).toBe(
+      'https://github.com/o/r',
+    );
+  });
+
+  // Nothing to convert, or a path an https server would not recognise.
+  it('refuses what is not an ssh remote', () => {
+    expect(httpsUrlFromSshRemote('https://github.com/o/r.git', 'github.com')).toBeNull();
+    expect(httpsUrlFromSshRemote('/srv/repo.git', 'github.com')).toBeNull();
+    expect(httpsUrlFromSshRemote('git@github.com:~user/repo.git', 'github.com')).toBeNull();
+    expect(httpsUrlFromSshRemote('git@github.com:', 'github.com')).toBeNull();
+    expect(httpsUrlFromSshRemote(null, 'github.com')).toBeNull();
+  });
+});
+
+describe('sshUrlFromHttpsRemote', () => {
+  it('rewrites an https url to scp syntax, dropping user and port', () => {
+    expect(sshUrlFromHttpsRemote('https://github.com/owner/repo.git')).toBe(
+      'git@github.com:owner/repo.git',
+    );
+    expect(sshUrlFromHttpsRemote('https://me@git.example.com:8443/g/r')).toBe(
+      'git@git.example.com:g/r',
+    );
+  });
+
+  it('refuses what is not an https remote', () => {
+    expect(sshUrlFromHttpsRemote('git@github.com:o/r.git')).toBeNull();
+    expect(sshUrlFromHttpsRemote('https://github.com/')).toBeNull();
+    expect(sshUrlFromHttpsRemote(null)).toBeNull();
   });
 });

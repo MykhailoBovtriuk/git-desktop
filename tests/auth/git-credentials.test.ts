@@ -167,3 +167,34 @@ describe('hasStoredCredential', () => {
     expect(env.GIT_ASKPASS).toBeUndefined();
   });
 });
+
+describe('forgetStoredCredential', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    fillOutput = '';
+    failNext = false;
+  });
+
+  // A helper erases the entry that matches what it is told, so it is told
+  // exactly what it answered with.
+  it('erases the credential git would have used', async () => {
+    fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=ghp_x\n';
+    await expect(credentials.forgetStoredCredential('github.com')).resolves.toBe(true);
+    expect(find('credential reject')?.stdin).toBe(
+      'protocol=https\nhost=github.com\nusername=alice\npassword=ghp_x\n\n',
+    );
+  });
+
+  it('erases nothing when nothing is stored', async () => {
+    fillOutput = 'protocol=https\nhost=github.com\n';
+    await expect(credentials.forgetStoredCredential('github.com')).resolves.toBe(false);
+    expect(find('credential reject')).toBeUndefined();
+  });
+
+  it('never lets an askpass invent the credential it then erases', async () => {
+    await credentials.forgetStoredCredential('github.com');
+    const env = find('credential fill')?.env ?? {};
+    expect(env.GIT_TERMINAL_PROMPT).toBe('0');
+    expect(env.GIT_ASKPASS).toBeUndefined();
+  });
+});

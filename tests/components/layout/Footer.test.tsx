@@ -32,8 +32,7 @@ function setup({
   authSource = 'none' as AuthSource | null,
   aheadBehind = { ahead: 0, behind: 0, upstream: 'origin/feature/login' } as AheadBehind,
 } = {}) {
-  const openOverlayView = vi.fn();
-  const openSignIn = vi.fn();
+  const openConnection = vi.fn();
   // Selector-aware: Footer and AppMenuButtons both select from the ui store.
   const repoState = {
     currentBranch: 'feature/login',
@@ -49,12 +48,12 @@ function setup({
     push: vi.fn().mockResolvedValue(undefined),
     publishBranch: vi.fn(),
   };
-  const uiState = { addToast: vi.fn(), openOverlayView };
-  const accountState = { current: account, accountFor: () => account, authSource, openSignIn };
+  const uiState = { addToast: vi.fn(), openOverlayView: vi.fn(), openConnection };
+  const accountState = { current: account, accountFor: () => account, authSource };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(accountState)) as any);
-  return { openOverlayView, openSignIn, repoState };
+  return { openConnection, repoState };
 }
 
 describe('Footer', () => {
@@ -106,22 +105,29 @@ describe('Footer', () => {
     expect(screen.queryByText('feature/login')).toBeNull();
   });
 
-  // One account per host, so there is no choice to reopen — the chip is a way
-  // to the Accounts screen, where signing out and back in is the whole story.
-  it('opens the accounts screen when clicked', () => {
-    const { openOverlayView } = setup();
+  // Whatever authenticates the repository, the chip leads to the one dialog
+  // where it can be changed.
+  it('opens the repository connection when clicked', () => {
+    const { openConnection } = setup();
     render(<Footer />);
     fireEvent.click(screen.getByText('@MykhailoBovtriuk'));
-    expect(openOverlayView).toHaveBeenCalledWith('settings');
+    expect(openConnection).toHaveBeenCalledOnce();
   });
 
   // A remote with nobody signed in is the state where the next push fails, so
   // the way out belongs here rather than only in the failure toast.
   it('offers sign-in when a remote has no account', () => {
-    const { openSignIn } = setup({ account: null });
+    const { openConnection } = setup({ account: null });
     render(<Footer />);
     fireEvent.click(screen.getByText('signIn'));
-    expect(openSignIn).toHaveBeenCalledWith('github.com');
+    expect(openConnection).toHaveBeenCalledOnce();
+  });
+
+  it('opens the connection from the ssh label too', () => {
+    const { openConnection } = setup({ account: null, remoteProtocol: 'ssh', authSource: 'ssh' });
+    render(<Footer />);
+    fireEvent.click(screen.getByText('account.viaSsh'));
+    expect(openConnection).toHaveBeenCalledOnce();
   });
 
   it('says nothing about accounts for a repository with no remote', () => {

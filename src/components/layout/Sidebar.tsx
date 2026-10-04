@@ -1,20 +1,11 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { Accordion, Switch } from '../../shared/ui';
+import { Accordion, ResizeHandle, Switch } from '../../shared/ui';
 import { ChangesSection } from '../staging/ChangesSection';
 import { StashSection } from '../stash/StashSection';
-import { getLocalStorage } from '../../lib/storage';
-
-const MIN_WIDTH = 224;
-const MAX_WIDTH = 480;
-
-function loadWidth(): number {
-  const saved = Number(getLocalStorage().getItem('sidebar-width'));
-  return saved >= MIN_WIDTH && saved <= MAX_WIDTH ? saved : MIN_WIDTH;
-}
+import { useResizableWidth } from '../../hooks/use-resizable-width';
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -25,27 +16,7 @@ export function Sidebar() {
     useShallow(s => ({ activeView: s.activeView, setActiveView: s.setActiveView })),
   );
 
-  const [width, setWidth] = useState(loadWidth);
-
-  const startResize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = width;
-    const onMove = (ev: MouseEvent) =>
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + ev.clientX - startX)));
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.userSelect = '';
-      setWidth(w => {
-        getLocalStorage().setItem('sidebar-width', String(w));
-        return w;
-      });
-    };
-    document.body.style.userSelect = 'none';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
+  const { width, startResize } = useResizableWidth('sidebar-width', 224, 480);
 
   const totalChanges = status.staged.length + status.unstaged.length;
   const stashOpen = activeView === 'stash' || activeView === 'stash-create';
@@ -117,15 +88,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Its own column, not an overlay: at right-0 it covered the file lists'
-          scrollbar. */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={t('resizeSidebar')}
-        onMouseDown={startResize}
-        className="w-1.5 shrink-0 cursor-col-resize hover:bg-blue/40 active:bg-blue/60 transition-colors"
-      />
+      <ResizeHandle label={t('resizeSidebar')} onMouseDown={startResize} />
     </>
   );
 }

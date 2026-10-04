@@ -3,24 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
-import { Button, TextInput, UserIcon } from '../../shared/ui';
+import { useUiStore } from '../../stores/ui-store';
+import { Button, TextInput, TruncatedText, UserIcon } from '../../shared/ui';
 
 /** Every server this user is signed in to, one row each. */
 export function AccountsSection() {
   const { t } = useTranslation('account');
-  const { accounts, authSource, persistent, openSignIn, signOut } = useAccountStore(
+  const { accounts, persistent, openSignIn, signOut } = useAccountStore(
     useShallow(s => ({
       accounts: s.accounts,
-      authSource: s.authSource,
       persistent: s.persistent,
       openSignIn: s.openSignIn,
       signOut: s.signOut,
     })),
   );
   const remoteHost = useRepoStore(s => s.remoteHost);
-  // Only the open repository's server: `git credential` cannot enumerate hosts.
-  const external =
-    remoteHost && (authSource === 'system' || authSource === 'ssh') ? authSource : null;
+  const openConnection = useUiStore(s => s.openConnection);
   const [adding, setAdding] = useState(false);
   const [host, setHost] = useState('');
 
@@ -54,10 +52,12 @@ export function AccountsSection() {
                 <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
               )}
               <div className="min-w-0">
-                <p className="text-text text-sm truncate">{account.name || account.login}</p>
-                <p className="text-subtext text-xs truncate">
-                  @{account.login} · {account.host}
-                </p>
+                <TruncatedText as="p" className="text-text text-sm">
+                  {account.name || account.login}
+                </TruncatedText>
+                <TruncatedText as="p" className="text-subtext text-xs">
+                  {`@${account.login} · ${account.host}`}
+                </TruncatedText>
               </div>
             </div>
             <Button variant="secondary" size="sm" onClick={() => void signOut(account.id)}>
@@ -65,21 +65,7 @@ export function AccountsSection() {
             </Button>
           </div>
         ))}
-
-        {external && (
-          <div className="bg-mantle/50 rounded p-3 flex items-center gap-3">
-            <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
-            <div className="min-w-0">
-              <p className="text-subtext text-sm truncate">{remoteHost}</p>
-              <p className="text-subtext text-xs truncate">
-                {t(external === 'ssh' ? 'section.viaSsh' : 'section.viaSystem')}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
-
-      {external && <p className="text-subtext text-xs mt-2">{t('section.externalHint')}</p>}
 
       {adding ? (
         <div className="flex items-center gap-2 mt-3">
@@ -108,9 +94,23 @@ export function AccountsSection() {
           </Button>
         </div>
       ) : (
-        <Button variant="secondary" size="sm" className="mt-3" onClick={startAdd}>
-          {t('section.add')}
-        </Button>
+        <div className="flex items-center gap-2 mt-3">
+          <Button variant="secondary" size="sm" onClick={startAdd}>
+            {t('section.add')}
+          </Button>
+          {/* The same dialog as the footer's account chip, for whoever looks
+              for it here. */}
+          {remoteHost && (
+            <Button
+              variant="secondary"
+              size="sm"
+              title={t('section.connectionHint', { host: remoteHost })}
+              onClick={openConnection}
+            >
+              {t('section.connection')}
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Without an OS keychain tokens last this session only; say so up front. */}
