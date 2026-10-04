@@ -12,5 +12,8 @@
   "loadingMore": "Laden...",
   "settings": "Instellingen",
   "about": "Over",
-  "resizeSidebar": "Zijbalkbreedte aanpassen"
+  "resizeSidebar": "Zijbalkbreedte aanpassen",
+  "resizeCommitList": "Breedte commitlijst aanpassen",
+  "resizeFileList": "Breedte bestandslijst aanpassen",
+  "resizeStashList": "Breedte stashlijst aanpassen"
 }

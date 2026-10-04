@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, DropdownRow, MenuItem } from '../../shared/ui';
+import { ContextMenu, DropdownRow, MenuItem, TruncatedText } from '../../shared/ui';
 
 interface RepoItemProps {
   name: string;
@@ -26,7 +26,7 @@ export function RepoItem({
     <div className="relative">
       <DropdownRow>
         <button onClick={onOpen} className="flex items-center gap-2 flex-1 min-w-0 text-left">
-          <span className="text-text truncate">{name}</span>
+          <TruncatedText className="text-text">{name}</TruncatedText>
         </button>
         {current && <span className="text-blue text-xs ml-2">✓</span>}
         <button

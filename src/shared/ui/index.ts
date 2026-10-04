@@ -11,6 +11,7 @@ export { MenuItem, type MenuItemProps } from './MenuItem';
 export { DropdownItem, DropdownRow, type DropdownItemProps } from './DropdownItem';
 export { ContextMenu, type ContextMenuProps } from './ContextMenu';
 export { FilePathList, type FilePathListProps } from './FilePathList';
+export { ResizeHandle, type ResizeHandleProps } from './ResizeHandle';
 export { SectionLabel } from './SectionLabel';
 export { Breadcrumbs, type Crumb, type BreadcrumbsProps } from './Breadcrumbs';
 export { Badge, type BadgeProps } from './Badge';
@@ -24,3 +25,5 @@ export {
 } from './SegmentedControl';
 export { ToastCard, type ToastCardProps } from './ToastCard';
 export { ErrorBoundary } from './ErrorBoundary';
+export { Tooltip, type TooltipProps } from './Tooltip';
+export { TruncatedText, type TruncatedTextProps } from './TruncatedText';

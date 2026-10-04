@@ -6,8 +6,9 @@ import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
 import { CommitList } from './CommitList';
 import { DiffViewer } from '../diff/DiffViewer';
-import { FilePathList, TextInput } from '../../shared/ui';
+import { FilePathList, ResizeHandle, TextInput } from '../../shared/ui';
 import { errorMessage } from '../../lib/error-message';
+import { useResizableWidth } from '../../hooks/use-resizable-width';
 
 export function HistoryView() {
   const { t } = useTranslation();
@@ -24,6 +25,9 @@ export function HistoryView() {
   const [filter, setFilter] = useState('');
   const [changedFiles, setChangedFiles] = useState<{ path: string; status: string }[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
+
+  const commitsColumn = useResizableWidth('history-commits-width', 224, 560, 288);
+  const filesColumn = useResizableWidth('history-files-width', 160, 480, 192);
 
   const commit = commits.find(c => c.hash === selectedCommit);
 
@@ -62,7 +66,10 @@ export function HistoryView() {
 
   return (
     <div className="flex h-full">
-      <div className="w-72 border-r border-surface0 flex flex-col shrink-0">
+      <div
+        className="border-r border-surface0 flex flex-col shrink-0"
+        style={{ width: commitsColumn.width }}
+      >
         <div className="flex items-center gap-2 px-3 py-2 border-b border-surface0 shrink-0">
           <button
             onClick={() => setActiveView('changes')}
@@ -80,6 +87,7 @@ export function HistoryView() {
         </div>
         <CommitList filter={filter} />
       </div>
+      <ResizeHandle label={t('resizeCommitList')} onMouseDown={commitsColumn.startResize} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {commit ? (
@@ -95,11 +103,13 @@ export function HistoryView() {
                 files={changedFiles}
                 selected={selectedFile}
                 onSelect={path => setSelectedFile(path, 'commit')}
+                width={filesColumn.width}
               >
                 {loadingFiles && changedFiles.length === 0 && (
                   <p className="px-3 py-2 text-subtext text-xs">{t('loading')}</p>
                 )}
               </FilePathList>
+              <ResizeHandle label={t('resizeFileList')} onMouseDown={filesColumn.startResize} />
               <div className="flex-1 overflow-hidden">
                 <DiffViewer />
               </div>

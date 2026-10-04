@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { Button, TextInput, UserIcon } from '../../shared/ui';
+import { Button, TextInput, TruncatedText, UserIcon } from '../../shared/ui';
 
 /** Every server this user is signed in to, one row each. */
 export function AccountsSection() {
@@ -52,10 +52,12 @@ export function AccountsSection() {
                 <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
               )}
               <div className="min-w-0">
-                <p className="text-text text-sm truncate">{account.name || account.login}</p>
-                <p className="text-subtext text-xs truncate">
-                  @{account.login} · {account.host}
-                </p>
+                <TruncatedText as="p" className="text-text text-sm">
+                  {account.name || account.login}
+                </TruncatedText>
+                <TruncatedText as="p" className="text-subtext text-xs">
+                  {`@${account.login} · ${account.host}`}
+                </TruncatedText>
               </div>
             </div>
             <Button variant="secondary" size="sm" onClick={() => void signOut(account.id)}>

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useGitAction } from '../../hooks/use-git-action';
-import { Button } from '../../shared/ui';
+import { Button, TruncatedText } from '../../shared/ui';
 
 export function RebaseBanner() {
   const { t } = useTranslation('rebase');
@@ -32,9 +32,9 @@ export function RebaseBanner() {
       className="flex items-center gap-3 px-4 py-2 bg-surface0 border-b border-red/40"
     >
       <span className="text-red text-sm font-semibold">{t('rebaseConflict')}</span>
-      <span className="text-subtext text-xs flex-1 truncate">
+      <TruncatedText className="text-subtext text-xs flex-1">
         {conflictCount > 0 ? t('conflictingFilesCount', { count: conflictCount }) : t('rebasing')}
-      </span>
+      </TruncatedText>
       <Button variant="secondary" onClick={handleAbort}>
         {t('abortRebase')}
       </Button>

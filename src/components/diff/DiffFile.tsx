@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { DiffHunk, DiffLine, FileDiff } from '../../types';
-import { basenameFromPath } from '../../lib/basename';
+import { TruncatedText } from '../../shared/ui';
 
 interface DiffFileProps {
   diff: FileDiff;
@@ -63,11 +63,9 @@ export function DiffFile({
   return (
     <div className="flex flex-col overflow-hidden flex-1">
       <div className="flex items-center gap-2 px-3 py-2 bg-mantle border-b border-surface0 shrink-0">
-        <span className="text-text text-sm font-medium" title={diff.path}>
-          {basenameFromPath(diff.path)}
-        </span>
-        <span className="text-green text-xs">+{diff.additions}</span>
-        <span className="text-red text-xs">-{diff.deletions}</span>
+        <TruncatedText className="text-text text-sm font-medium min-w-0">{diff.path}</TruncatedText>
+        <span className="text-green text-xs shrink-0">+{diff.additions}</span>
+        <span className="text-red text-xs shrink-0">-{diff.deletions}</span>
       </div>
 
       <div ref={parentRef} className="font-mono text-xs overflow-auto flex-1">
@@ -101,10 +99,12 @@ export function DiffFile({
                       {row.hunk.newCount} @@
                     </span>
                     {showHunkActions && (
+                      // The row is as wide as the longest line, so without sticky
+                      // the button sat past the right edge until scrolled to.
                       <button
                         type="button"
                         onClick={() => onHunk(baseHunkIndex + row.hunkIndex)}
-                        className="text-blue hover:text-sky text-xs px-1 shrink-0"
+                        className="sticky right-0 bg-surface0 text-blue hover:text-sky text-xs px-1 shrink-0"
                       >
                         {isStaged ? t('unstageHunk') : t('stageHunk')}
                       </button>

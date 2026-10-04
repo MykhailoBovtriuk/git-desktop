@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, DropdownRow, MenuItem } from '../../shared/ui';
+import { ContextMenu, DropdownRow, MenuItem, TruncatedText } from '../../shared/ui';
 
 interface BranchItemProps {
   name: string;
@@ -50,7 +50,7 @@ export function BranchItem({
           {/* Only the current branch earns the accent — a blue dot on every
               row was an indicator carrying no information. */}
           <span className={current ? 'text-blue' : 'text-subtext'}>{isRemote ? '○' : '●'}</span>
-          <span className="text-text truncate max-w-40">{name}</span>
+          <TruncatedText className="text-text max-w-40">{name}</TruncatedText>
         </button>
         {current && <span className="text-blue text-xs">✓</span>}
         <button

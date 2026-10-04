@@ -2,7 +2,14 @@ import { useTranslation } from 'react-i18next';
 import type { StashEntry } from '../../types';
 import { relativeTime } from '../../lib/relative-time';
 import { useUiStore } from '../../stores/ui-store';
-import { ListItem, IconButton, StashApplyIcon, StashPopIcon, StashDropIcon } from '../../shared/ui';
+import {
+  ListItem,
+  IconButton,
+  TruncatedText,
+  StashApplyIcon,
+  StashPopIcon,
+  StashDropIcon,
+} from '../../shared/ui';
 
 interface StashListProps {
   stashes: StashEntry[];
@@ -48,7 +55,9 @@ export function StashList({
         >
           <div className="flex items-start justify-between gap-1">
             <div className="min-w-0">
-              <div className="text-text text-xs truncate">{s.message}</div>
+              <TruncatedText as="div" className="text-text text-xs">
+                {s.message}
+              </TruncatedText>
               <p className="text-subtext text-xs mt-0.5">
                 {s.branch && <>{s.branch} · </>}
                 {relativeTime(s.date, i18n.language)}

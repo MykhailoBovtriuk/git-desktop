@@ -1,15 +1,31 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FilePathList } from '../../../src/shared/ui/FilePathList';
 
 const files = [{ path: 'src/deep/a.ts' }, { path: 'b.ts' }];
 
 describe('FilePathList', () => {
-  it('shows basenames but keeps the full path in the title', () => {
+  it('shows basenames and the full path in a tooltip on hover', () => {
+    vi.useFakeTimers();
     render(<FilePathList files={files} selected={null} onSelect={() => {}} />);
-    const btn = screen.getByText('a.ts');
-    expect(btn).toHaveAttribute('title', 'src/deep/a.ts');
+    fireEvent.mouseEnter(screen.getByText('a.ts'));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('src/deep/a.ts');
+    vi.useRealTimers();
+  });
+
+  it('shows no tooltip for a root-level file that fits', () => {
+    vi.useFakeTimers();
+    render(<FilePathList files={files} selected={null} onSelect={() => {}} />);
+    fireEvent.mouseEnter(screen.getByText('b.ts'));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('reports selection with the full path, not the basename', () => {
@@ -21,8 +37,8 @@ describe('FilePathList', () => {
 
   it('highlights the selected file', () => {
     render(<FilePathList files={files} selected="b.ts" onSelect={() => {}} />);
-    expect(screen.getByText('b.ts')).toHaveClass('bg-surface1', 'border-blue');
-    expect(screen.getByText('a.ts')).toHaveClass('border-transparent');
+    expect(screen.getByText('b.ts').closest('button')).toHaveClass('bg-surface1', 'border-blue');
+    expect(screen.getByText('a.ts').closest('button')).toHaveClass('border-transparent');
   });
 
   it('renders children above the list (loading row)', () => {
