@@ -36,9 +36,26 @@
     "add": "Account toevoegen",
     "hostPlaceholder": "github.com",
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
-    "viaSystem": "Buiten deze app ingelogd, via de systeemopslag voor credentials",
-    "viaSsh": "Gebruikt je SSH-sleutel — geen account nodig",
-    "externalHint": "Alleen voor de geopende repository: git kun je naar één server vragen, nooit om een lijst."
+    "connection": "Repositoryverbinding…",
+    "connectionHint": "SSH of HTTPS, en waarmee deze repository inlogt op {{host}}"
   },
-  "signedInAs": "Ingelogd als {{name}} op {{host}}"
+  "signedInAs": "Ingelogd als {{name}} op {{host}}",
+  "connection": {
+    "title": "Repositoryverbinding",
+    "protocol": "Protocol",
+    "protocolHint": "SSH gebruikt je sleutel uit ~/.ssh; HTTPS een account of de systeemopslag voor credentials",
+    "ssh": "Gebruikt je SSH-sleutel",
+    "sshHint": "Schakel over naar HTTPS om met een account te authenticeren",
+    "system": "Git gebruikt een login uit de systeemopslag voor credentials",
+    "systemHint": "Buiten deze app aangemaakt. Mislukt pushen, vergeet hem dan en log opnieuw in",
+    "none": "Niets om mee in te loggen",
+    "noneHint": "Push en pull mislukken tot je inlogt",
+    "local": "Deze remote heeft geen login nodig",
+    "signIn": "Inloggen",
+    "signOutHint": "Logt uit bij {{host}} voor elke repository daarop",
+    "forget": "Vergeten",
+    "forgetTitle": "Opgeslagen login vergeten",
+    "forgetConfirm": "De login voor {{host}} uit de systeemopslag wissen? Git in een terminal gebruikt hem ook.",
+    "failed": "Verbinding bijwerken is mislukt"
+  }
 }

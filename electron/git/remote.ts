@@ -1,15 +1,78 @@
 import { GitContext } from './context';
 import { accountForHost, getFreshToken } from '../auth/token-store';
-import { resolveRemoteHost } from '../auth/remote-host';
+import {
+  httpsUrlFromSshRemote,
+  sshUrlFromHttpsRemote,
+  resolveRemote,
+  resolveRemoteHost,
+  type ResolvedRemote,
+} from '../auth/remote-host';
+
+async function originRemote(ctx: GitContext) {
+  const remotes = await ctx.ensureRepo().getRemotes(true);
+  return remotes.find(r => r.name === 'origin') ?? remotes[0];
+}
 
 /**
  * The origin URL, or null without a remote. SSH and HTTPS fail authentication
  * for different reasons.
  */
 export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
-  const remotes = await ctx.ensureRepo().getRemotes(true);
-  const origin = remotes.find(r => r.name === 'origin') ?? remotes[0];
+  const origin = await originRemote(ctx);
   return origin?.refs?.push || origin?.refs?.fetch || null;
+}
+
+/** Where the ssh address is kept while the remote is on https: an alias is not recoverable from it. */
+const SSH_URL_KEY = 'gitdesktop-sshurl';
+const SSH_PUSH_URL_KEY = 'gitdesktop-sshpushurl';
+
+/**
+ * Point origin at the same repository over the other protocol: https lets a
+ * signed-in account's token authenticate it, ssh goes back to the key.
+ */
+export async function switchRemoteProtocol(
+  ctx: GitContext,
+  to: 'ssh' | 'https',
+): Promise<ResolvedRemote> {
+  const origin = await originRemote(ctx);
+  const fetch = origin?.refs?.fetch;
+  if (!origin || !fetch) throw new Error('The repository has no remote');
+  const push = origin.refs.push && origin.refs.push !== fetch ? origin.refs.push : null;
+  const repo = ctx.ensureRepo();
+  const config = (key: string) => `remote.${origin.name}.${key}`;
+  const setUrls = async (fetchUrl: string, pushUrl: string | null) => {
+    await repo.remote(['set-url', origin.name, fetchUrl]);
+    // A separate push url would otherwise go on using the old protocol.
+    if (push) await repo.remote(['set-url', '--push', origin.name, pushUrl ?? fetchUrl]);
+  };
+
+  if (to === 'https') {
+    const toHttps = async (url: string) => {
+      const host = await resolveRemoteHost(url);
+      return host ? httpsUrlFromSshRemote(url, host) : null;
+    };
+    const fetchUrl = await toHttps(fetch);
+    if (!fetchUrl) throw new Error('The remote is not an ssh address');
+    await repo.addConfig(config(SSH_URL_KEY), fetch);
+    if (push) await repo.addConfig(config(SSH_PUSH_URL_KEY), push);
+    await setUrls(fetchUrl, push && (await toHttps(push)));
+  } else {
+    const fetchUrl = sshUrlFromHttpsRemote(fetch);
+    if (!fetchUrl) throw new Error('The remote is not an https address');
+    // The address it had before, alias and all, as long as it is still the same
+    // repository.
+    const remembered = async (key: string, httpsUrl: string) => {
+      const url = (await repo.raw(['config', '--get', config(key)]).catch(() => '')).trim();
+      if (!url) return null;
+      const host = await resolveRemoteHost(url);
+      return host && httpsUrlFromSshRemote(url, host) === httpsUrl ? url : null;
+    };
+    await setUrls(
+      (await remembered(SSH_URL_KEY, fetch)) ?? fetchUrl,
+      push && ((await remembered(SSH_PUSH_URL_KEY, push)) ?? sshUrlFromHttpsRemote(push)),
+    );
+  }
+  return resolveRemote(await getRemoteUrl(ctx));
 }
 
 /**

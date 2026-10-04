@@ -16,6 +16,7 @@ import { hostFromRemoteUrl, originUrlFor } from '../auth/remote-host';
 import { verifyAgainstRemote } from '../auth/verify-credential';
 import {
   approveCredentials,
+  forgetStoredCredential,
   gitUsernameFor,
   hasStoredCredential,
   rejectCredentials,
@@ -251,6 +252,17 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
       cancelSignIn();
       lastError = null;
       return null;
+    }),
+  );
+
+  // For a credential stored outside the app: signing out of one of ours already
+  // erases it.
+  ipcMain.handle('account:forget-system-credential', (_e, host: unknown) =>
+    wrap(async () => {
+      assertHost(host);
+      const forgotten = await forgetStoredCredential(host);
+      notify();
+      return forgotten;
     }),
   );
 

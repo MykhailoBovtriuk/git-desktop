@@ -58,6 +58,50 @@ export function protocolFromRemoteUrl(remoteUrl: string | null | undefined): Rem
   return 'other';
 }
 
+/**
+ * The https address of the same repository as an ssh remote, so a signed-in
+ * account's token can reach it. `host` is the resolved one: an ssh alias
+ * means nothing to an https server. Null when there is nothing to convert.
+ */
+export function httpsUrlFromSshRemote(
+  remoteUrl: string | null | undefined,
+  host: string,
+): string | null {
+  if (protocolFromRemoteUrl(remoteUrl) !== 'ssh') return null;
+  const raw = remoteUrl!.trim();
+  let repoPath: string;
+  if (raw.includes('://')) {
+    try {
+      repoPath = new URL(raw).pathname;
+    } catch {
+      return null;
+    }
+  } else {
+    repoPath = raw.slice(SCP_LIKE.exec(raw)![0].length);
+  }
+  repoPath = repoPath.replace(/^\/+/, '');
+  // `~user/repo` is relative to a home directory, which https has no notion of.
+  if (!repoPath || repoPath.startsWith('~')) return null;
+  return `https://${host}/${repoPath}`;
+}
+
+/**
+ * The scp-style ssh address of an https remote: `git@host:path`. The user and
+ * port of an https url mean nothing to ssh, so both are dropped.
+ */
+export function sshUrlFromHttpsRemote(remoteUrl: string | null | undefined): string | null {
+  if (protocolFromRemoteUrl(remoteUrl) !== 'https') return null;
+  let url: URL;
+  try {
+    url = new URL(remoteUrl!.trim());
+  } catch {
+    return null;
+  }
+  const repoPath = url.pathname.replace(/^\/+/, '');
+  if (!url.hostname || !repoPath) return null;
+  return `git@${url.hostname}:${repoPath}`;
+}
+
 /** True for a host git can reach over the network — i.e. not a local path. */
 export function isNetworkHost(host: string | null): host is string {
   return !!host && host.length > 0 && !host.startsWith('.') && !host.includes('/');
@@ -106,11 +150,16 @@ export async function resolveRemoteHost(
   return isNetworkHost(resolved) && resolved.includes('.') ? resolved : null;
 }
 
-/** The host and the protocol together: both answers come from one URL. */
-export async function resolveRemote(
-  remoteUrl: string | null | undefined,
-): Promise<{ host: string | null; protocol: RemoteProtocol | null }> {
+export interface ResolvedRemote {
+  url: string | null;
+  host: string | null;
+  protocol: RemoteProtocol | null;
+}
+
+/** The address with the host and protocol read from it: all three answers come from one URL. */
+export async function resolveRemote(remoteUrl: string | null | undefined): Promise<ResolvedRemote> {
   return {
+    url: remoteUrl?.trim() || null,
     host: await resolveRemoteHost(remoteUrl),
     protocol: protocolFromRemoteUrl(remoteUrl),
   };

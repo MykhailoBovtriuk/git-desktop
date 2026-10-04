@@ -292,6 +292,78 @@ describe('GitService', () => {
   });
 });
 
+describe('switchRemoteProtocol', () => {
+  const urls = () => ({
+    fetch: execSync('git remote get-url origin', { cwd: tmpDir }).toString().trim(),
+    push: execSync('git remote get-url --push origin', { cwd: tmpDir }).toString().trim(),
+  });
+
+  it('points an ssh origin at the same repository over https', async () => {
+    execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    expect(await git.switchRemoteProtocol('https')).toEqual({
+      url: 'https://github.com/owner/repo.git',
+      host: 'github.com',
+      protocol: 'https',
+    });
+    expect(urls()).toEqual({
+      fetch: 'https://github.com/owner/repo.git',
+      push: 'https://github.com/owner/repo.git',
+    });
+  });
+
+  it('points an https origin at the same repository over ssh', async () => {
+    execSync('git remote add origin https://github.com/owner/repo.git', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    expect(await git.switchRemoteProtocol('ssh')).toEqual({
+      url: 'git@github.com:owner/repo.git',
+      host: 'github.com',
+      protocol: 'ssh',
+    });
+    expect(urls().fetch).toBe('git@github.com:owner/repo.git');
+  });
+
+  // An ssh alias cannot be rebuilt from the https address, so going back must
+  // restore the one the repository had.
+  it('restores the original ssh address, alias and all, on the way back', async () => {
+    execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
+    execSync('git remote set-url --push origin git@github.com:owner/fork.git', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    await git.switchRemoteProtocol('https');
+    expect(urls()).toEqual({
+      fetch: 'https://github.com/owner/repo.git',
+      push: 'https://github.com/owner/fork.git',
+    });
+
+    await git.switchRemoteProtocol('ssh');
+    expect(urls()).toEqual({
+      fetch: 'git@github.com:owner/repo.git',
+      push: 'git@github.com:owner/fork.git',
+    });
+  });
+
+  it('ignores a remembered ssh address once the remote points elsewhere', async () => {
+    execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    await git.switchRemoteProtocol('https');
+    execSync('git remote set-url origin https://github.com/other/project.git', { cwd: tmpDir });
+
+    await git.switchRemoteProtocol('ssh');
+    expect(urls().fetch).toBe('git@github.com:other/project.git');
+  });
+
+  it('refuses a switch to the protocol the remote already uses', async () => {
+    execSync('git remote add origin https://github.com/owner/repo.git', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    await expect(git.switchRemoteProtocol('https')).rejects.toThrow();
+    expect(urls().fetch).toBe('https://github.com/owner/repo.git');
+  });
+});
+
 describe('stageFiles/markResolved with dash-prefixed paths', () => {
   // Without a `--` separator, a file named "-A" is parsed by git as the
   // stage-everything flag and other files get staged too.

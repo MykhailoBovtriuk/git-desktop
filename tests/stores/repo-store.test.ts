@@ -16,6 +16,11 @@ vi.mock('../../src/api/git-api', () => ({
     pull: vi.fn().mockResolvedValue('1 change'),
     push: vi.fn().mockResolvedValue(null),
     pushSetUpstream: vi.fn().mockResolvedValue(null),
+    switchRemoteProtocol: vi.fn().mockResolvedValue({
+      url: 'https://github.com/o/r.git',
+      host: 'github.com',
+      protocol: 'https',
+    }),
     checkout: vi.fn().mockResolvedValue(null),
     checkoutForce: vi.fn().mockResolvedValue(null),
     merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
@@ -788,5 +793,55 @@ describe('restoring saved repositories', () => {
 
     expect(useRepoStore.getState().repoPath).toBeNull();
     expect(gitApi.openRepo).not.toHaveBeenCalled();
+  });
+});
+
+describe('switching the remote protocol', () => {
+  beforeEach(() => {
+    useRepoStore.setState({ repoPath: '/tmp/r', remoteHost: 'github.com', remoteProtocol: 'ssh' });
+    accountState.phase = null;
+    accountState.dismissedRepos = new Set(['/tmp/r']);
+    accountState.openSignIn.mockClear();
+    accountState.authSource = 'ssh';
+    authSource.mockClear();
+  });
+
+  // The dialog that asked shows the new state with its own sign-in button; a
+  // browser popping up unasked would be one surprise too many.
+  it('moves the remote over and learns what now authenticates it', async () => {
+    authSource.mockResolvedValue('none');
+    await useRepoStore.getState().switchRemoteProtocol('https');
+
+    expect(useRepoStore.getState().remoteUrl).toBe('https://github.com/o/r.git');
+    expect(useRepoStore.getState().remoteProtocol).toBe('https');
+    expect(authSource).toHaveBeenCalledWith('github.com', 'https');
+    expect(accountState.authSource).toBe('none');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+
+  // Back on the key, an account has nothing to offer.
+  it('does not ask to sign in after moving to ssh', async () => {
+    useRepoStore.setState({ remoteProtocol: 'https' });
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.switchRemoteProtocol as any).mockResolvedValueOnce({
+      url: 'git@github.com:o/r.git',
+      host: 'github.com',
+      protocol: 'ssh',
+    });
+    authSource.mockResolvedValue('ssh');
+    await useRepoStore.getState().switchRemoteProtocol('ssh');
+
+    expect(gitApi.switchRemoteProtocol).toHaveBeenCalledWith('ssh');
+    expect(useRepoStore.getState().remoteProtocol).toBe('ssh');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
+  });
+
+  it('leaves the remote state alone when the switch fails', async () => {
+    const { gitApi } = await import('../../src/api/git-api');
+    (gitApi.switchRemoteProtocol as any).mockRejectedValueOnce(new Error('not ssh'));
+
+    await expect(useRepoStore.getState().switchRemoteProtocol('https')).rejects.toThrow('not ssh');
+    expect(useRepoStore.getState().remoteProtocol).toBe('ssh');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 });

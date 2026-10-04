@@ -29,11 +29,15 @@ interface UiState {
    * the dropdown closes the moment it is opened.
    */
   newBranchOpen: boolean;
+  /** The open repository's connection dialog: protocol and what authenticates it. */
+  connectionOpen: boolean;
   setActiveView: (view: ActiveView) => void;
   openOverlayView: (view: OverlayView) => void;
   overlayBack: () => void;
   openNewBranch: () => void;
   closeNewBranch: () => void;
+  openConnection: () => void;
+  closeConnection: () => void;
   setSelectedCommit: (hash: string | null) => void;
   setSelectedFile: (path: string | null, area?: SelectedFileArea) => void;
   setActiveMergeFile: (path: string | null) => void;
@@ -61,6 +65,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   toasts: [],
   selectedStash: null,
   newBranchOpen: false,
+  connectionOpen: false,
 
   setActiveView: view => set({ activeView: view }),
   // Settings/About cover the whole content area, so leaving them has to restore
@@ -93,6 +98,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
     }),
   openNewBranch: () => set({ newBranchOpen: true }),
   closeNewBranch: () => set({ newBranchOpen: false }),
+  openConnection: () => set({ connectionOpen: true }),
+  closeConnection: () => set({ connectionOpen: false }),
   setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
     set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),

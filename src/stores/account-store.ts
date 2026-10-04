@@ -59,6 +59,8 @@ interface AccountState {
   cancelSignIn: () => Promise<void>;
   dismissForRepo: (repoPath: string) => void;
   signOut: (accountId: string) => Promise<void>;
+  /** Erase a credential stored outside the app, e.g. a stale Keychain password. */
+  forgetSystemCredential: (host: string) => Promise<void>;
 }
 
 export const useAccountStore = create<AccountState>()((set, get) => ({
@@ -179,6 +181,10 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
     await accountApi.signOut(accountId);
     set(s => ({ current: s.current?.id === accountId ? null : s.current }));
     await get().loadAccounts();
+  },
+
+  forgetSystemCredential: async host => {
+    await accountApi.forgetSystemCredential(host);
   },
 }));
 

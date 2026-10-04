@@ -36,9 +36,26 @@
     "add": "Add account",
     "hostPlaceholder": "github.com",
     "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting.",
-    "viaSystem": "Signed in outside this app, via the system credential store",
-    "viaSsh": "Uses your SSH key — no account needed",
-    "externalHint": "Shown for the open repository only: git can be asked about one server at a time, never for a list."
+    "connection": "Repository connection…",
+    "connectionHint": "SSH or HTTPS, and what signs this repository in to {{host}}"
   },
-  "signedInAs": "Signed in as {{name}} on {{host}}"
+  "signedInAs": "Signed in as {{name}} on {{host}}",
+  "connection": {
+    "title": "Repository connection",
+    "protocol": "Protocol",
+    "protocolHint": "SSH uses your key from ~/.ssh; HTTPS uses an account or the system credential store",
+    "ssh": "Uses your SSH key",
+    "sshHint": "Switch to HTTPS to authenticate with an account instead",
+    "system": "Git uses a login from the system credential store",
+    "systemHint": "Created outside this app. If pushes fail, forget it and sign in again",
+    "none": "Nothing to sign in with",
+    "noneHint": "Push and pull will fail until you sign in",
+    "local": "This remote needs no sign-in",
+    "signIn": "Sign in",
+    "signOutHint": "Signs out of {{host}} for every repository on it",
+    "forget": "Forget",
+    "forgetTitle": "Forget stored login",
+    "forgetConfirm": "Erase the login for {{host}} from the system credential store? Git in a terminal uses it too.",
+    "failed": "Could not update the connection"
+  }
 }

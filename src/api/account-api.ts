@@ -35,5 +35,7 @@ export const accountApi = {
     invoke<null>('account:open-token-help', providerId, host),
   cancelSignIn: () => invoke<null>('account:cancel-sign-in'),
   signOut: (accountId: string) => invoke<null>('account:sign-out', accountId),
+  forgetSystemCredential: (host: string) =>
+    invoke<boolean>('account:forget-system-credential', host),
   onAccountChanged: (cb: () => void) => window.electronAPI.onAccountChanged(cb),
 };

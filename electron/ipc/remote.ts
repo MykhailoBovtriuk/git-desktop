@@ -10,6 +10,13 @@ export function registerRemoteHandlers(git: GitService) {
 
   ipcMain.handle('git:push', () => wrap(() => git.push().then(() => null)));
 
+  ipcMain.handle('git:switch-remote-protocol', (_e, to: unknown) =>
+    wrap(() => {
+      if (to !== 'ssh' && to !== 'https') throw new Error('Invalid protocol');
+      return git.switchRemoteProtocol(to);
+    }),
+  );
+
   ipcMain.handle('git:push-set-upstream', (_e, remote: string, branch: string) =>
     wrap(() => {
       assertBranchName(remote, 'remote');

@@ -5,10 +5,12 @@ type StatusResult = GitStatus & AheadBehind;
 
 export const gitApi = {
   openRepo: (path: string) =>
-    invoke<{ root: string; remoteHost: string | null; remoteProtocol: RemoteProtocol | null }>(
-      'git:open-repo',
-      path,
-    ),
+    invoke<{
+      root: string;
+      remoteUrl: string | null;
+      remoteHost: string | null;
+      remoteProtocol: RemoteProtocol | null;
+    }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
@@ -21,6 +23,11 @@ export const gitApi = {
   fetch: () => invoke<null>('git:fetch'),
   pull: () => invoke<string>('git:pull'),
   push: () => invoke<null>('git:push'),
+  switchRemoteProtocol: (to: 'ssh' | 'https') =>
+    invoke<{ url: string | null; host: string | null; protocol: RemoteProtocol | null }>(
+      'git:switch-remote-protocol',
+      to,
+    ),
   pushSetUpstream: (remote: string, branch: string) =>
     invoke<null>('git:push-set-upstream', remote, branch),
   createBranch: (name: string) => invoke<null>('git:create-branch', name),

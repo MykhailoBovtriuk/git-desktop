@@ -4,7 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AccountsSection } from '../../../src/components/settings/AccountsSection';
 import { useAccountStore } from '../../../src/stores/account-store';
 import { useRepoStore } from '../../../src/stores/repo-store';
-import type { AuthSource, ProviderAccount } from '../../../src/types';
+import { useUiStore } from '../../../src/stores/ui-store';
+import type { ProviderAccount } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -27,11 +28,10 @@ function setup({
   accounts = [] as ProviderAccount[],
   persistent = true,
   remoteHost = null as string | null,
-  authSource = null as AuthSource | null,
 } = {}) {
   const openSignIn = vi.fn();
   const signOut = vi.fn().mockResolvedValue(undefined);
-  const state = { accounts, persistent, authSource, openSignIn, signOut };
+  const state = { accounts, persistent, openSignIn, signOut };
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(state)) as any);
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel({ remoteHost })) as any);
   return { openSignIn, signOut };
@@ -102,48 +102,28 @@ describe('AccountsSection', () => {
     expect(screen.queryByText('section.notPersistent')).toBeNull();
   });
 
-  // The credential is not ours, so no Sign out for someone else's keychain
-  // entry.
-  it('names a credential that works outside this app, with no way to sign out of it', () => {
-    setup({ remoteHost: 'github.com', authSource: 'system' });
+  // How the open repository authenticates lives in its connection dialog;
+  // this screen is about the app's accounts only.
+  it('says nothing about the open repository connection', () => {
+    setup({ remoteHost: 'github.com' });
     render(<AccountsSection />);
 
-    expect(screen.getByText('github.com')).toBeTruthy();
-    expect(screen.getByText('section.viaSystem')).toBeTruthy();
-    expect(screen.queryByText('section.signOut')).toBeNull();
+    expect(screen.queryByText('github.com')).toBeNull();
+    expect(screen.queryByRole('radiogroup')).toBeNull();
   });
 
-  it('names an ssh remote the same way', () => {
-    setup({ remoteHost: 'github.com', authSource: 'ssh' });
+  it('opens the open repository connection dialog from here too', () => {
+    useUiStore.setState({ connectionOpen: false });
+    setup({ remoteHost: 'github.com' });
     render(<AccountsSection />);
 
-    expect(screen.getByText('section.viaSsh')).toBeTruthy();
-    expect(screen.queryByText('section.signOut')).toBeNull();
+    fireEvent.click(screen.getByText('section.connection'));
+    expect(useUiStore.getState().connectionOpen).toBe(true);
   });
 
-  // `git credential` answers about one host and can never be enumerated, so the
-  // row has to admit it speaks only for the open repository.
-  it('says the external row covers the open repository only', () => {
-    setup({ remoteHost: 'github.com', authSource: 'system' });
+  it('has no connection to show without an open remote', () => {
+    setup();
     render(<AccountsSection />);
-    expect(screen.getByText('section.externalHint')).toBeTruthy();
-  });
-
-  it('shows no external row when an account of our own covers the host', () => {
-    setup({
-      accounts: [account('github.com', 'octocat')],
-      remoteHost: 'github.com',
-      authSource: 'account',
-    });
-    render(<AccountsSection />);
-
-    expect(screen.queryByText('section.viaSystem')).toBeNull();
-    expect(screen.queryByText('section.externalHint')).toBeNull();
-  });
-
-  it('shows no external row when nothing authenticates the host', () => {
-    setup({ remoteHost: 'github.com', authSource: 'none' });
-    render(<AccountsSection />);
-    expect(screen.queryByText('section.externalHint')).toBeNull();
+    expect(screen.queryByText('section.connection')).toBeNull();
   });
 });

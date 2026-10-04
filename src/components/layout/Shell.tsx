@@ -19,6 +19,7 @@ import { StashView } from '../stash/StashView';
 import { SettingsView } from '../settings/SettingsView';
 import { AboutView } from '../about/AboutView';
 import { SignInModal } from '../account/SignInModal';
+import { ConnectionModal } from '../account/ConnectionModal';
 import { UpdateModal } from '../update/UpdateModal';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
@@ -93,6 +94,7 @@ export function Shell() {
       <MergeConflictModal />
       <CheckoutConflictModal />
       <NewBranchModal />
+      <ConnectionModal />
       <ConfirmDialog />
       <SignInModal />
       <UpdateModal />
