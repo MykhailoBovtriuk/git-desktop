@@ -19,10 +19,3 @@ export function updateErrorText(t: TFunction, error: string): string {
   const key = ERROR_KEYS[error];
   return key ? t(key) : error || t('errors.downloadFailed');
 }
-
-/** Installers run 100–150 MB, so one decimal of MB is the useful precision. */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}

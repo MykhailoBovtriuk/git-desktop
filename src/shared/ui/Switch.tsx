@@ -4,11 +4,13 @@ export interface SwitchProps {
   checked: boolean;
   onToggle: () => void;
   label?: string;
+  /** Keeps the label for screen readers only, where a row title already says it. */
+  hideLabel?: boolean;
   title?: string;
   className?: string;
 }
 
-export function Switch({ checked, onToggle, label, title, className }: SwitchProps) {
+export function Switch({ checked, onToggle, label, hideLabel, title, className }: SwitchProps) {
   return (
     <button
       type="button"
@@ -35,7 +37,7 @@ export function Switch({ checked, onToggle, label, title, className }: SwitchPro
           )}
         />
       </span>
-      {label}
+      {!hideLabel && label}
     </button>
   );
 }

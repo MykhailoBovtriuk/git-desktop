@@ -3,7 +3,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUpdateStore } from '../../stores/update-store';
 import { appApi } from '../../api/app-api';
 import { Button, DownloadIcon, Modal } from '../../shared/ui';
-import { formatBytes, updateErrorText } from './update-text';
+import { updateErrorText } from './update-text';
+import { formatBytes } from '../../lib/format-bytes';
 
 /**
  * One dialog through every phase: update, downloading and ready are one

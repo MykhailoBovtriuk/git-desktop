@@ -10,14 +10,21 @@ export interface ContextMenuProps {
   /**
    * "panel" opens beside the closest [data-dropdown-panel] instead of the
    * trigger, for right-aligned panels where the menu would cover its own list.
+   * "below" drops down under the trigger, for menus opened from a toolbar.
    */
-  anchor?: 'button' | 'panel';
+  anchor?: 'button' | 'panel' | 'below';
   height: number;
   children: ReactNode;
 }
 
 /** Fixed-position "⋯" menu portal, shared by the repo and branch dropdowns. */
-export function ContextMenu({ open, anchorRef, anchor = 'button', height, children }: ContextMenuProps) {
+export function ContextMenu({
+  open,
+  anchorRef,
+  anchor = 'button',
+  height,
+  children,
+}: ContextMenuProps) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -28,7 +35,11 @@ export function ContextMenu({ open, anchorRef, anchor = 'button', height, childr
     const r = anchorRef.current.getBoundingClientRect();
 
     let left: number;
-    if (anchor === 'panel') {
+    let top = r.top;
+    if (anchor === 'below') {
+      left = Math.min(Math.max(8, r.left), window.innerWidth - MENU_W - 8);
+      top = r.bottom + 4;
+    } else if (anchor === 'panel') {
       const panel =
         anchorRef.current.closest('[data-dropdown-panel]')?.getBoundingClientRect() ?? r;
       left = panel.left - MENU_W - 4;
@@ -39,7 +50,6 @@ export function ContextMenu({ open, anchorRef, anchor = 'button', height, childr
       if (left + MENU_W > window.innerWidth) left = r.left - MENU_W - 4;
     }
 
-    let top = r.top;
     if (top + height > window.innerHeight) top = window.innerHeight - height - 8;
     setPos({ top, left });
   }, [open, anchor, height, anchorRef]);
