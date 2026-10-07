@@ -169,6 +169,8 @@ export interface Toast {
   title: string;
   message: string;
   action?: { label: string; onClick: () => void };
+  /** A quieter link than `action`: it does not keep the toast on screen. */
+  details?: { label: string; onClick: () => void };
 }
 
 /**
@@ -221,6 +223,64 @@ export type UpdatePhase =
   /** Nothing asked for yet, or the last answer was "up to date". */
   'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
 
+/** A user-visible git operation; the logs panel names entries after it. */
+export type LogOp =
+  | 'commit'
+  | 'stage'
+  | 'unstage'
+  | 'discard'
+  | 'fetch'
+  | 'pull'
+  | 'push'
+  | 'publish'
+  | 'remote-protocol'
+  | 'branch-create'
+  | 'branch-delete'
+  | 'remote-branch-delete'
+  | 'checkout'
+  | 'merge'
+  | 'merge-abort'
+  | 'merge-conclude'
+  | 'resolve'
+  | 'rebase'
+  | 'rebase-abort'
+  | 'rebase-continue'
+  | 'stash-save'
+  | 'stash-apply'
+  | 'stash-pop'
+  | 'stash-drop';
+
+export type LogStatus = 'running' | 'success' | 'error';
+
+/** One git process run on behalf of a logged operation, as a terminal would show it. */
+export interface LogCommand {
+  argv: string[];
+  stdout: string;
+  stderr: string;
+}
+
+export interface LogEntry {
+  id: string;
+  ts: number;
+  durationMs?: number;
+  repoPath: string | null;
+  op: LogOp;
+  /** What the operation was about: a branch, the commit subject, a stash message. */
+  detail?: string;
+  status: LogStatus;
+  commands: LogCommand[];
+  error?: string;
+}
+
+/** How long finished entries stay on disk; 'session' never writes them. */
+export const LOG_RETENTIONS = ['session', 'day', 'week', 'month', 'forever'] as const;
+export type LogRetention = (typeof LOG_RETENTIONS)[number];
+
+export interface LogStats {
+  bytes: number;
+  entries: number;
+}
+
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
   onGitChanged: (cb: () => void) => () => void;
@@ -228,6 +288,7 @@ export interface ElectronAPI {
   // Unlike the two above, this one carries a payload: the renderer draws the
   // progress bar from it rather than asking back for the numbers.
   onUpdateProgress: (cb: (progress: UpdateProgress) => void) => () => void;
+  onLogEntry: (cb: (entry: LogEntry) => void) => () => void;
   platform: string;
 }
 

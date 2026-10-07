@@ -73,3 +73,13 @@ export function assertBranchName(value: unknown, name: string): asserts value is
     throw new Error(`Invalid argument: ${name} has an invalid ref format`);
   }
 }
+
+/**
+ * An optional flag: undefined is its default, anything but a boolean is a bug
+ * in the renderer rather than a wish to honour. Returns the flag, false when absent.
+ */
+export function optionalBoolean(value: unknown, name: string): boolean {
+  if (value === undefined) return false;
+  if (typeof value !== 'boolean') throw new Error(`Invalid argument: ${name} must be a boolean`);
+  return value;
+}

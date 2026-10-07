@@ -12,9 +12,13 @@ import { registerFileHandlers } from './ipc/files';
 import { registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
 import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
+import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
 
 export { wrap };
-export type IpcHandlerOptions = RepoHandlerOptions & AppHandlerOptions & UpdateHandlerOptions;
+export type IpcHandlerOptions = RepoHandlerOptions &
+  AppHandlerOptions &
+  UpdateHandlerOptions &
+  LogHandlerOptions;
 
 const gitService = new GitService();
 
@@ -24,7 +28,14 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   if (registered) return;
   registered = true;
 
-  registerRepoHandlers(gitService, options);
+  const logStore = registerLogHandlers(options);
+  registerRepoHandlers(gitService, {
+    ...options,
+    onRepoOpened: root => {
+      options.onRepoOpened?.(root);
+      void logStore.ensureRepo(root).catch(() => {});
+    },
+  });
   registerStagingHandlers(gitService);
   registerRemoteHandlers(gitService);
   registerBranchHandlers(gitService);

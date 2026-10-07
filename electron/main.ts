@@ -192,6 +192,7 @@ app.whenReady().then(() => {
   registerIpcHandlers({
     onRepoOpened: root => repoWatcher.watch(root),
     getWindow: () => mainWindow,
+    logDir: path.join(app.getPath('userData'), 'logs'),
   });
   createWindow();
 });
