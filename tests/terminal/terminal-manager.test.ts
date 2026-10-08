@@ -35,6 +35,12 @@ async function until(check: () => boolean, ms = 5000) {
   }
 }
 
+// Windows refuses to remove a live process's cwd, and ConPTY can hold the
+// handle a moment after exit, so callers kill the shell first and we retry.
+function removeDir(dir: string) {
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+}
+
 describe('trimBuffer', () => {
   it('keeps the tail, cut at a line start', () => {
     expect(trimBuffer('abc', 10)).toBe('abc');
@@ -45,14 +51,17 @@ describe('trimBuffer', () => {
 describe.skipIf(!pty || testShell.length === 0)('TerminalManager (real pty)', () => {
   it('runs a shell in the repository folder and streams its output', async () => {
     const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-term-')));
-    const { manager, data } = setup();
+    const { manager, data, exits } = setup();
     const session = manager.create({ repoPath: dir, cols: 80, rows: 24 });
     expect(manager.list(dir)).toEqual([session]);
 
     manager.write(session.id, win ? 'cd\r' : 'pwd\r');
     await until(() => (data.get(session.id) ?? '').includes(path.basename(dir)));
     expect(manager.buffer(session.id)).toContain(path.basename(dir));
-    fs.rmSync(dir, { recursive: true, force: true });
+
+    manager.kill(session.id);
+    await until(() => exits.has(session.id));
+    removeDir(dir);
   });
 
   it('reports the exit and forgets the session', async () => {
@@ -74,6 +83,11 @@ describe.skipIf(!pty || testShell.length === 0)('TerminalManager (real pty)', ()
     await until(() => exits.has(inA.id));
     expect(exits.has(inB.id)).toBe(false);
     expect(manager.list(b)).toHaveLength(1);
+
+    manager.kill(inB.id);
+    await until(() => exits.has(inB.id));
+    removeDir(a);
+    removeDir(b);
   });
 
   it('refuses a folder that no longer exists', () => {
