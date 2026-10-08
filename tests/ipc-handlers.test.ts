@@ -46,12 +46,20 @@ describe('registered IPC channels', () => {
   };
 
   // Pushed to the renderer, not invoked, so no ipcMain.handle.
-  const PUSH_EVENTS = new Set(['account:changed', 'app:update-progress', 'log:entry']);
+  const PUSH_EVENTS = new Set([
+    'account:changed',
+    'app:update-progress',
+    'log:entry',
+    'term:data',
+    'term:exit',
+  ]);
 
   const channelsInFiles = (...relPaths: string[]) => {
     const found = relPaths.flatMap(relPath => {
       const src = fs.readFileSync(path.resolve(__dirname, '..', relPath), 'utf-8');
-      return [...src.matchAll(/'((?:git|app|shell|window|account|log):[a-z-]+)'/g)].map(m => m[1]);
+      return [...src.matchAll(/'((?:git|app|shell|window|account|log|term):[a-z-]+)'/g)].map(
+        m => m[1],
+      );
     });
     return [...new Set(found)].filter(c => !PUSH_EVENTS.has(c)).sort();
   };
@@ -74,6 +82,7 @@ describe('registered IPC channels', () => {
         'src/api/account-api.ts',
         'src/api/update-api.ts',
         'src/api/log-api.ts',
+        'src/api/terminal-api.ts',
       ),
     ).toEqual(channels);
   });

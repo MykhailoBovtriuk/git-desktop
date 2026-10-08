@@ -13,6 +13,7 @@ import { registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
 import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
 import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
+import { registerTerminalHandlers, type TerminalControl } from './ipc/terminal';
 
 export { wrap };
 export type IpcHandlerOptions = RepoHandlerOptions &
@@ -23,12 +24,20 @@ export type IpcHandlerOptions = RepoHandlerOptions &
 const gitService = new GitService();
 
 let registered = false;
+let terminals: TerminalControl | null = null;
+
+/** For app quit: shells must not outlive the window that owned them. */
+export function killAllTerminals(): void {
+  terminals?.killAll();
+}
 
 export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   if (registered) return;
   registered = true;
 
   const logStore = registerLogHandlers(options);
+  terminals = registerTerminalHandlers(options);
+
   registerRepoHandlers(gitService, {
     ...options,
     onRepoOpened: root => {

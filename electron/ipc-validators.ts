@@ -83,3 +83,10 @@ export function optionalBoolean(value: unknown, name: string): boolean {
   if (typeof value !== 'boolean') throw new Error(`Invalid argument: ${name} must be a boolean`);
   return value;
 }
+
+/** A terminal's columns or rows. */
+export function assertDimension(value: unknown, name: string): asserts value is number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 1000) {
+    throw new Error(`Invalid argument: ${name} must be an integer between 1 and 1000`);
+  }
+}

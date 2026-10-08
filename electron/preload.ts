@@ -70,6 +70,15 @@ const ALLOWED_CHANNELS = new Set<string>([
   'log:get-retention',
   'log:set-retention',
   'log:open-folder',
+  'term:available',
+  'term:shells',
+  'term:create',
+  'term:write',
+  'term:resize',
+  'term:kill',
+  'term:list',
+  'term:buffer',
+  'term:open-link',
   'shell:open-external',
   'window:set-titlebar-overlay',
 ]);
@@ -100,5 +109,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // download, or for each log line, would be a round trip per repaint.
   onUpdateProgress: subscribe<[UpdateProgress]>('app:update-progress'),
   onLogEntry: subscribe<[LogEntry]>('log:entry'),
+  // Terminal output is the hottest push there is; it arrives batched per frame.
+  onTerminalData: subscribe<[id: string, data: string]>('term:data'),
+  onTerminalExit: subscribe<[id: string, exitCode: number]>('term:exit'),
   platform: process.platform,
 });

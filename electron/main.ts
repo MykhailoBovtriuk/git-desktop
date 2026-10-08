@@ -1,7 +1,7 @@
 import { app, BrowserWindow, nativeImage, protocol, session } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
-import { registerIpcHandlers } from './ipc-handlers';
+import { killAllTerminals, registerIpcHandlers } from './ipc-handlers';
 import { resolveAppAssetPath } from './app-asset-path';
 import { RepoWatcher } from './repo-watcher';
 import { initDeepLinks, registerProtocol } from './auth/deep-link';
@@ -196,6 +196,8 @@ app.whenReady().then(() => {
   });
   createWindow();
 });
+
+app.on('before-quit', () => killAllTerminals());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

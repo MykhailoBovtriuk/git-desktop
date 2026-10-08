@@ -281,6 +281,25 @@ export interface LogStats {
   entries: number;
 }
 
+/** A shell the terminal can start; the id is all the renderer ever sends back. */
+export interface TerminalShell {
+  id: string;
+  label: string;
+}
+
+export interface TerminalSession {
+  id: string;
+  repoPath: string;
+  shellId: string;
+  title: string;
+}
+
+export interface TerminalAvailability {
+  ok: boolean;
+  /** Why node-pty could not load, for the placeholder shown instead. */
+  reason?: string;
+}
+
 export interface ElectronAPI {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
   onGitChanged: (cb: () => void) => () => void;
@@ -289,6 +308,8 @@ export interface ElectronAPI {
   // progress bar from it rather than asking back for the numbers.
   onUpdateProgress: (cb: (progress: UpdateProgress) => void) => () => void;
   onLogEntry: (cb: (entry: LogEntry) => void) => () => void;
+  onTerminalData: (cb: (id: string, data: string) => void) => () => void;
+  onTerminalExit: (cb: (id: string, exitCode: number) => void) => () => void;
   platform: string;
 }
 

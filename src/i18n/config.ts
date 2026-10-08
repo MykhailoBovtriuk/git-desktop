@@ -19,6 +19,7 @@ import enAccount from './en/account.json';
 import enUpdate from './en/update.json';
 import enSync from './en/sync.json';
 import enLogs from './en/logs.json';
+import enTerminal from './en/terminal.json';
 
 import ukCommon from './uk/common.json';
 import ukStaging from './uk/staging.json';
@@ -37,6 +38,7 @@ import ukAccount from './uk/account.json';
 import ukUpdate from './uk/update.json';
 import ukSync from './uk/sync.json';
 import ukLogs from './uk/logs.json';
+import ukTerminal from './uk/terminal.json';
 
 import nlCommon from './nl/common.json';
 import nlStaging from './nl/staging.json';
@@ -55,6 +57,7 @@ import nlAccount from './nl/account.json';
 import nlUpdate from './nl/update.json';
 import nlSync from './nl/sync.json';
 import nlLogs from './nl/logs.json';
+import nlTerminal from './nl/terminal.json';
 
 i18n
   .use(LanguageDetector)
@@ -81,6 +84,7 @@ i18n
         update: enUpdate,
         sync: enSync,
         logs: enLogs,
+        terminal: enTerminal,
       },
       uk: {
         common: ukCommon,
@@ -100,6 +104,7 @@ i18n
         update: ukUpdate,
         sync: ukSync,
         logs: ukLogs,
+        terminal: ukTerminal,
       },
       nl: {
         common: nlCommon,
@@ -119,6 +124,7 @@ i18n
         update: nlUpdate,
         sync: nlSync,
         logs: nlLogs,
+        terminal: nlTerminal,
       },
     },
     // No 'navigator': English is the default until the user picks a language,
