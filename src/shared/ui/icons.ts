@@ -17,8 +17,13 @@ export {
   FiTrash2 as StashDropIcon,
   FiTrash2 as TrashIcon,
   FiDownload as DownloadIcon,
+  FiFileText as LogsIcon,
+  FiTerminal as TerminalIcon,
   FiChevronDown as ChevronDownIcon,
   FiChevronRight as ChevronRightIcon,
   FiLoader as SpinnerIcon,
   FiAlertCircle as ErrorIcon,
 } from 'react-icons/fi';
+
+// A brand mark, not an interface icon, so it is the one glyph outside Feather.
+export { SiGit as GitLogoIcon } from 'react-icons/si';

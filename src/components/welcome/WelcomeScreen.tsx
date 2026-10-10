@@ -1,13 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
-import { Button, Badge, TruncatedText } from '../../shared/ui';
+import { Button, Badge, InfoIcon, SettingsIcon, TruncatedText } from '../../shared/ui';
 import { basenameFromPath } from '../../lib/basename';
-import { AppMenuButtons } from '../layout/AppMenuButtons';
 
 export function WelcomeScreen() {
   const { t } = useTranslation('repo');
+  const { t: tc } = useTranslation('common');
+  const openOverlayView = useUiStore(s => s.openOverlayView);
   const { openDialog, openRepo, recentRepos } = useRepoStore(
     useShallow(s => ({
       openDialog: s.openDialog,
@@ -23,18 +25,42 @@ export function WelcomeScreen() {
 
   return (
     <div className="relative h-screen flex flex-col items-center justify-center bg-base gap-4">
-      <div className="absolute bottom-3 left-3">
-        <AppMenuButtons />
-      </div>
-
       <h1 className="text-2xl text-text font-bold flex items-center gap-2">
         Git Desktop
         <Badge variant="beta">Beta</Badge>
       </h1>
       <p className="text-subtext text-sm">{t('tagline')}</p>
-      <Button variant="primary" onClick={handleDialog} className="px-5 py-2 mt-2 font-medium">
-        {t('open')}
-      </Button>
+      {/* One column as wide as the Settings/Info pair, so the main action
+          lines up with them. No titlebar or footer here, so the way to
+          Settings and About is part of the page itself. */}
+      <div className="inline-flex flex-col gap-2 mt-2">
+        <Button
+          variant="primary"
+          onClick={handleDialog}
+          className="px-5 py-2 font-medium"
+          fullWidth
+        >
+          {t('open')}
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="surface"
+            onClick={() => openOverlayView('settings')}
+            className="px-5 py-2 font-medium flex flex-1 items-center justify-center gap-2"
+          >
+            <SettingsIcon size={16} aria-hidden="true" />
+            {tc('settings')}
+          </Button>
+          <Button
+            variant="surface"
+            onClick={() => openOverlayView('about')}
+            className="px-5 py-2 font-medium flex flex-1 items-center justify-center gap-2"
+          >
+            <InfoIcon size={16} aria-hidden="true" />
+            {tc('info')}
+          </Button>
+        </div>
+      </div>
 
       {repos.length > 0 && (
         <div className="mt-6 w-80">

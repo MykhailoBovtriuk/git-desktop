@@ -9,5 +9,7 @@
   "moreActions": "Meer acties",
   "removeFromList": "Uit de lijst verwijderen",
   "removeCurrentTitle": "Geopende repository verwijderen?",
-  "removeCurrentMessage": "\"{{name}}\" is nu geopend. Als je hem uit de lijst verwijdert, wordt hij ook gesloten. De map op schijf blijft ongemoeid."
+  "removeCurrentMessage": "\"{{name}}\" is nu geopend. Verwijderen uit de lijst sluit de repository en wist het logboek ervan. De map op schijf blijft onaangeroerd.",
+  "removeTitle": "Repository uit de lijst verwijderen?",
+  "removeMessage": "\"{{name}}\" wordt uit de lijst verwijderd en het logboek ervan gewist. De map op schijf blijft onaangeroerd."
 }

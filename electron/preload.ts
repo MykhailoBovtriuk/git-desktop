@@ -70,6 +70,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'log:get-retention',
   'log:set-retention',
   'log:open-folder',
+  'repo:forget',
   'term:available',
   'term:shells',
   'term:create',

@@ -2,6 +2,7 @@ import type { ActiveView } from '../../types';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore, isOverlayView } from '../../stores/ui-store';
 import { Titlebar } from './Titlebar';
+import { BareTitlebar } from './BareTitlebar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { WelcomeScreen } from '../welcome/WelcomeScreen';
@@ -21,6 +22,7 @@ import { AboutView } from '../about/AboutView';
 import { SignInModal } from '../account/SignInModal';
 import { ConnectionModal } from '../account/ConnectionModal';
 import { UpdateModal } from '../update/UpdateModal';
+import { RightPanel } from '../panel/RightPanel';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
@@ -48,6 +50,7 @@ export function Shell() {
   const repoPath = useRepoStore(s => s.repoPath);
   const activeView = useUiStore(s => s.activeView);
   const showsOverlay = isOverlayView(activeView);
+  const sidebarOpen = useUiStore(s => s.sidebarOpen);
 
   if (!repoPath) {
     // Without a repository there is no footer, so the welcome screen links to
@@ -56,7 +59,10 @@ export function Shell() {
       <>
         {showsOverlay ? (
           <div className="h-screen flex flex-col bg-base overflow-hidden">
-            <OverlayContent activeView={activeView} />
+            <BareTitlebar />
+            <main className="flex-1 overflow-hidden">
+              <OverlayContent activeView={activeView} />
+            </main>
           </div>
         ) : (
           <WelcomeScreen />
@@ -82,12 +88,22 @@ export function Shell() {
           </main>
         ) : (
           <>
-            <Sidebar />
+            {/* Hidden, not unmounted: the commit form keeps an unsent message
+                in local state. */}
+            <div className={sidebarOpen ? 'contents' : 'hidden'}>
+              <Sidebar />
+            </div>
             <main className="flex-1 overflow-hidden">
               <MainContent />
             </main>
           </>
         )}
+        {/* Settings and About are a different place, not a view beside the
+            tools: the panel steps aside but stays mounted, so terminals keep
+            their screens and come back as they were. */}
+        <div className={showsOverlay ? 'hidden' : 'contents'}>
+          <RightPanel />
+        </div>
       </div>
       <Footer />
       <Toast />

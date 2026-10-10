@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../stores/ui-store';
 import { useAccountStore } from '../stores/account-store';
+import { useLogStore } from '../stores/log-store';
 import { CheckoutConflictError, MergeConflictError, useRepoStore } from '../stores/repo-store';
 import { selectSignInHost } from '../stores/repo/selectors';
 import { classifyGitError } from '../lib/git-error-mapper';
@@ -20,6 +21,7 @@ export function useGitAction() {
   const signInHost = useRepoStore(selectSignInHost);
   const currentBranch = useRepoStore(s => s.currentBranch);
   const publishBranch = useRepoStore(s => s.publishBranch);
+  const openRightPanel = useUiStore(s => s.openRightPanel);
 
   const run = async <T>(fn: () => Promise<T>, opts: GitActionOptions<T>): Promise<boolean> => {
     try {
@@ -41,6 +43,14 @@ export function useGitAction() {
         variant: 'error',
         title: opts.title,
         message: friendly || raw,
+        // The friendly line hides git's own words; the log has them in full.
+        details: {
+          label: t('logs:showInLogs'),
+          onClick: () => {
+            useLogStore.getState().focusLatestError();
+            openRightPanel('logs');
+          },
+        },
         action:
           action === 'publishBranch' && currentBranch
             ? {

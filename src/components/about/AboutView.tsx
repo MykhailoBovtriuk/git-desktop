@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/ui-store';
+import { useRepoStore } from '../../stores/repo-store';
+import { useEscapeToClose } from '../../hooks/use-escape-to-close';
+import { useAppVersion } from '../../hooks/use-app-version';
 import { appApi } from '../../api/app-api';
 import { PageHeader } from '../layout/PageHeader';
 import { Badge, Button } from '../../shared/ui';
@@ -23,22 +25,12 @@ const SUPPORT_LINKS = [
 
 export function AboutView() {
   const { t } = useTranslation('about');
-  const overlayBack = useUiStore(s => s.overlayBack);
+  const closeOverlays = useUiStore(s => s.closeOverlays);
   const addToast = useUiStore(s => s.addToast);
-  const [version, setVersion] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    appApi
-      .getVersion()
-      .then(v => {
-        if (active) setVersion(v);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
+  const version = useAppVersion();
+  // Same rule as Settings: the titlebar toggle closes it when there is one.
+  const repoOpen = useRepoStore(s => !!s.repoPath);
+  useEscapeToClose(closeOverlays);
 
   const open = (url: string) => {
     appApi.openExternal(url).catch((err: unknown) => {
@@ -52,7 +44,7 @@ export function AboutView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-base">
-      <PageHeader crumbs={[{ label: t('title') }]} onBack={overlayBack} />
+      <PageHeader crumbs={[{ label: t('title') }]} onBack={repoOpen ? undefined : closeOverlays} />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-6 flex flex-col gap-6">

@@ -3,6 +3,7 @@ import './i18n/config';
 import { useAutoRefresh } from './hooks/use-auto-refresh';
 import { useTheme } from './hooks/use-theme';
 import { useUpdateCheck } from './hooks/use-update-check';
+import { usePanelFeeds } from './hooks/use-panel-feeds';
 import { Shell } from './components/layout/Shell';
 import { accountApi } from './api/account-api';
 import { useAccountStore } from './stores/account-store';
@@ -12,6 +13,7 @@ export default function App() {
   useTheme();
   useAutoRefresh();
   useUpdateCheck();
+  usePanelFeeds();
 
   // Sign-in finishes in the main process, so the result is pushed; without this
   // the modal would wait forever.

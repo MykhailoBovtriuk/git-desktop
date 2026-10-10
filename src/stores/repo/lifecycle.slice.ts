@@ -1,5 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import { useAccountStore } from '../account-store';
+import { useUiStore } from '../ui-store';
 import type { RemoteProtocol } from '../../types';
 import type { RepoState, RepoSlice } from './types';
 import { errorMessage } from '../../lib/error-message';
@@ -100,6 +101,8 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
 
   openRepo: async path => {
     const opened = await gitApi.openRepo(path);
+    // Another repository is something else to look at: Settings/About step aside.
+    useUiStore.getState().closeOverlays();
     const root = opened?.root || path;
     set(s => ({
       epoch: s.epoch + 1,
@@ -144,6 +147,8 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   },
 
   removeRecentRepo: path => {
+    // Leaving the app takes the repository's logs and terminals with it.
+    void gitApi.forgetRepo(path).catch(() => {});
     set(s => ({
       recentRepos: s.recentRepos.filter(r => r && r !== path),
       // Dropping the repo that is currently open leaves nothing to show, so

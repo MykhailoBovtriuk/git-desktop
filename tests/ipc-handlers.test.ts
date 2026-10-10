@@ -52,12 +52,13 @@ describe('registered IPC channels', () => {
     'log:entry',
     'term:data',
     'term:exit',
+    'repo:changed',
   ]);
 
   const channelsInFiles = (...relPaths: string[]) => {
     const found = relPaths.flatMap(relPath => {
       const src = fs.readFileSync(path.resolve(__dirname, '..', relPath), 'utf-8');
-      return [...src.matchAll(/'((?:git|app|shell|window|account|log|term):[a-z-]+)'/g)].map(
+      return [...src.matchAll(/'((?:git|app|shell|window|account|log|term|repo):[a-z-]+)'/g)].map(
         m => m[1],
       );
     });

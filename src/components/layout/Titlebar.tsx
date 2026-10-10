@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
-import { Badge, DragRegion, IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
+import { AppMenuButtons } from './AppMenuButtons';
+import { useDismiss } from '../../hooks/use-dismiss';
+import { DragRegion, IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
+import { TitlebarBrand, WindowControlsSpacer } from './TitlebarBrand';
 import { basenameFromPath } from '../../lib/basename';
 
 export function Titlebar() {
@@ -34,32 +37,23 @@ export function Titlebar() {
     }
   };
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (branchRef.current && !branchRef.current.contains(e.target as Node)) setBranchOpen(false);
-      if (repoRef.current && !repoRef.current.contains(e.target as Node)) setRepoOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  useDismiss(branchRef, branchOpen, () => setBranchOpen(false));
+  useDismiss(repoRef, repoOpen, () => setRepoOpen(false));
 
   const repoName = repoPath ? basenameFromPath(repoPath) : '';
 
-  const isMac = (window.electronAPI?.platform ?? 'darwin') === 'darwin';
-
   return (
     <DragRegion className="relative h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none">
-      <div className={isMac ? 'w-20 shrink-0' : 'w-3 shrink-0'} />
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-text font-semibold text-sm">Git Desktop</span>
-        <Badge variant="beta">Beta</Badge>
-      </div>
+      <TitlebarBrand />
 
       <div className="flex-1 min-w-0" />
 
       {/* Centred on the window, not between the side blocks: those differ in
           width, so the group sat off-centre. */}
       <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[42%]">
+        <DragRegion draggable={false} className="shrink-0">
+          <AppMenuButtons />
+        </DragRegion>
         <DragRegion draggable={false} ref={branchRef} className="relative min-w-0">
           <button
             onClick={() => !mergeState && setBranchOpen(o => !o)}
@@ -103,7 +97,7 @@ export function Titlebar() {
         {repoOpen && <RepoDropdown onClose={() => setRepoOpen(false)} />}
       </DragRegion>
 
-      {!isMac && <div className="w-36 shrink-0" />}
+      <WindowControlsSpacer />
     </DragRegion>
   );
 }
