@@ -1,0 +1,21 @@
+{
+  "title": "Terminal",
+  "toggle": "Terminal ({{shortcut}})",
+  "newTerminal": "Nieuwe terminal",
+  "newWithShell": "Nieuwe terminal met…",
+  "close": "Terminal sluiten",
+  "createFailed": "Kon geen terminal starten",
+  "exited": "[Proces beëindigd met code {{code}}. Druk op Enter om opnieuw te starten.]",
+  "unavailable": "De terminal is niet beschikbaar op dit systeem.",
+  "empty": "Geen terminals geopend.",
+  "find": "Zoeken (Enter, Shift+Enter)",
+  "openLinkTitle": "Link openen?",
+  "openLinkMessage": "{{url}} wordt geopend in je browser.",
+  "openLinkConfirm": "Openen",
+  "settings": {
+    "shell": "Shell",
+    "auto": "Automatisch",
+    "fontSize": "Lettergrootte",
+    "shellHint": "De shell waarmee nieuwe terminals starten."
+  }
+}

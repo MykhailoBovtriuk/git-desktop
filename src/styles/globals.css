@@ -75,7 +75,10 @@ body {
   margin: 0;
   background: var(--gd-base);
   color: var(--gd-text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   overflow: hidden;
   /* No global `user-select: none`: users must be able to copy hashes, paths and
      diffs. Chrome opts out with `select-none`. */

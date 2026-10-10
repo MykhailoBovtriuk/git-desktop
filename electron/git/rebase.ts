@@ -2,6 +2,7 @@ import simpleGit from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import { GitContext, credentialSafeEnv } from './context';
+import { attachOutputLogger } from '../log/git-logger';
 
 export async function rebase(ctx: GitContext, branch: string): Promise<void> {
   await ctx.ensureRepo().rebase([branch]);
@@ -28,14 +29,16 @@ export async function continueRebase(ctx: GitContext): Promise<void> {
   if (!ctx.repoPath) throw new Error('No repository opened');
   // Dedicated instance: core.editor=true accepts the message unchanged, and
   // strict error detection catches git's stdout-only conflict failure.
-  const git = simpleGit({
-    baseDir: ctx.repoPath,
-    unsafe: { allowUnsafeAskPass: true, allowUnsafeEditor: true },
-    errors(error, result) {
-      if (error) return error;
-      if (result.exitCode === 0) return undefined;
-      return Buffer.concat([...result.stdOut, ...result.stdErr]);
-    },
-  }).env(credentialSafeEnv());
+  const git = attachOutputLogger(
+    simpleGit({
+      baseDir: ctx.repoPath,
+      unsafe: { allowUnsafeAskPass: true, allowUnsafeEditor: true },
+      errors(error, result) {
+        if (error) return error;
+        if (result.exitCode === 0) return undefined;
+        return Buffer.concat([...result.stdOut, ...result.stdErr]);
+      },
+    }).env(credentialSafeEnv()),
+  );
   await git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
 }

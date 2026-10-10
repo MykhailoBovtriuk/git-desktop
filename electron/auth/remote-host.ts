@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { gitConfigGet, runGit } from '../git/exec';
 
 const run = promisify(execFile);
 
@@ -171,21 +172,13 @@ export async function resolveRemote(remoteUrl: string | null | undefined): Promi
  */
 export async function originUrlFor(repoRoot: string): Promise<string | null> {
   try {
-    const { stdout } = await run('git', ['-C', repoRoot, 'remote']);
-    const names = stdout
+    const names = (await runGit(['-C', repoRoot, 'remote']))
       .split('\n')
       .map(n => n.trim())
       .filter(Boolean);
     const chosen = names.includes('origin') ? 'origin' : names[0];
     if (!chosen) return null;
-    const { stdout: url } = await run('git', [
-      '-C',
-      repoRoot,
-      'config',
-      '--get',
-      `remote.${chosen}.url`,
-    ]);
-    return url.trim() || null;
+    return (await gitConfigGet({ kind: 'effective', repoRoot }, `remote.${chosen}.url`)) || null;
   } catch {
     // Not a repository, or a remote with no URL configured.
     return null;

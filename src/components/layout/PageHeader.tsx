@@ -4,8 +4,11 @@ import { Breadcrumbs, type Crumb } from '../../shared/ui';
 
 interface PageHeaderProps {
   crumbs: Crumb[];
-  /** One level up: the screen below this one, or out when there is none. */
-  onBack: () => void;
+  /**
+   * One level up: the screen below this one, or out when there is none. Left
+   * out where the titlebar's own toggle already closes the page.
+   */
+  onBack?: () => void;
   /** Actions belonging to this screen, shown at the right of the header. */
   children?: ReactNode;
 }
@@ -13,10 +16,14 @@ interface PageHeaderProps {
 export function PageHeader({ crumbs, onBack, children }: PageHeaderProps) {
   const { t } = useTranslation();
   return (
-    <div className="relative flex items-center px-4 py-2 border-b border-surface0 shrink-0">
-      <button onClick={onBack} className="text-blue text-xs hover:underline shrink-0">
-        ← {t('back')}
-      </button>
+    // The crumbs are absolutely centred and give the row no height; without the
+    // back link it would collapse, so it keeps the height that link gave it.
+    <div className="relative flex items-center min-h-8 px-4 py-2 border-b border-surface0 shrink-0">
+      {onBack && (
+        <button onClick={onBack} className="text-blue text-xs hover:underline shrink-0">
+          ← {t('back')}
+        </button>
+      )}
 
       {/* Centred on the window so the crumbs do not shift with the back label's
           length. */}

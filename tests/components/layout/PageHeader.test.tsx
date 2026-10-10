@@ -35,4 +35,9 @@ describe('PageHeader', () => {
 
     expect(screen.getByText('check for updates')).toBeTruthy();
   });
+
+  it('shows no back link when the page is closed some other way', () => {
+    render(<PageHeader crumbs={crumbs} />);
+    expect(screen.queryByText('← back')).toBeNull();
+  });
 });

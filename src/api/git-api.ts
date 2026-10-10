@@ -12,6 +12,8 @@ export const gitApi = {
       remoteProtocol: RemoteProtocol | null;
     }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
+  /** A repository leaving the app: deletes its logs and closes its terminals. */
+  forgetRepo: (path: string) => invoke<null>('repo:forget', path),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
   getBranches: () => invoke<Branch[]>('git:get-branches'),

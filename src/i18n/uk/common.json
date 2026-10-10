@@ -15,5 +15,8 @@
   "resizeSidebar": "Змінити ширину панелі",
   "resizeCommitList": "Змінити ширину списку комітів",
   "resizeFileList": "Змінити ширину списку файлів",
-  "resizeStashList": "Змінити ширину списку stash"
+  "resizeStashList": "Змінити ширину списку stash",
+  "info": "Інфо",
+  "hideSidebar": "Сховати бічну панель ({{shortcut}})",
+  "showSidebar": "Показати бічну панель ({{shortcut}})"
 }

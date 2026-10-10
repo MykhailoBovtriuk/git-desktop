@@ -12,6 +12,11 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   size?: Size;
   /** Spins the icon only, so the button surface keeps its hover/press feedback. */
   spinning?: boolean;
+  /**
+   * Makes it a toggle: blue and aria-pressed while on. Leave it out for a
+   * plain button, which then carries no pressed state at all.
+   */
+  active?: boolean;
 }
 
 const TINT: Record<Tint, string> = {
@@ -31,15 +36,17 @@ export function IconButton({
   tint = 'subtext',
   size = 'md',
   spinning,
+  active,
   className,
   ...rest
 }: IconButtonProps) {
   return (
     <button
       {...rest}
+      aria-pressed={active}
       className={cn(
         'inline-flex items-center justify-center rounded transition-colors hover:bg-surface1 disabled:opacity-40',
-        TINT[tint],
+        TINT[active ? 'blue' : tint],
         PAD[size],
         className,
       )}

@@ -38,17 +38,18 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
     await runAction(() => openDialog(), { title: t('addRepository') });
   };
 
-  // Only the open repository needs confirmation: removing it also closes it.
+  // Removing deletes the repository's logs, and the open one is closed too.
   const handleRemove = async (path: string) => {
-    if (path === repoPath) {
-      const ok = await requestConfirm({
-        title: t('removeCurrentTitle'),
-        message: t('removeCurrentMessage', { name: basenameFromPath(path) }),
-        confirmLabel: t('removeFromList'),
-        danger: true,
-      });
-      if (!ok) return;
-    }
+    const current = path === repoPath;
+    const ok = await requestConfirm({
+      title: t(current ? 'removeCurrentTitle' : 'removeTitle'),
+      message: t(current ? 'removeCurrentMessage' : 'removeMessage', {
+        name: basenameFromPath(path),
+      }),
+      confirmLabel: t('removeFromList'),
+      danger: true,
+    });
+    if (!ok) return;
     setOpenMenu(null);
     onClose();
     removeRecentRepo(path);

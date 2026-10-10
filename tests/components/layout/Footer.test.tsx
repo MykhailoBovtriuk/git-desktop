@@ -11,7 +11,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 vi.mock('../../../src/stores/repo-store', () => ({ useRepoStore: vi.fn() }));
-vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
+vi.mock('../../../src/stores/ui-store', () => ({
+  useUiStore: vi.fn(),
+  isOverlayView: (view: string) => view === 'settings' || view === 'about',
+}));
 vi.mock('../../../src/stores/account-store', () => ({ useAccountStore: vi.fn() }));
 
 const ACCOUNT: ProviderAccount = {
@@ -33,7 +36,7 @@ function setup({
   aheadBehind = { ahead: 0, behind: 0, upstream: 'origin/feature/login' } as AheadBehind,
 } = {}) {
   const openConnection = vi.fn();
-  // Selector-aware: Footer and AppMenuButtons both select from the ui store.
+  // Selector-aware: Footer and PanelButtons both select from the ui store.
   const repoState = {
     currentBranch: 'feature/login',
     remoteHost,
@@ -48,7 +51,13 @@ function setup({
     push: vi.fn().mockResolvedValue(undefined),
     publishBranch: vi.fn(),
   };
-  const uiState = { addToast: vi.fn(), openOverlayView: vi.fn(), openConnection };
+  const uiState = {
+    addToast: vi.fn(),
+    openOverlayView: vi.fn(),
+    openConnection,
+    sidebarOpen: true,
+    toggleSidebar: vi.fn(),
+  };
   const accountState = { current: account, accountFor: () => account, authSource };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
@@ -57,6 +66,15 @@ function setup({
 }
 
 describe('Footer', () => {
+  it('puts the Git logo in the left corner to hide the sidebar', () => {
+    setup();
+    render(<Footer />);
+    expect(screen.getByRole('button', { name: 'hideSidebar' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

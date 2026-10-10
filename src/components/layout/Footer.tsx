@@ -4,7 +4,8 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useAccountStore } from '../../stores/account-store';
 import { UserIcon, cn } from '../../shared/ui';
-import { AppMenuButtons } from './AppMenuButtons';
+import { PanelButtons } from './PanelButtons';
+import { SidebarToggle } from './SidebarToggle';
 import { useRemoteSync } from '../../hooks/use-remote-sync';
 
 export function Footer() {
@@ -44,9 +45,8 @@ export function Footer() {
   return (
     <div className="relative h-10 bg-mantle border-t border-surface0 flex items-center justify-between px-3 shrink-0 select-none">
       <div className="shrink-0">
-        <AppMenuButtons />
+        <SidebarToggle />
       </div>
-
       {/* Centred on the window rather than on the leftover space, so the
           readout does not drift as the side blocks change width. */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs max-w-[45%]">
@@ -103,6 +103,10 @@ export function Footer() {
             </span>
           </>
         )}
+      </div>
+
+      <div className="shrink-0">
+        <PanelButtons />
       </div>
     </div>
   );

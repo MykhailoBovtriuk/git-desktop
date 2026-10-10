@@ -12,19 +12,51 @@ import { registerFileHandlers } from './ipc/files';
 import { registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
 import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
+import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
+import { registerTerminalHandlers, type TerminalControl } from './ipc/terminal';
+import { ipcMain } from 'electron';
+import { assertString } from './ipc-validators';
 
 export { wrap };
-export type IpcHandlerOptions = RepoHandlerOptions & AppHandlerOptions & UpdateHandlerOptions;
+export type IpcHandlerOptions = RepoHandlerOptions &
+  AppHandlerOptions &
+  UpdateHandlerOptions &
+  LogHandlerOptions;
 
 const gitService = new GitService();
 
 let registered = false;
+let terminals: TerminalControl | null = null;
+
+/** For app quit: shells must not outlive the window that owned them. */
+export function killAllTerminals(): void {
+  terminals?.killAll();
+}
 
 export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   if (registered) return;
   registered = true;
 
-  registerRepoHandlers(gitService, options);
+  const logStore = registerLogHandlers(options);
+  terminals = registerTerminalHandlers(options);
+  const terminalControl = terminals;
+
+  // One door for a repository leaving the app: its log folder and its shells.
+  ipcMain.handle('repo:forget', (_e, repoPath: unknown) =>
+    wrap(async () => {
+      assertString(repoPath, 'repoPath');
+      terminalControl.killRepo(repoPath);
+      await logStore.forgetRepo(repoPath);
+      return null;
+    }),
+  );
+  registerRepoHandlers(gitService, {
+    ...options,
+    onRepoOpened: root => {
+      options.onRepoOpened?.(root);
+      void logStore.ensureRepo(root).catch(() => {});
+    },
+  });
   registerStagingHandlers(gitService);
   registerRemoteHandlers(gitService);
   registerBranchHandlers(gitService);

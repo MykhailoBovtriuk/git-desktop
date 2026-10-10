@@ -15,5 +15,8 @@
   "resizeSidebar": "Resize sidebar",
   "resizeCommitList": "Resize commit list",
   "resizeFileList": "Resize file list",
-  "resizeStashList": "Resize stash list"
+  "resizeStashList": "Resize stash list",
+  "info": "Info",
+  "hideSidebar": "Hide sidebar ({{shortcut}})",
+  "showSidebar": "Show sidebar ({{shortcut}})"
 }

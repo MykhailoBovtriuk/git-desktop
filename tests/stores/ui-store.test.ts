@@ -123,42 +123,40 @@ describe('ui-store', () => {
 
 describe('overlay views', () => {
   beforeEach(() => {
-    useUiStore.setState({ activeView: 'changes', previousView: 'changes', overlayStack: [] });
+    useUiStore.setState({ activeView: 'changes', previousView: 'changes', sidebarOpen: true });
   });
 
-  // Back is the only exit: one press per level, and the last lands where the
-  // user came from.
-  it('goes back one screen at a time, out to where the user came from', () => {
+  it('switching between Settings and About replaces the page', () => {
     useUiStore.getState().setActiveView('graph');
-    useUiStore.getState().openOverlayView('settings');
     useUiStore.getState().openOverlayView('about');
-
-    useUiStore.getState().overlayBack();
+    useUiStore.getState().openOverlayView('settings');
     expect(useUiStore.getState().activeView).toBe('settings');
 
-    useUiStore.getState().overlayBack();
+    // Closing goes back to the work view, never to the page shown before.
+    useUiStore.getState().closeOverlays();
     expect(useUiStore.getState().activeView).toBe('graph');
-    expect(useUiStore.getState().overlayStack).toEqual([]);
   });
 
-  it('leaves the overlay when back is pressed on the top-level screen', () => {
+  it('closes to where the user came from, however many times the pages were switched', () => {
     useUiStore.getState().setActiveView('history');
     useUiStore.getState().openOverlayView('settings');
-
-    useUiStore.getState().overlayBack();
+    useUiStore.getState().openOverlayView('about');
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().closeOverlays();
     expect(useUiStore.getState().activeView).toBe('history');
   });
 
-  // A breadcrumb pointing at a screen we came through must unwind to it, or
-  // "back" would bounce between the two forever.
-  it('unwinds to a screen already below the current one', () => {
-    useUiStore.getState().setActiveView('changes');
-    useUiStore.getState().openOverlayView('settings');
-    useUiStore.getState().openOverlayView('about');
-    useUiStore.getState().openOverlayView('settings');
+  it('closing outside Settings/About changes nothing', () => {
+    useUiStore.getState().setActiveView('stash');
+    useUiStore.getState().closeOverlays();
+    expect(useUiStore.getState().activeView).toBe('stash');
+  });
 
-    expect(useUiStore.getState().overlayStack).toEqual([]);
-    useUiStore.getState().overlayBack();
+  it('the sidebar toggle leaves Settings and shows the sidebar', () => {
+    useUiStore.setState({ sidebarOpen: false });
+    useUiStore.getState().openOverlayView('settings');
+    useUiStore.getState().toggleSidebar();
     expect(useUiStore.getState().activeView).toBe('changes');
+    expect(useUiStore.getState().sidebarOpen).toBe(true);
   });
 });
