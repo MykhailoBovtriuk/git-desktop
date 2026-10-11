@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/ui-store';
 import { useRepoStore } from '../../stores/repo-store';
+import { useSettingsStore } from '../../stores/settings-store';
 import { gitApi } from '../../api/git-api';
 import { useGitAction } from '../../hooks/use-git-action';
 import { parseDiff } from './parse-diff';
@@ -42,7 +43,11 @@ export function useFileDiff() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showHunkActions = inChanges && !useCommitContext;
+  const ignoreWhitespace = useSettingsStore(s => s.diffIgnoreWhitespace);
+  // A hunk is staged by applying the diff on screen as a patch; with
+  // whitespace left out it no longer matches the file, so staging waits.
+  const whitespaceBlocksStaging = inChanges && !useCommitContext && ignoreWhitespace;
+  const showHunkActions = inChanges && !useCommitContext && !ignoreWhitespace;
 
   const handleHunk = (globalHunkIndex: number) =>
     runGitAction(
@@ -68,11 +73,11 @@ export function useFileDiff() {
       try {
         let rawText = '';
         if (useCommitContext && selectedCommit) {
-          rawText = await gitApi.getFileDiff(selectedCommit, selectedFile);
+          rawText = await gitApi.getFileDiff(selectedCommit, selectedFile, ignoreWhitespace);
         } else {
           rawText = isStaged
-            ? await gitApi.getStagedDiff(selectedFile)
-            : await gitApi.getWorkingDiff(selectedFile);
+            ? await gitApi.getStagedDiff(selectedFile, ignoreWhitespace)
+            : await gitApi.getWorkingDiff(selectedFile, ignoreWhitespace);
         }
         if (!cancelled) {
           setRaw(rawText);
@@ -91,7 +96,15 @@ export function useFileDiff() {
     return () => {
       cancelled = true;
     };
-  }, [selectedFile, selectedCommit, isStaged, useCommitContext, hasSelection, epoch]);
+  }, [
+    selectedFile,
+    selectedCommit,
+    isStaged,
+    useCommitContext,
+    hasSelection,
+    epoch,
+    ignoreWhitespace,
+  ]);
 
   return {
     selectedFile,
@@ -101,6 +114,7 @@ export function useFileDiff() {
     hasSelection,
     isStaged,
     showHunkActions,
+    whitespaceBlocksStaging,
     handleHunk,
   };
 }

@@ -48,10 +48,12 @@ export const gitApi = {
     invoke<null>('git:delete-remote-branch', remote, branch),
   getCommitDiff: (hash: string) =>
     invoke<{ path: string; status: string }[]>('git:get-commit-diff', hash),
-  getFileDiff: (hash: string, filePath: string) =>
-    invoke<string>('git:get-file-diff', hash, filePath),
-  getWorkingDiff: (filePath: string) => invoke<string>('git:get-working-diff', filePath),
-  getStagedDiff: (filePath: string) => invoke<string>('git:get-staged-diff', filePath),
+  getFileDiff: (hash: string, filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-file-diff', hash, filePath, ignoreWhitespace),
+  getWorkingDiff: (filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-working-diff', filePath, ignoreWhitespace),
+  getStagedDiff: (filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-staged-diff', filePath, ignoreWhitespace),
   getMergeConflicts: () => invoke<string[]>('git:get-merge-conflicts'),
   abortMerge: () => invoke<null>('git:abort-merge'),
   isMerging: () => invoke<boolean>('git:is-merging'),

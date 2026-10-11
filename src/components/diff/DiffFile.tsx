@@ -1,32 +1,38 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { DiffHunk, DiffLine, FileDiff } from '../../types';
 import { TruncatedText } from '../../shared/ui';
+import { useSettingsStore } from '../../stores/settings-store';
 
 interface DiffFileProps {
   diff: FileDiff;
   baseHunkIndex: number;
   showHunkActions: boolean;
+  /** Whitespace is hidden from this working-tree diff, which turns hunk staging off. */
+  whitespaceBlocksStaging?: boolean;
   isStaged: boolean;
   onHunk: (globalHunkIndex: number) => void;
   renderContent: (line: DiffLine) => ReactNode;
 }
 
-type Row =
-  | { kind: 'hunk'; hunkIndex: number; hunk: DiffHunk }
-  | { kind: 'line'; line: DiffLine };
+type Row = { kind: 'hunk'; hunkIndex: number; hunk: DiffHunk } | { kind: 'line'; line: DiffLine };
 
 export function DiffFile({
   diff,
   baseHunkIndex,
   showHunkActions,
+  whitespaceBlocksStaging,
   isStaged,
   onHunk,
   renderContent,
 }: DiffFileProps) {
   const { t } = useTranslation('diff');
+  const fontSize = useSettingsStore(s => s.diffFontSize);
+  const wrap = useSettingsStore(s => s.diffWrapLines);
+  // text-xs's own ratio (12px/16px), kept at every size so rows stay as dense.
+  const lineHeight = Math.round((fontSize * 4) / 3);
 
   // Flat row list so one virtualizer covers headers and lines alike. Without
   // it a 3000-line file rendered ~180k DOM nodes and took 1.7s to appear.
@@ -56,9 +62,14 @@ export function DiffFile({
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: i => (rows[i].kind === 'hunk' ? 26 : 16),
+    estimateSize: i => (rows[i].kind === 'hunk' ? lineHeight + 10 : lineHeight),
     overscan: 20,
   });
+
+  // Sizes measured at the old font or width are wrong now; measure afresh.
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [fontSize, wrap, rowVirtualizer]);
 
   return (
     <div className="flex flex-col overflow-hidden flex-1">
@@ -66,15 +77,23 @@ export function DiffFile({
         <TruncatedText className="text-text text-sm font-medium min-w-0">{diff.path}</TruncatedText>
         <span className="text-green text-xs shrink-0">+{diff.additions}</span>
         <span className="text-red text-xs shrink-0">-{diff.deletions}</span>
+        {whitespaceBlocksStaging && (
+          <span className="ml-auto text-subtext text-xs shrink-0">{t('whitespaceHidden')}</span>
+        )}
       </div>
 
-      <div ref={parentRef} className="font-mono text-xs overflow-auto flex-1">
+      <div
+        ref={parentRef}
+        className="font-mono overflow-auto flex-1"
+        style={{ fontSize, lineHeight: `${lineHeight}px` }}
+      >
         <div
           className="relative"
           style={{
             height: rowVirtualizer.getTotalSize(),
-            // 5rem ≈ two 2rem gutters + px-2 + the +/- sign column.
-            minWidth: `max(100%, calc(${maxCols}ch + 5rem))`,
+            // 5rem ≈ two 2rem gutters + px-2 + the +/- sign column. Wrapped
+            // lines never overflow, so then the width is just the pane's.
+            minWidth: wrap ? '100%' : `max(100%, calc(${maxCols}ch + 5rem))`,
           }}
         >
           {rowVirtualizer.getVirtualItems().map(virtualRow => {
@@ -126,7 +145,11 @@ export function DiffFile({
                     <span className="text-subtext w-8 shrink-0 text-right pr-2 select-none border-r border-surface0">
                       {row.line.newLineNumber ?? ''}
                     </span>
-                    <span className="px-2 whitespace-pre">
+                    <span
+                      className={
+                        wrap ? 'px-2 whitespace-pre-wrap break-all min-w-0' : 'px-2 whitespace-pre'
+                      }
+                    >
                       <span
                         className={
                           row.line.type === 'add'

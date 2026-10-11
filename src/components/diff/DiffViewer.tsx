@@ -13,6 +13,7 @@ export function DiffViewer() {
     hasSelection,
     isStaged,
     showHunkActions,
+    whitespaceBlocksStaging,
     handleHunk,
   } = useFileDiff();
   const renderContent = useDiffHighlighter(selectedFile);
@@ -42,6 +43,7 @@ export function DiffViewer() {
           diff={diff}
           baseHunkIndex={hunkOffsets[di]}
           showHunkActions={showHunkActions}
+          whitespaceBlocksStaging={whitespaceBlocksStaging}
           isStaged={isStaged}
           onHunk={handleHunk}
           renderContent={renderContent}

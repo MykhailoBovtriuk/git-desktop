@@ -3,5 +3,6 @@
   "noDiffToDisplay": "Geen verschil om te tonen",
   "loadFailed": "Laden van het verschil is mislukt",
   "stageHunk": "Hunk stagen",
-  "unstageHunk": "Hunk unstagen"
+  "unstageHunk": "Hunk unstagen",
+  "whitespaceHidden": "Witruimte verborgen: regels stagen staat uit"
 }

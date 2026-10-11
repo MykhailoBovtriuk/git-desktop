@@ -30,8 +30,8 @@ export class GitService {
   getCommitDiff(hash: string): Promise<{ path: string; status: string }[]> {
     return history.getCommitDiff(this.ctx, hash);
   }
-  getFileDiff(hash: string, filePath: string): Promise<string> {
-    return history.getFileDiff(this.ctx, hash, filePath);
+  getFileDiff(hash: string, filePath: string, ignoreWhitespace = false): Promise<string> {
+    return history.getFileDiff(this.ctx, hash, filePath, ignoreWhitespace);
   }
 
   getStatus(): Promise<GitStatus & AheadBehind> {
@@ -52,11 +52,11 @@ export class GitService {
   applyPatch(patch: string, opts: { cached?: boolean; reverse?: boolean } = {}): Promise<void> {
     return status.applyPatch(this.ctx, patch, opts);
   }
-  getWorkingDiff(filePath: string): Promise<string> {
-    return status.getWorkingDiff(this.ctx, filePath);
+  getWorkingDiff(filePath: string, ignoreWhitespace = false): Promise<string> {
+    return status.getWorkingDiff(this.ctx, filePath, ignoreWhitespace);
   }
-  getStagedDiff(filePath: string): Promise<string> {
-    return status.getStagedDiff(this.ctx, filePath);
+  getStagedDiff(filePath: string, ignoreWhitespace = false): Promise<string> {
+    return status.getStagedDiff(this.ctx, filePath, ignoreWhitespace);
   }
 
   getRemoteUrl(): Promise<string | null> {
