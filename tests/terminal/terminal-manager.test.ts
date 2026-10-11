@@ -48,6 +48,8 @@ describe('trimBuffer', () => {
   });
 });
 
+// Real shells start and die slowly on a loaded machine; the waits inside each
+// test (until, removeDir) must time out before vitest's 5s default does.
 describe.skipIf(!pty || testShell.length === 0)('TerminalManager (real pty)', () => {
   it('runs a shell in the repository folder and streams its output', async () => {
     const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-term-')));
@@ -105,4 +107,4 @@ describe.skipIf(!pty || testShell.length === 0)('TerminalManager (real pty)', ()
     const { manager } = setup();
     expect(() => manager.write('nope', 'x')).toThrow(/No such terminal/);
   });
-});
+}, 20_000);
