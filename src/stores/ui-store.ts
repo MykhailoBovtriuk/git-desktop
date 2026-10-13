@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
 export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
+export const SETTINGS_CATEGORIES = [
+  'general',
+  'accounts',
+  'git',
+  'diff',
+  'terminal',
+  'logs',
+  'updates',
+] as const;
+export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The tool panel docked on the right; the footer's right-hand buttons open it. */
 export type RightPanelTab = 'logs' | 'terminal';
@@ -39,6 +49,11 @@ interface UiState {
    * its view stays mounted (hidden) so switching tabs never rebuilds xterm.
    */
   terminalMounted: boolean;
+  /** The Settings page shown on the right of its menu; kept for the session. */
+  settingsCategory: SettingsCategory;
+  setSettingsCategory: (category: SettingsCategory) => void;
+  /** Settings, straight on `category` when given (a link from elsewhere), else where it was left. */
+  openSettings: (category?: SettingsCategory) => void;
   /** The left column (changes, stash, history/graph); not remembered across launches. */
   sidebarOpen: boolean;
   /** Over Settings/About it leaves the page and shows the sidebar instead. */
@@ -86,6 +101,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   connectionOpen: false,
   rightPanel: null,
   terminalMounted: false,
+  settingsCategory: 'general',
   sidebarOpen: true,
 
   setActiveView: view => set({ activeView: view }),
@@ -98,6 +114,11 @@ export const useUiStore = create<UiState>()((set, get) => ({
         ? { activeView: view }
         : { activeView: view, previousView: s.activeView },
     ),
+  setSettingsCategory: settingsCategory => set({ settingsCategory }),
+  openSettings: category => {
+    if (category) set({ settingsCategory: category });
+    get().openOverlayView('settings');
+  },
   closeOverlays: () =>
     set(s => (isOverlayView(s.activeView) ? { activeView: s.previousView } : {})),
   openNewBranch: () => set({ newBranchOpen: true }),

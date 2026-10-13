@@ -24,8 +24,8 @@ export function CommitForm() {
       hasIdentity: s.hasIdentity,
     })),
   );
-  const { addToast, openOverlayView } = useUiStore(
-    useShallow(s => ({ addToast: s.addToast, openOverlayView: s.openOverlayView })),
+  const { addToast, openSettings } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, openSettings: s.openSettings })),
   );
   const runAction = useGitAction();
 
@@ -86,7 +86,7 @@ export function CommitForm() {
         <div className="flex flex-col gap-1 rounded bg-yellow/10 p-2">
           <p className="text-yellow text-xs">{t('noIdentity')}</p>
           <button
-            onClick={() => openOverlayView('settings')}
+            onClick={() => openSettings('git')}
             className="text-blue text-xs hover:underline self-start"
           >
             {t('noIdentityAction')}

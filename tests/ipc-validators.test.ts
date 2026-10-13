@@ -9,6 +9,7 @@ import {
   assertStashIndex,
   assertBranchName,
   assertCommitHash,
+  assertIdentity,
 } from '../electron/ipc-validators';
 
 describe('assertString', () => {
@@ -172,5 +173,24 @@ describe('assertBranchName', () => {
 
   it('rejects non-string input', () => {
     expect(() => assertBranchName(5, 'branch')).toThrow(/non-empty string/);
+  });
+});
+
+describe('assertIdentity', () => {
+  it('accepts a name and email, or empty values meaning unset', () => {
+    expect(() => assertIdentity({ name: 'Ada', email: 'ada@example.com' })).not.toThrow();
+    expect(() => assertIdentity({ name: '', email: '' })).not.toThrow();
+  });
+
+  it('rejects anything git config would store as more than one line', () => {
+    expect(() => assertIdentity({ name: 'Ada\n[core]', email: '' })).toThrow(/name/);
+    expect(() => assertIdentity({ name: 'Ada', email: 'a@b\0' })).toThrow(/email/);
+  });
+
+  it('rejects an email that is not one, and odd shapes', () => {
+    expect(() => assertIdentity({ name: 'Ada', email: 'not-an-email' })).toThrow(/email/);
+    expect(() => assertIdentity({ name: 'x'.repeat(201), email: '' })).toThrow(/name/);
+    expect(() => assertIdentity({ name: 1, email: '' })).toThrow(/name/);
+    expect(() => assertIdentity(null)).toThrow(/identity/);
   });
 });

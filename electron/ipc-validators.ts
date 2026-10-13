@@ -75,6 +75,27 @@ export function assertBranchName(value: unknown, name: string): asserts value is
 }
 
 /**
+ * A name and email headed for `git config`: one line each, as git stores them,
+ * and an email that at least looks like one. Empty means unset.
+ */
+export function assertIdentity(value: unknown): asserts value is { name: string; email: string } {
+  if (!value || typeof value !== 'object') throw new Error('Invalid argument: identity');
+  const { name, email } = value as Record<string, unknown>;
+  for (const [field, v] of [
+    ['name', name],
+    ['email', email],
+  ] as const) {
+    if (typeof v !== 'string' || v.length > 200 || /[\n\r\0]/.test(v)) {
+      throw new Error(`Invalid argument: ${field}`);
+    }
+  }
+  const trimmed = (email as string).trim();
+  if (trimmed && !/^[^\s@]+@[^\s@]+$/.test(trimmed)) {
+    throw new Error('Invalid argument: email');
+  }
+}
+
+/**
  * An optional flag: undefined is its default, anything but a boolean is a bug
  * in the renderer rather than a wish to honour. Returns the flag, false when absent.
  */

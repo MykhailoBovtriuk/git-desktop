@@ -33,9 +33,8 @@ export function AccountsSection() {
   };
 
   return (
-    <section className="border-b border-surface0 py-4 last:border-0">
-      <h2 className="text-text text-sm font-medium">{t('section.title')}</h2>
-      <p className="text-subtext text-xs mt-0.5 mb-3">{t('section.hint')}</p>
+    <section className="py-4">
+      <p className="text-subtext text-xs mb-3">{t('section.hint')}</p>
 
       {accounts.length === 0 && <p className="text-subtext text-xs mb-3">{t('section.empty')}</p>}
 

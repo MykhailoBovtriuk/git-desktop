@@ -18,5 +18,33 @@
   "autoRefreshHint": "Hoe vaak de repository wordt gepolld. Git-bewerkingen (commit, checkout, stash) worden direct opgepikt; bewerkingen in bestanden pas bij de volgende poll — met Uit alleen bij handmatig vernieuwen.",
   "off": "Uit",
   "seconds_one": "{{count}}s",
-  "seconds_other": "{{count}}s"
+  "seconds_other": "{{count}}s",
+  "categories": {
+    "general": "Algemeen",
+    "accounts": "Accounts",
+    "git": "Git",
+    "diff": "Diff",
+    "terminal": "Terminal",
+    "logs": "Logboek",
+    "updates": "Updates"
+  },
+  "identity": {
+    "title": "Commit-auteur",
+    "hint": "De naam en het e-mailadres die git in elke commit vastlegt. Opgeslagen in je globale git-config, dus de opdrachtregel gebruikt ze ook.",
+    "name": "Naam",
+    "email": "E-mail",
+    "override": "Andere auteur in {{repo}}",
+    "overrideHint": "Bijvoorbeeld een werkadres alleen voor deze repository. Opgeslagen in .git/config.",
+    "effective": "Volgende commit hier: {{who}}",
+    "missing": "Geen auteur ingesteld: git weigert te committen.",
+    "save": "Opslaan",
+    "saved": "Opgeslagen"
+  },
+  "diff": {
+    "fontSize": "Lettergrootte",
+    "wrap": "Lange regels afbreken",
+    "wrapHint": "Lange regels lopen door op de volgende rij in plaats van horizontaal te scrollen.",
+    "ignoreWhitespace": "Witruimte negeren",
+    "ignoreWhitespaceHint": "Verbergt wijzigingen die alleen spaties en inspringing raken. Losse hunks stagen staat dan uit."
+  }
 }

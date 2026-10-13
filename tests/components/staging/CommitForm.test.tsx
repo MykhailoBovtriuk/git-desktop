@@ -37,16 +37,23 @@ function setupMocks({
     remoteHost: null,
     hasIdentity,
   };
-  const uiState = { addToast: mockAddToast, openOverlayView: vi.fn() };
+  const uiState = { addToast: mockAddToast, openSettings: vi.fn() };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 
-  return { mockCommit, mockAddToast };
+  return { mockCommit, mockAddToast, uiState };
 }
 
 describe('CommitForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('sends a missing author straight to Settings › Git', () => {
+    const { uiState } = setupMocks({ staged: ['file.ts'], hasIdentity: false });
+    render(<CommitForm />);
+    fireEvent.click(screen.getByText('noIdentityAction'));
+    expect(uiState.openSettings).toHaveBeenCalledWith('git');
   });
 
   it('commit button is disabled when message is empty', () => {

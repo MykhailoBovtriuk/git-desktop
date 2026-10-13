@@ -1,4 +1,13 @@
-import type { AheadBehind, Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
+import type {
+  AheadBehind,
+  Commit,
+  Branch,
+  GitIdentities,
+  GitIdentity,
+  GitStatus,
+  RemoteProtocol,
+  StashEntry,
+} from '../types';
 import { invoke } from './invoke';
 
 type StatusResult = GitStatus & AheadBehind;
@@ -62,6 +71,10 @@ export const gitApi = {
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
   hasIdentity: () => invoke<boolean>('git:has-identity'),
+  getIdentity: () => invoke<GitIdentities>('git:get-identity'),
+  /** An empty name or email unsets it; for 'local' that means the global one applies. */
+  setIdentity: (scope: 'global' | 'local', identity: GitIdentity) =>
+    invoke<null>('git:set-identity', scope, identity),
   readFile: (p: string) => invoke<string>('git:read-file', p),
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
   getConflictSides: (p: string) =>

@@ -1,16 +1,40 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import type { ProviderAccount } from '../../src/types';
+import type { GitIdentities, GitIdentity, ProviderAccount } from '../../src/types';
+import { gitConfigGet, gitConfigSet, gitConfigUnset, type ConfigScope } from '../git/exec';
 
-const run = promisify(execFile);
+const GLOBAL: ConfigScope = { kind: 'global' };
 
-async function readGlobal(key: string): Promise<string> {
-  try {
-    const { stdout } = await run('git', ['config', '--global', '--get', key]);
-    return stdout.trim();
-  } catch {
-    // git exits non-zero when the key is unset.
-    return '';
+async function readIdentity(scope: ConfigScope): Promise<GitIdentity> {
+  const [name, email] = await Promise.all([
+    gitConfigGet(scope, 'user.name'),
+    gitConfigGet(scope, 'user.email'),
+  ]);
+  return { name, email };
+}
+
+/** The global author, and this repository's override when one is open. */
+export async function getIdentity(repoRoot: string | null): Promise<GitIdentities> {
+  const global = await readIdentity(GLOBAL);
+  if (!repoRoot) return { global, local: null };
+  return { global, local: await readIdentity({ kind: 'local', repoRoot }) };
+}
+
+/**
+ * Writes the author for one scope. An empty value unsets the key, which for a
+ * repository means falling back to the global author.
+ */
+export async function setIdentity(
+  scope: 'global' | 'local',
+  repoRoot: string | null,
+  identity: GitIdentity,
+): Promise<void> {
+  if (scope === 'local' && !repoRoot) throw new Error('No repository opened');
+  const target: ConfigScope = scope === 'global' ? GLOBAL : { kind: 'local', repoRoot: repoRoot! };
+  for (const [key, value] of [
+    ['user.name', identity.name.trim()],
+    ['user.email', identity.email.trim()],
+  ] as const) {
+    if (value) await gitConfigSet(target, key, value);
+    else await gitConfigUnset(target, key);
   }
 }
 
@@ -19,12 +43,7 @@ async function readGlobal(key: string): Promise<string> {
  * override counts.
  */
 export async function hasIdentity(repoRoot: string): Promise<boolean> {
-  try {
-    const { stdout } = await run('git', ['-C', repoRoot, 'config', '--get', 'user.email']);
-    return stdout.trim().length > 0;
-  } catch {
-    return false;
-  }
+  return (await gitConfigGet({ kind: 'effective', repoRoot }, 'user.email')).length > 0;
 }
 
 /**
@@ -32,13 +51,8 @@ export async function hasIdentity(repoRoot: string): Promise<boolean> {
  * what is missing, never replaces the user's choice.
  */
 export async function ensureGlobalIdentity(account: ProviderAccount): Promise<void> {
-  const [name, email] = await Promise.all([readGlobal('user.name'), readGlobal('user.email')]);
-
+  const { name, email } = await readIdentity(GLOBAL);
   const nextName = account.name || account.login;
-  if (!name && nextName) {
-    await run('git', ['config', '--global', 'user.name', nextName]);
-  }
-  if (!email && account.email) {
-    await run('git', ['config', '--global', 'user.email', account.email]);
-  }
+  if (!name && nextName) await gitConfigSet(GLOBAL, 'user.name', nextName);
+  if (!email && account.email) await gitConfigSet(GLOBAL, 'user.email', account.email);
 }

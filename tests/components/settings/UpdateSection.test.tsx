@@ -113,7 +113,7 @@ describe('UpdateSection', () => {
   it('reinstalls the running version', () => {
     const { startDownload } = setup({ result: checked });
     render(<UpdateSection />);
-    fireEvent.click(screen.getByText('reinstall'));
+    fireEvent.click(screen.getByRole('button', { name: 'reinstall' }));
     expect(startDownload).toHaveBeenCalledWith('1.1.0');
   });
 
@@ -121,21 +121,25 @@ describe('UpdateSection', () => {
   it('disables reinstall when no release matches the running version', () => {
     setup({ result: { ...checked, current: null } });
     render(<UpdateSection />);
-    expect((screen.getByText('reinstall') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'reinstall' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it('disables reinstall in a build that cannot install', () => {
     setup({ result: { ...checked, canInstall: false } });
     render(<UpdateSection />);
-    expect((screen.getByText('reinstall') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'reinstall' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it('toggles both preferences', () => {
     const { setAutoCheckUpdates, setIncludePrereleases } = setup();
     render(<UpdateSection />);
-    fireEvent.click(screen.getByText('autoCheck'));
+    fireEvent.click(screen.getByRole('switch', { name: 'autoCheck' }));
     expect(setAutoCheckUpdates).toHaveBeenCalledWith(false);
-    fireEvent.click(screen.getByText('includePrerelease'));
+    fireEvent.click(screen.getByRole('switch', { name: 'includePrerelease' }));
     expect(setIncludePrereleases).toHaveBeenCalledWith(true);
   });
 

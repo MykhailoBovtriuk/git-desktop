@@ -281,6 +281,18 @@ export interface LogStats {
   entries: number;
 }
 
+/** Who commits are authored as: git's user.name and user.email. */
+export interface GitIdentity {
+  name: string;
+  email: string;
+}
+
+export interface GitIdentities {
+  global: GitIdentity;
+  /** This repository's own override (empty strings when unset); null with no repository open. */
+  local: GitIdentity | null;
+}
+
 /** A shell the terminal can start; the id is all the renderer ever sends back. */
 export interface TerminalShell {
   id: string;

@@ -2,8 +2,13 @@ import { ipcMain, dialog } from 'electron';
 import { GitService } from '../git-service';
 import { resolveRemote } from '../auth/remote-host';
 import { stripLegacyProfileKeys } from '../auth/legacy-cleanup';
-import { hasIdentity } from '../auth/identity-bootstrap';
-import { assertString, assertBoundedLogLimit, assertNonNegativeInteger } from '../ipc-validators';
+import { getIdentity, hasIdentity, setIdentity } from '../auth/identity-bootstrap';
+import {
+  assertString,
+  assertBoundedLogLimit,
+  assertNonNegativeInteger,
+  assertIdentity,
+} from '../ipc-validators';
 import { wrap } from './wrap';
 
 export interface RepoHandlerOptions {
@@ -53,6 +58,17 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
 
   // One boolean, not a resolved identity: the only thing the UI does with it is
   // stop a commit that git would reject outright for having no author.
+  ipcMain.handle('git:get-identity', () => wrap(() => getIdentity(git.getRepoPath())));
+
+  ipcMain.handle('git:set-identity', (_e, scope: unknown, identity: unknown) =>
+    wrap(async () => {
+      if (scope !== 'global' && scope !== 'local') throw new Error('Invalid argument: scope');
+      assertIdentity(identity);
+      await setIdentity(scope, git.getRepoPath(), identity);
+      return null;
+    }),
+  );
+
   ipcMain.handle('git:has-identity', () =>
     wrap(async () => {
       const root = git.getRepoPath();

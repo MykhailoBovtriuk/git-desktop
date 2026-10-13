@@ -47,6 +47,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:get-stash-top',
   'git:get-repo-path',
   'git:has-identity',
+  'git:get-identity',
+  'git:set-identity',
   'git:read-file',
   'git:write-file',
   'git:get-conflict-sides',
