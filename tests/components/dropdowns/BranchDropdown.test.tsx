@@ -50,8 +50,6 @@ beforeEach(() => {
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 });
 
-// The dropdown panel is the element carrying the branch actions; when a merge
-// is in progress it must be inert so the user can't checkout mid-merge.
 const panel = (container: HTMLElement) => container.querySelector('.p-2') as HTMLElement;
 
 describe('BranchDropdown merge lock', () => {
@@ -60,8 +58,6 @@ describe('BranchDropdown merge lock', () => {
     expect(panel(container).className).not.toContain('pointer-events-none');
   });
 
-  // Regression: after a restart mid-merge git has MERGE_HEAD (merging=true) but
-  // the renderer-only mergeState is null — the dropdown must still be locked.
   it('is locked when merging even without a mergeState', () => {
     repoState.merging = true;
     repoState.mergeState = null;
@@ -83,13 +79,9 @@ describe('BranchDropdown new branch', () => {
 
     fireEvent.click(screen.getByText('new'));
     expect(uiState.openNewBranch).toHaveBeenCalledTimes(1);
-    // The dialog is mounted outside the dropdown, which would otherwise sit on
-    // top of it.
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  // Typing a name that matches nothing is exactly when you want to create it,
-  // so the row the action lives in must not be filtered away with the list.
   it('offers new even when the filter matches no local branch', () => {
     render(<BranchDropdown onClose={() => {}} />);
 
@@ -128,7 +120,6 @@ describe('BranchDropdown pull and push', () => {
     await waitFor(() => expect(repoState.push).toHaveBeenCalledTimes(1));
   });
 
-  // git pull and push only ever move HEAD's branch.
   it('offers neither for another branch', () => {
     render(<BranchDropdown onClose={() => {}} />);
     openContext('feature');

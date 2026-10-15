@@ -5,10 +5,6 @@ import { useRepoStore } from './repo-store';
 import { errorMessage } from '../lib/error-message';
 import type { UpdateCheckResult, UpdatePhase, UpdateProgress } from '../types';
 
-/**
- * Update state; not persisted, the main process owns the facts and settings
- * hold preferences. Errors stay as tokens the UI translates.
- */
 interface UpdateState {
   phase: UpdatePhase;
   result: UpdateCheckResult | null;
@@ -16,7 +12,6 @@ interface UpdateState {
   downloadedVersion: string | null;
   error: string | null;
   modalOpen: boolean;
-  /** Set before aborting, so the rejected download reads as a cancellation. */
   cancelRequested: boolean;
 
   check: (opts?: { silent?: boolean; force?: boolean }) => Promise<void>;
@@ -25,9 +20,7 @@ interface UpdateState {
   cancelDownload: () => Promise<void>;
   install: () => Promise<void>;
   openModal: () => void;
-  /** Close the modal, keep what was found. */
   later: () => void;
-  /** Close it and do not mention this version again. */
   skip: () => void;
 }
 
@@ -44,8 +37,6 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
     const phase = get().phase;
     if (phase === 'checking' || phase === 'downloading') return;
 
-    // Asking explicitly is an answer to an earlier "skip": the button means
-    // "tell me about it", so it takes the version off the list.
     if (force && useSettingsStore.getState().skippedVersion) {
       useSettingsStore.getState().setSkippedVersion(null);
     }
@@ -62,8 +53,6 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
         modalOpen: available && result.latest?.version !== skipped ? true : s.modalOpen,
       }));
     } catch (err) {
-      // A check nobody asked for has no business reporting that the network is
-      // down; it simply found nothing this time.
       if (silent) {
         set({ phase: 'idle', error: null });
         return;
@@ -83,7 +72,6 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
       set({ phase: 'ready', downloadedVersion: downloaded.version, progress: null });
     } catch (err) {
       if (get().cancelRequested) {
-        // Cancelling is not a failure: it lands back where the download started.
         set({
           phase: get().result?.status === 'available' ? 'available' : 'idle',
           progress: null,
@@ -102,8 +90,6 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
   },
 
   install: async () => {
-    // The main process cannot see a push halfway through; quitting under one
-    // would be rude at best.
     if (useRepoStore.getState().busyOperation) {
       set({ error: 'repo-busy' });
       return;

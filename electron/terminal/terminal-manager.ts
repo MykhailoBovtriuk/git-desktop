@@ -5,7 +5,6 @@ import type { TerminalSession } from '../../src/types';
 import type { PtyModule } from './pty-loader';
 import { pickShell, terminalEnv, type ShellSpec } from './shell';
 
-/** Scrollback kept per session, replayed when its tab comes back into view. */
 export const BUFFER_CHARS = 200_000;
 /** Output is batched for one frame: `yes` must not become an IPC per byte. */
 const FLUSH_MS = 16;
@@ -81,9 +80,7 @@ export class TerminalManager {
   resize(id: string, cols: number, rows: number): void {
     try {
       this.get(id).pty.resize(cols, rows);
-    } catch {
-      // A resize racing the process's exit is harmless.
-    }
+    } catch {}
   }
 
   kill(id: string): void {
@@ -94,7 +91,6 @@ export class TerminalManager {
     } catch {}
   }
 
-  /** A repository leaving the app takes its shells with it. */
   killRepo(repoPath: string): void {
     for (const session of this.sessions.values()) {
       if (session.repoPath === repoPath) this.kill(session.id);

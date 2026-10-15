@@ -29,7 +29,6 @@ const pluralBase = (key: string): string | null => {
   return m ? m[1] : null;
 };
 
-// Intl.PluralRules cardinal categories actually used by i18next per language.
 const REQUIRED_PLURALS: Record<(typeof LANGS)[number], string[]> = {
   en: ['one', 'other'],
   uk: ['one', 'few', 'many', 'other'],
@@ -48,7 +47,6 @@ describe('i18n parity', () => {
   });
 
   for (const ns of namespaces) {
-    // Plural keys collapse to their base — uk legitimately has more forms.
     const normalize = (keys: string[]) => [...new Set(keys.map(k => pluralBase(k) ?? k))].sort();
 
     for (const lang of LANGS.filter(l => l !== 'en')) {

@@ -25,7 +25,6 @@ export function SettingsView() {
   const current = CATEGORIES.find(c => c.id === category) ?? CATEGORIES[0];
   const Page = current.Component;
 
-  // Up/Down walk the menu like a list, and focus follows so Enter is not needed.
   const onNavKey = (e: React.KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();

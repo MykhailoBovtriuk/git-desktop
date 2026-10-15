@@ -8,10 +8,6 @@ import { Button, DownloadIcon, Switch, TruncatedText } from '../../shared/ui';
 import { updateErrorText } from '../update/update-text';
 import { SettingsSection } from './SettingsSection';
 
-/**
- * Where updates are asked for. Its own section: it needs a status line, a phase
- * button and two switches.
- */
 export function UpdateSection() {
   const { t } = useTranslation('update');
   const {
@@ -47,8 +43,6 @@ export function UpdateSection() {
       })),
     );
 
-  // Before the first check there is no result to read the version from, and
-  // the row should not sit empty until someone presses the button.
   const appVersion = useAppVersion();
 
   const version = result?.currentVersion ?? appVersion;
@@ -119,7 +113,6 @@ export function UpdateSection() {
 
   return (
     <>
-      {/* The category heading above names the page; this is its introduction. */}
       <p className="text-subtext text-xs pt-1">{t('hint')}</p>
 
       <section className="py-4 border-b border-surface0">

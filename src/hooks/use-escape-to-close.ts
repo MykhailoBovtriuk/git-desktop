@@ -1,9 +1,5 @@
 import { useEffect } from 'react';
 
-/**
- * Esc leaves a full-screen page. It stands aside when the key means something
- * nearer: a dialog on top, or a field being edited (Esc clears or cancels there).
- */
 export function useEscapeToClose(onClose: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

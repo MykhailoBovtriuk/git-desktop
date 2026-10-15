@@ -3,10 +3,6 @@ import { REDIRECT_URI } from './oauth-config';
 /** Every outbound request identifies the app; GitHub rejects requests without one. */
 const USER_AGENT = 'git-desktop';
 
-/**
- * `status` and `headers` are carried so a caller can tell a rate limit from a
- * real failure; both are absent when the request never reached a server.
- */
 export class OAuthError extends Error {
   constructor(
     message: string,
@@ -17,18 +13,22 @@ export class OAuthError extends Error {
   }
 }
 
-/**
- * A JSON GET against a provider API. A null token means an anonymous call: an
- * empty bearer would earn a 401.
- */
 export async function getJson<T>(
   url: string,
   token: string | null,
   accept = 'application/json',
 ): Promise<T> {
+  return (await authedGet(url, token ? `Bearer ${token}` : null, accept)).json() as Promise<T>;
+}
+
+export async function authedGet(
+  url: string,
+  authorization: string | null,
+  accept = 'application/json',
+): Promise<Response> {
   const res = await fetch(url, {
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(authorization ? { Authorization: authorization } : {}),
       Accept: accept,
       'User-Agent': USER_AGENT,
     },
@@ -36,7 +36,7 @@ export async function getJson<T>(
   if (!res.ok) {
     throw new OAuthError(`${url} returned ${res.status}`, res.status, res.headers);
   }
-  return (await res.json()) as T;
+  return res;
 }
 
 /**
@@ -46,7 +46,6 @@ export async function getJson<T>(
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string | null;
-  /** ms epoch, or null for a token that does not expire (GitHub OAuth apps). */
   expiresAt: number | null;
 }
 
@@ -89,6 +88,38 @@ export async function postToken(
   };
 }
 
+export interface ProbeResponse {
+  status: number;
+  headers: Headers;
+  body: unknown;
+}
+
+const PROBE_TIMEOUT_MS = 8000;
+
+export async function probe(url: string): Promise<ProbeResponse | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    const body = await res.json().catch(() => null);
+    return { status: res.status, headers: res.headers, body };
+  } catch {
+    return null;
+  }
+}
+
+export async function sendRevoke(url: string, init: RequestInit): Promise<void> {
+  try {
+    await fetch(url, {
+      ...init,
+      headers: { 'User-Agent': USER_AGENT, ...(init.headers ?? {}) },
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+  } catch {}
+}
+
 /**
  * An avatar as a data: URI, since the renderer's CSP allows no remote images.
  */
@@ -105,7 +136,6 @@ export async function fetchAvatar(url: string | null | undefined): Promise<strin
     if (buf.byteLength > MAX_AVATAR_BYTES) return null;
     return `data:${type.split(';')[0]};base64,${buf.toString('base64')}`;
   } catch {
-    // An avatar is decoration; failing to load one must not fail a sign-in.
     return null;
   }
 }

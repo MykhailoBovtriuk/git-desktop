@@ -6,8 +6,6 @@ export interface ListItemProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function ListItem({ selected, className, children, onClick, ...rest }: ListItemProps) {
-  // Clickable rows must be focusable (role/tabIndex) for keyboard and screen
-  // readers.
   const interactive = onClick
     ? {
         onClick,

@@ -18,7 +18,6 @@ interface FileListProps {
   onStage?: (path: string) => void;
   onUnstage?: (path: string) => void;
   onDiscard?: (path: string) => void;
-  /** Hands the row's path to whoever knows the repository root. */
   onCopyPath?: (path: string) => void;
   onSelect: (path: string) => void;
   selectedFile: string | null;
@@ -45,8 +44,6 @@ export function FileList({
   selectedFile,
 }: FileListProps) {
   const { t } = useTranslation('staging');
-  // Copying changes nothing on screen, so a quiet mark shows the click landed;
-  // a toast would be too loud.
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,8 +82,6 @@ export function FileList({
             </div>
 
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              {/* First in the row: it is the only action here that changes
-                  nothing, and sitting next to Discard makes a slip expensive. */}
               {onCopyPath && (
                 <IconButton
                   icon={copiedPath === file.path ? CheckIcon : CopyIcon}

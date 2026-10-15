@@ -15,23 +15,35 @@ const saveCredential = vi.fn().mockResolvedValue(undefined);
 const approveCredentials = vi.fn().mockResolvedValue(undefined);
 const ensureGlobalIdentity = vi.fn().mockResolvedValue(undefined);
 const originUrlFor = vi.fn<(repo: string) => Promise<string | null>>();
-const accountForHost = vi.fn<() => Promise<unknown>>();
-const hasStoredCredential = vi.fn<() => Promise<boolean>>();
+const accountForRepo = vi.fn<(repo: string) => Promise<unknown>>();
+const credentialsOnHost = vi.fn<(host: string) => Promise<unknown[]>>();
+const storedUsername = vi.fn<(host: string) => Promise<string | null>>();
+const bindRepoUsername = vi.fn().mockResolvedValue(undefined);
+const unbindRepoUsername = vi.fn().mockResolvedValue(undefined);
 const verifyAgainstRemote = vi.fn<() => Promise<void>>();
 const fetchAccount = vi.fn<() => Promise<unknown>>();
+const enterpriseFetch = vi.fn<(host: string, token: string) => Promise<unknown>>();
+const enterpriseProbe = vi.fn<(host: string) => Promise<string>>();
+const revokeToken = vi.fn().mockResolvedValue(undefined);
+const clearCredential = vi.fn<(id: string) => Promise<unknown>>();
+const rejectCredentials = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('../../electron/auth/token-store', () => ({
   saveCredential: (...a: unknown[]) => saveCredential(...a),
-  accountForHost: () => accountForHost(),
-  clearCredential: vi.fn(),
+  accountForRepo: (repo: string) => accountForRepo(repo),
+  credentialsOnHost: (host: string) => credentialsOnHost(host),
+  clearCredential: (id: string) => clearCredential(id),
   isPersistent: () => true,
   listAccounts: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../electron/auth/git-credentials', () => ({
-  hasStoredCredential: () => hasStoredCredential(),
+  storedUsername: (host: string) => storedUsername(host),
+  bindRepoUsername: (...a: unknown[]) => bindRepoUsername(...a),
+  unbindRepoUsername: (...a: unknown[]) => unbindRepoUsername(...a),
   approveCredentials: (...a: unknown[]) => approveCredentials(...a),
-  rejectCredentials: vi.fn(),
+  rejectCredentials: (...a: unknown[]) => rejectCredentials(...a),
+  listCredentialHelpers: vi.fn().mockResolvedValue([]),
   gitUsernameFor: (account: { login: string }) => account.login,
 }));
 
@@ -50,20 +62,41 @@ vi.mock('../../electron/auth/remote-host', async importOriginal => {
 
 vi.mock('../../electron/auth/providers/registry', async importOriginal => {
   const actual = await importOriginal<typeof import('../../electron/auth/providers/registry')>();
+  const github = {
+    id: 'github',
+    displayName: 'GitHub',
+    fetchAccount: () => fetchAccount(),
+    revokeToken: (o: unknown) => revokeToken(o),
+  };
+  const enterprise = {
+    id: 'github-enterprise',
+    displayName: 'GitHub Enterprise',
+    fetchAccount: (host: string, token: string) => enterpriseFetch(host, token),
+    probe: (host: string) => enterpriseProbe(host),
+  };
   return {
     ...actual,
-    providerForHost: (host: string) =>
-      host === 'github.com'
-        ? { id: 'github', displayName: 'GitHub', fetchAccount: () => fetchAccount() }
-        : null,
+    providerForHost: (host: string) => (host === 'github.com' ? github : null),
+    providerById: (id: string) =>
+      id === 'github'
+        ? github
+        : id === 'github-enterprise'
+          ? enterprise
+          : actual.providerById(id as never),
   };
 });
 
 const { registerAccountHandlers } = await import('../../electron/ipc/account');
 registerAccountHandlers();
 
-const signInToken = (host: string, login: string, token: string, repo: string | null = null) =>
-  handlers.get('account:sign-in-token')!(null, host, login, token, repo) as Promise<{
+const signInToken = (
+  host: string,
+  login: string,
+  token: string,
+  repo = '/src/p',
+  providerId = 'token',
+) =>
+  handlers.get('account:sign-in-token')!(null, providerId, host, login, token, repo) as Promise<{
     data?: unknown;
     error?: string;
   }>;
@@ -78,29 +111,43 @@ beforeEach(() => {
   vi.clearAllMocks();
   originUrlFor.mockResolvedValue(null);
   verifyAgainstRemote.mockResolvedValue(undefined);
-  accountForHost.mockResolvedValue(null);
-  hasStoredCredential.mockResolvedValue(false);
+  accountForRepo.mockResolvedValue(null);
+  credentialsOnHost.mockResolvedValue([]);
+  storedUsername.mockResolvedValue(null);
+  clearCredential.mockResolvedValue(null);
 });
 
-const askAuthSource = (host: string | null, protocol: string | null) =>
-  handlers.get('account:auth-source')!(null, host, protocol) as Promise<{ data?: string }>;
+const askAuthSource = (host: string | null, protocol: string | null, repo = '/src/p') =>
+  handlers.get('account:auth-source')!(null, host, protocol, repo) as Promise<{ data?: string }>;
 
 describe('account:auth-source', () => {
-  it('reports an account of our own first', async () => {
-    accountForHost.mockResolvedValue({ id: 'github.com' });
+  it("reports the repository's own account first", async () => {
+    accountForRepo.mockResolvedValue({ host: 'github.com' });
     expect((await askAuthSource('github.com', 'https')).data).toBe('account');
+    expect(accountForRepo).toHaveBeenCalledWith('/src/p');
   });
 
-  // An ssh remote goes by key, so the keychain has nothing to say about it —
-  // and asking anyway would provoke a credential lookup on every ssh repo.
+  it('does not count an account for another server', async () => {
+    accountForRepo.mockResolvedValue({ host: 'gitlab.com' });
+    expect((await askAuthSource('github.com', 'https')).data).toBe('none');
+  });
+
   it('settles ssh without touching the keychain', async () => {
     expect((await askAuthSource('github.com', 'ssh')).data).toBe('ssh');
-    expect(hasStoredCredential).not.toHaveBeenCalled();
+    expect(storedUsername).not.toHaveBeenCalled();
   });
 
-  it('reports the system credential store when git can already authenticate', async () => {
-    hasStoredCredential.mockResolvedValue(true);
+  it('reports a login git finds on its own, like a terminal sign-in', async () => {
+    storedUsername.mockResolvedValue('octocat');
     expect((await askAuthSource('github.com', 'https')).data).toBe('system');
+  });
+
+  it("does not take another repository's sign-in for this one's", async () => {
+    storedUsername.mockResolvedValue('octocat');
+    credentialsOnHost.mockResolvedValue([
+      { repoPath: '/src/other', account: { login: 'octocat' } },
+    ]);
+    expect((await askAuthSource('github.com', 'https')).data).toBe('none');
   });
 
   it('reports nothing at all when no credential exists', async () => {
@@ -109,13 +156,11 @@ describe('account:auth-source', () => {
 
   it('reports nothing for a repository with no remote', async () => {
     expect((await askAuthSource(null, null)).data).toBe('none');
-    expect(hasStoredCredential).not.toHaveBeenCalled();
+    expect(storedUsername).not.toHaveBeenCalled();
   });
 });
 
 describe('account:sign-in-token', () => {
-  // The bug this whole path was rebuilt for: host "1-1", login "1-1",
-  // token "1-1" used to produce a signed-in account and a keychain entry.
   it('refuses a made-up credential for a server it cannot check', async () => {
     const result = await signInToken('1-1', '1-1', '1-1');
     expect(result.error).toMatch(/no other way to check/i);
@@ -126,7 +171,7 @@ describe('account:sign-in-token', () => {
     originUrlFor.mockResolvedValue('https://1-1/a/b.git');
     verifyAgainstRemote.mockRejectedValue(new Error('The server rejected this username and token'));
 
-    const result = await signInToken('1-1', '1-1', '1-1', '/repo');
+    const result = await signInToken('1-1', '1-1', '1-1');
     expect(result.error).toMatch(/rejected/i);
     expect(verifyAgainstRemote).toHaveBeenCalledWith('https://1-1/a/b.git', '1-1', '1-1');
     storedNothing();
@@ -135,7 +180,7 @@ describe('account:sign-in-token', () => {
   it('checks an unknown server against its own remote, then stores', async () => {
     originUrlFor.mockResolvedValue('https://git.example.com/a/b.git');
 
-    const result = await signInToken('git.example.com', 'alice', 'tok', '/repo');
+    const result = await signInToken('git.example.com', 'alice', 'tok');
     expect(result.error).toBeUndefined();
     expect(verifyAgainstRemote).toHaveBeenCalledWith(
       'https://git.example.com/a/b.git',
@@ -144,16 +189,15 @@ describe('account:sign-in-token', () => {
     );
     expect(approveCredentials).toHaveBeenCalledWith('git.example.com', 'alice', 'tok');
     expect(saveCredential).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'git.example.com', host: 'git.example.com' }),
+      expect.objectContaining({ repoPath: '/src/p', host: 'git.example.com' }),
     );
+    expect(bindRepoUsername).toHaveBeenCalledWith('/src/p', 'git.example.com', 'alice');
   });
 
-  // An ssh remote never carries a token, so a token proved against it proves
-  // nothing — and `ls-remote` would authenticate with the user's key instead.
   it('will not check a token against an ssh remote', async () => {
     originUrlFor.mockResolvedValue('git@git.example.com:a/b.git');
 
-    const result = await signInToken('git.example.com', 'alice', 'tok', '/repo');
+    const result = await signInToken('git.example.com', 'alice', 'tok');
     expect(result.error).toMatch(/https/i);
     expect(verifyAgainstRemote).not.toHaveBeenCalled();
     storedNothing();
@@ -162,7 +206,7 @@ describe('account:sign-in-token', () => {
   it('will not check a token against a remote on a different host', async () => {
     originUrlFor.mockResolvedValue('https://elsewhere.example/a/b.git');
 
-    const result = await signInToken('git.example.com', 'alice', 'tok', '/repo');
+    const result = await signInToken('git.example.com', 'alice', 'tok');
     expect(result.error).toBeDefined();
     expect(verifyAgainstRemote).not.toHaveBeenCalled();
     storedNothing();
@@ -181,7 +225,6 @@ describe('account:sign-in-token', () => {
 
     const result = await signInToken('github.com', 'whatever-they-typed', 'tok');
     expect(result.error).toBeUndefined();
-    // The API is the authority on who this is; the form is only a guess.
     expect(result.data).toMatchObject({ login: 'real-login', name: 'Real Name' });
     expect(verifyAgainstRemote).not.toHaveBeenCalled();
     expect(approveCredentials).toHaveBeenCalledWith('github.com', 'real-login', 'tok');
@@ -203,8 +246,6 @@ describe('account:sign-in-token', () => {
     storedNothing();
   });
 
-  // `git credential` reads one key=value per line from stdin, so a newline in
-  // a value is a second field nobody asked for.
   it('rejects a line break in the username or token', async () => {
     expect((await signInToken('git.example.com', 'alice\npassword=x', 'tok')).error).toMatch(
       /line break/,
@@ -213,5 +254,125 @@ describe('account:sign-in-token', () => {
       /line break/,
     );
     storedNothing();
+  });
+});
+
+describe('account:sign-in-token with a chosen service', () => {
+  it('asks the chosen service its API, with no username typed', async () => {
+    enterpriseFetch.mockResolvedValue({
+      providerId: 'github-enterprise',
+      host: 'ghe.acme.com',
+      displayName: 'GitHub Enterprise',
+      login: 'jane',
+      name: 'Jane',
+      email: 'jane@acme.com',
+      avatarDataUrl: null,
+    });
+
+    const result = await signInToken('ghe.acme.com', '', 'tok', '/src/p', 'github-enterprise');
+    expect(result.error).toBeUndefined();
+    expect(enterpriseFetch).toHaveBeenCalledWith('ghe.acme.com', 'tok');
+    expect(verifyAgainstRemote).not.toHaveBeenCalled();
+    expect(approveCredentials).toHaveBeenCalledWith('ghe.acme.com', 'jane', 'tok');
+  });
+
+  it('still needs a username for a bare Git server', async () => {
+    const result = await signInToken('git.example.com', '', 'tok');
+    expect(result.error).toMatch(/login/);
+    storedNothing();
+  });
+
+  it('refuses an unknown service', async () => {
+    const result = await signInToken('git.example.com', 'a', 'tok', '/src/p', 'nope');
+    expect(result.error).toMatch(/Unknown provider/);
+    storedNothing();
+  });
+});
+
+describe('account:probe-server', () => {
+  const probeServer = (providerId: string, host: string) =>
+    handlers.get('account:probe-server')!(null, providerId, host) as Promise<{
+      data?: string;
+      error?: string;
+    }>;
+
+  it("passes on the service's own answer", async () => {
+    enterpriseProbe.mockResolvedValue('mismatch');
+    expect((await probeServer('github-enterprise', 'gitlab.acme.com')).data).toBe('mismatch');
+    expect(enterpriseProbe).toHaveBeenCalledWith('gitlab.acme.com');
+  });
+
+  it('has nothing to ask a bare Git server', async () => {
+    expect((await probeServer('token', 'git.example.com')).data).toBe('ok');
+  });
+
+  it('refuses something that is not a hostname', async () => {
+    expect((await probeServer('github-enterprise', 'evil.com/path')).error).toMatch(/hostname/);
+  });
+});
+
+describe('account:sign-out', () => {
+  const signOut = (repo: unknown) =>
+    handlers.get('account:sign-out')!(null, repo) as Promise<{ error?: string }>;
+
+  const stored = (repoPath: string, token: string) => ({
+    repoPath,
+    host: 'github.com',
+    account: { providerId: 'github', login: 'octocat' },
+    accessToken: token,
+    clientId: 'cid',
+    clientSecret: 'sec',
+  });
+
+  it('signs the repository out: config, keychain and token', async () => {
+    clearCredential.mockResolvedValue(stored('/src/p', 'tok'));
+
+    expect((await signOut('/src/p')).error).toBeUndefined();
+    expect(clearCredential).toHaveBeenCalledWith('/src/p');
+    expect(unbindRepoUsername).toHaveBeenCalledWith('/src/p', 'github.com');
+    expect(rejectCredentials).toHaveBeenCalledWith('github.com', 'octocat');
+    expect(revokeToken).toHaveBeenCalledWith({
+      host: 'github.com',
+      token: 'tok',
+      clientId: 'cid',
+      clientSecret: 'sec',
+    });
+  });
+
+  it('keeps the keychain entry another repository still uses', async () => {
+    clearCredential.mockResolvedValue(stored('/src/p', 'tok'));
+    credentialsOnHost.mockResolvedValue([stored('/src/other', 'tok-other')]);
+
+    await signOut('/src/p');
+    expect(rejectCredentials).not.toHaveBeenCalled();
+    expect(approveCredentials).toHaveBeenCalledWith('github.com', 'octocat', 'tok-other');
+  });
+
+  it('does nothing more for a repository with no account', async () => {
+    expect((await signOut('/nowhere')).error).toBeUndefined();
+    expect(rejectCredentials).not.toHaveBeenCalled();
+    expect(revokeToken).not.toHaveBeenCalled();
+  });
+
+  it('refuses something that is not a repository path', async () => {
+    expect((await signOut('relative/path')).error).toMatch(/absolute/);
+    expect(clearCredential).not.toHaveBeenCalled();
+  });
+});
+
+describe('forgetRepoAccount', () => {
+  it('signs the repository out', async () => {
+    const { forgetRepoAccount } = await import('../../electron/ipc/account');
+    clearCredential.mockResolvedValue({
+      repoPath: '/src/p',
+      host: 'github.com',
+      account: { providerId: 'github', login: 'octocat' },
+      accessToken: 'tok',
+      clientId: '',
+      clientSecret: null,
+    });
+    await forgetRepoAccount('/src/p');
+    expect(unbindRepoUsername).toHaveBeenCalledWith('/src/p', 'github.com');
+    expect(rejectCredentials).toHaveBeenCalledWith('github.com', 'octocat');
   });
 });

@@ -52,8 +52,6 @@ beforeEach(() => {
 const saveButton = () => screen.getByText('saveMarkResolved').closest('button')!;
 
 describe('MergeEditor save guard', () => {
-  // Regression: while readFile was in flight Save was enabled and overwrote the
-  // file with ''.
   it('disables Save while the file content is still loading', async () => {
     vi.mocked(gitApi.readFile).mockReturnValue(new Promise(() => {}));
     render(<MergeEditor />);
@@ -81,8 +79,6 @@ describe('MergeEditor save guard', () => {
     await waitFor(() => expect(saveButton()).not.toBeDisabled());
   });
 
-  // Regression: a double click on the last file ran writeFile/markResolved and
-  // concludeMerge twice — the second merge commit failed or left junk state.
   it('ignores a second click while saving is in flight', async () => {
     vi.mocked(gitApi.readFile).mockResolvedValue('plain text');
     vi.mocked(gitApi.writeFile).mockReturnValue(new Promise(() => {}));

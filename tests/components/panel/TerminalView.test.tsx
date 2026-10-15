@@ -12,7 +12,6 @@ const api = vi.hoisted(() => ({
   list: vi.fn(),
 }));
 vi.mock('../../../src/api/terminal-api', () => ({ terminalApi: api }));
-// xterm needs a real canvas; the pane is covered by the manual check.
 vi.mock('../../../src/components/panel/TerminalPane', () => ({
   TerminalPane: ({ id, visible }: { id: string; visible: boolean }) => (
     <div data-testid={`pane-${id}`} data-visible={String(visible)} />
@@ -80,7 +79,6 @@ describe('TerminalView', () => {
     const toggle = screen.getByRole('button', { name: 'newWithShell' });
 
     fireEvent.click(toggle);
-    // Portalled to <body>, outside the tab bar that would clip it.
     const item = screen.getByRole('button', { name: 'bash' });
     expect(item.closest('.fixed')?.parentElement).toBe(document.body);
 

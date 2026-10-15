@@ -55,7 +55,6 @@ describe('logged', () => {
       await gate;
       return null;
     });
-    // A status poll racing the logged operation must not land in it.
     await git.getStatus();
     release();
     await op;

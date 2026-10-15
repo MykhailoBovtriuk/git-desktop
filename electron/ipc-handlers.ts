@@ -9,7 +9,7 @@ import { registerRebaseHandlers } from './ipc/rebase';
 import { registerStashHandlers } from './ipc/stash';
 import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
-import { registerAccountHandlers } from './ipc/account';
+import { forgetRepoAccount, registerAccountHandlers } from './ipc/account';
 import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
 import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
 import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
@@ -28,7 +28,6 @@ const gitService = new GitService();
 let registered = false;
 let terminals: TerminalControl | null = null;
 
-/** For app quit: shells must not outlive the window that owned them. */
 export function killAllTerminals(): void {
   terminals?.killAll();
 }
@@ -41,12 +40,12 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   terminals = registerTerminalHandlers(options);
   const terminalControl = terminals;
 
-  // One door for a repository leaving the app: its log folder and its shells.
   ipcMain.handle('repo:forget', (_e, repoPath: unknown) =>
     wrap(async () => {
       assertString(repoPath, 'repoPath');
       terminalControl.killRepo(repoPath);
       await logStore.forgetRepo(repoPath);
+      await forgetRepoAccount(repoPath);
       return null;
     }),
   );

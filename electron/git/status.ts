@@ -110,7 +110,6 @@ export async function applyPatch(
   }
 }
 
-/** `-w`: compare ignoring whitespace. Display only; such a diff is no patch to apply. */
 const wsArgs = (ignoreWhitespace?: boolean) => (ignoreWhitespace ? ['-w'] : []);
 
 export async function getWorkingDiff(

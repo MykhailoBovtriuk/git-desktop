@@ -26,7 +26,6 @@ export function TerminalSection() {
     );
   const [shells, setShells] = useState<TerminalShell[]>([]);
 
-  // Detection only reads the disk; it does not load the native terminal module.
   useEffect(() => {
     void terminalApi
       .shells()
@@ -34,7 +33,6 @@ export function TerminalSection() {
       .catch(() => {});
   }, []);
 
-  // A shell that disappeared (uninstalled, settings copied over) means automatic.
   const value = shells.some(s => s.id === terminalShell) ? (terminalShell as string) : AUTO;
 
   return (

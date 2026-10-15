@@ -1,6 +1,5 @@
 import type { ITheme } from '@xterm/xterm';
 
-/** The app palette, read live so the terminal follows a theme switch. */
 export function readTerminalTheme(): ITheme {
   const styles = getComputedStyle(document.documentElement);
   const v = (name: string, fallback: string) =>

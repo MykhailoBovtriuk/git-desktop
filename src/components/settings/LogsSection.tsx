@@ -9,14 +9,11 @@ import { LOG_RETENTIONS, type LogRetention, type LogStats } from '../../types';
 import { SettingsSection } from './SettingsSection';
 import { formatBytes } from '../../lib/format-bytes';
 
-/** Retention lives in the main process, which writes the files before any window asks. */
 export function LogsSection() {
   const { t } = useTranslation('logs');
   const requestConfirm = useUiStore(s => s.requestConfirm);
   const clearLog = useLogStore(s => s.clear);
   const entryCount = useLogStore(s => s.entries.length);
-  // Size, clearing and the folder are the open repository's; how long logs are
-  // kept applies to all of them.
   const repoPath = useRepoStore(s => s.repoPath);
   const [retention, setRetention] = useState<LogRetention | null>(null);
   const [stats, setStats] = useState<LogStats | null>(null);
@@ -36,7 +33,6 @@ export function LogsSection() {
       .catch(() => {});
   }, []);
 
-  // The figure follows operations finished while Settings is open.
   useEffect(refreshStats, [refreshStats, entryCount]);
 
   const change = async (next: LogRetention) => {
@@ -82,7 +78,6 @@ export function LogsSection() {
           />
         )}
       </SettingsSection>
-      {/* Size, clearing and the folder belong to the open repository. */}
       {repoPath && (
         <SettingsSection title={t('settings.repoTitle')} description={t('settings.repoHint')}>
           <div className="flex items-center gap-2">

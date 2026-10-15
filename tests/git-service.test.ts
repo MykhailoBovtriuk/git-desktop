@@ -49,8 +49,6 @@ describe('GitService', () => {
     execSync('git stash push -m "drawer"', { cwd: tmpDir });
 
     const log = await git.getLog(10, 0);
-    // --all used to pull refs/stash in, showing the stash plus an
-    // "index on ..." commit that means nothing to the user.
     expect(log.some(c => c.refs.some(r => r.includes('refs/stash')))).toBe(false);
     expect(log.some(c => /^index on /.test(c.message))).toBe(false);
     expect(log.some(c => c.message.includes('drawer'))).toBe(false);
@@ -65,8 +63,6 @@ describe('GitService', () => {
 
     const expected = execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim();
     expect(await git.getHeadCommit()).toBe(expected);
-    // The regression: the footer used commits[0] from a log sorted across all
-    // branches, which is the feature commit here — not where the user stands.
     const log = await git.getLog(10, 0);
     expect(log[0].message).toBe('newer elsewhere');
     expect(log[0].abbreviatedHash).not.toBe(expected);
@@ -134,8 +130,6 @@ describe('GitService', () => {
     );
   });
 
-  // The new branch sits on the same commit, so switching to it must not touch
-  // the working tree — that is what "bring my changes" relies on.
   it('createBranch carries uncommitted work over, staged and unstaged alike', async () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
@@ -158,8 +152,6 @@ describe('GitService', () => {
     await expect(git.createBranch('feature/login')).rejects.toThrow();
   });
 
-  // Without -u untracked files stay in the tree, so "leave my changes" would
-  // bring them along.
   it('stashSave takes untracked files too when asked', async () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
@@ -183,8 +175,6 @@ describe('GitService', () => {
     expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(true);
   });
 
-  // git rejects the combination outright; catching it here names the reason
-  // rather than surfacing git's own wording about incompatible options.
   it('stashSave refuses to combine staged-only with untracked', async () => {
     await git.openRepo(tmpDir);
     await expect(git.stashSave('nope', true, true)).rejects.toThrow(/mutually exclusive/i);
@@ -325,8 +315,6 @@ describe('switchRemoteProtocol', () => {
     expect(urls().fetch).toBe('git@github.com:owner/repo.git');
   });
 
-  // An ssh alias cannot be rebuilt from the https address, so going back must
-  // restore the one the repository had.
   it('restores the original ssh address, alias and all, on the way back', async () => {
     execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
     execSync('git remote set-url --push origin git@github.com:owner/fork.git', { cwd: tmpDir });
@@ -365,8 +353,6 @@ describe('switchRemoteProtocol', () => {
 });
 
 describe('stageFiles/markResolved with dash-prefixed paths', () => {
-  // Without a `--` separator, a file named "-A" is parsed by git as the
-  // stage-everything flag and other files get staged too.
   it('stageFiles stages only the named file, not everything', async () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, '-A'), 'dash file');
@@ -393,7 +379,6 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
 });
 
 describe('rebase lifecycle', () => {
-  // Creates a rebase conflict: two branches change the same line of file.txt.
   function makeRebaseConflict(): { mainBranch: string } {
     const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tmpDir })
       .toString()
@@ -434,7 +419,6 @@ describe('rebase lifecycle', () => {
     const { mainBranch } = makeRebaseConflict();
 
     await expect(git.rebase(mainBranch)).rejects.toThrow();
-    // Conflicts unresolved — continue must fail and the rebase stays active.
     await expect(git.continueRebase()).rejects.toThrow();
     expect(await git.isRebasing()).toBe(true);
 
@@ -454,7 +438,6 @@ describe('credential prompt safety (Fix 2)', () => {
     const env = credentialSafeEnv();
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
     expect(env.GIT_ASKPASS).toBe('echo');
-    // The rest of process.env must survive the merge (PATH is always set).
     expect(env.PATH).toBe(process.env.PATH);
   });
 });
@@ -490,7 +473,6 @@ describe('empty repository (unborn HEAD)', () => {
     status = await git.getStatus();
     expect(status.staged.some(f => f.path === 'new.txt')).toBe(false);
     expect(status.unstaged.some(f => f.path === 'new.txt' && !f.staged)).toBe(true);
-    // The file itself must survive unstaging.
     expect(fs.readFileSync(path.join(emptyDir, 'new.txt'), 'utf-8')).toBe('content');
   });
 });
@@ -501,18 +483,13 @@ describe('readFile/writeFile path guards', () => {
   });
 
   it('allows normal reads and writes inside the repo', async () => {
-    await git.writeFile('sub/dir-file.txt', 'nested').catch(() => {
-      // parent dir does not exist — that's a plain write failure, not a guard
-    });
+    await git.writeFile('sub/dir-file.txt', 'nested').catch(() => {});
     await git.writeFile('plain.txt', 'ok');
     expect(await git.readFile('plain.txt')).toBe('ok');
-    // dotfiles that merely start with ".git" must not be blocked
     await git.writeFile('.gitignore', 'node_modules\n');
     expect(await git.readFile('.gitignore')).toBe('node_modules\n');
   });
 
-  // Writing into .git/ means code execution on the next git command, even
-  // though the path is inside the repo.
   it('rejects writes into .git', async () => {
     await expect(git.writeFile('.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
     expect(fs.existsSync(path.join(tmpDir, '.git', 'hooks', 'pre-commit'))).toBe(false);
@@ -568,7 +545,6 @@ describe('applyPatch (hunk-level staging)', () => {
   const seedMultiHunk = () => {
     fs.writeFileSync(path.join(tmpDir, 'multi.txt'), TWENTY);
     execSync('git add multi.txt && git commit -m "multi"', { cwd: tmpDir });
-    // Two well-separated edits (line 2 and line 18) → two independent hunks.
     const lines = TWENTY.split('\n');
     lines[1] = 'LINE2';
     lines[17] = 'LINE18';
@@ -580,16 +556,14 @@ describe('applyPatch (hunk-level staging)', () => {
     await git.openRepo(tmpDir);
 
     const raw = await git.getWorkingDiff('multi.txt');
-    expect((raw.match(/^@@ /gm) || []).length).toBe(2); // sanity: two hunks
+    expect((raw.match(/^@@ /gm) || []).length).toBe(2);
 
     await git.applyPatch(buildHunkPatch(raw, 0), { cached: true });
 
-    // Index (staged) carries the first change only.
     const staged = await git.getStagedDiff('multi.txt');
     expect(staged).toContain('LINE2');
     expect(staged).not.toContain('LINE18');
 
-    // The working tree still shows the second, still-unstaged change.
     const working = await git.getWorkingDiff('multi.txt');
     expect(working).toContain('LINE18');
     expect(working).not.toContain('LINE2');
@@ -599,7 +573,6 @@ describe('applyPatch (hunk-level staging)', () => {
     seedMultiHunk();
     await git.openRepo(tmpDir);
 
-    // Stage the whole file, then peel one hunk back off the index.
     await git.stageFiles(['multi.txt']);
     let staged = await git.getStagedDiff('multi.txt');
     expect((staged.match(/^@@ /gm) || []).length).toBe(2);
@@ -607,8 +580,8 @@ describe('applyPatch (hunk-level staging)', () => {
     await git.applyPatch(buildHunkPatch(staged, 0), { cached: true, reverse: true });
 
     staged = await git.getStagedDiff('multi.txt');
-    expect(staged).not.toContain('LINE2'); // first hunk peeled back
-    expect(staged).toContain('LINE18'); // second hunk stays staged
+    expect(staged).not.toContain('LINE2');
+    expect(staged).toContain('LINE18');
   });
 
   it('rejects a patch that does not apply and cleans up its temp file', async () => {

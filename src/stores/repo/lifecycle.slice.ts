@@ -31,10 +31,6 @@ type LifecycleSlice = Pick<
 // there is a single store instance.
 let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
 
-/**
- * Offer to sign in when a repository that needs it opens, unless it is ssh,
- * already signed in or covered by git. The answer also feeds the footer.
- */
 async function promptSignInIfNeeded(
   root: string,
   remoteHost: string | null,
@@ -52,8 +48,8 @@ async function promptSignInIfNeeded(
   }
 
   const account = useAccountStore.getState();
-  account.refreshCurrent(remoteHost);
-  await account.refreshAuthSource(remoteHost, remoteProtocol);
+  account.refreshCurrent(root);
+  await account.refreshAuthSource(remoteHost, remoteProtocol, root);
 
   if (account.dismissedRepos.has(root)) return;
   if (account.phase) return;
@@ -89,19 +85,17 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     }
   },
 
-  // The dialog that asked shows the new state, sign-in button included; a
-  // browser opening on its own would be one surprise too many.
   switchRemoteProtocol: async to => {
     const { url, host, protocol } = await gitApi.switchRemoteProtocol(to);
     set(s => ({ epoch: s.epoch + 1, remoteUrl: url, remoteHost: host, remoteProtocol: protocol }));
     const account = useAccountStore.getState();
-    account.refreshCurrent(host);
-    await account.refreshAuthSource(host, protocol);
+    const repoPath = get().repoPath;
+    account.refreshCurrent(repoPath);
+    await account.refreshAuthSource(host, protocol, repoPath);
   },
 
   openRepo: async path => {
     const opened = await gitApi.openRepo(path);
-    // Another repository is something else to look at: Settings/About step aside.
     useUiStore.getState().closeOverlays();
     const root = opened?.root || path;
     set(s => ({
@@ -147,12 +141,9 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   },
 
   removeRecentRepo: path => {
-    // Leaving the app takes the repository's logs and terminals with it.
     void gitApi.forgetRepo(path).catch(() => {});
     set(s => ({
       recentRepos: s.recentRepos.filter(r => r && r !== path),
-      // Dropping the repo that is currently open leaves nothing to show, so
-      // close it too — Shell falls back to the welcome screen on a null path.
       ...(s.repoPath === path
         ? {
             repoPath: null,

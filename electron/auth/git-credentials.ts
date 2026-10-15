@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
-import type { ProviderAccount } from '../../src/types';
+import os from 'os';
+import type { CredentialHelperEntry, ProviderAccount } from '../../src/types';
 import { providerById } from './providers/registry';
 
 /**
@@ -18,7 +19,8 @@ export function allowedHelpers(platform: string = process.platform): string[] {
 
 function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = execFile('git', args, { env: env ?? process.env }, (err, stdout) => {
+    const options = { env: env ?? process.env, cwd: os.homedir() };
+    const child = execFile('git', args, options, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout);
     });
@@ -29,12 +31,18 @@ function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<s
 }
 
 /**
- * Make sure git has a credential helper; without one `git credential approve`
- * silently stores nothing. Returns the helper, or null if none is trusted.
+ * Make sure git has a credential helper for this host; without one `git
+ * credential approve` silently stores nothing. Any scope counts, the system
+ * one included, and so does a helper scoped to the host's URL: the global
+ * config is written only when git would otherwise have nowhere to keep a
+ * token. Returns the helper, or null if none is trusted.
  */
-export async function ensureCredentialHelper(): Promise<string | null> {
-  const existing = await run(['config', '--global', '--get', 'credential.helper'])
-    .then(out => out.trim())
+export async function ensureCredentialHelper(host?: string): Promise<string | null> {
+  const lookup = host
+    ? ['config', '--get-urlmatch', 'credential.helper', `https://${host}`]
+    : ['config', '--get', 'credential.helper'];
+  const existing = await run(lookup)
+    .then(out => out.trim().split('\n').pop()?.trim() ?? '')
     .catch(() => '');
   if (existing) return existing;
 
@@ -46,10 +54,6 @@ export async function ensureCredentialHelper(): Promise<string | null> {
   return helper;
 }
 
-/**
- * The username git should send with the token. Azure DevOps ignores it and
- * reads the token from the password field; everyone else wants the login.
- */
 export function gitUsernameFor(account: ProviderAccount): string {
   const provider = providerById(account.providerId);
   return provider?.gitUsername?.(account) ?? account.login;
@@ -70,16 +74,18 @@ export async function approveCredentials(
   username: string,
   token: string,
 ): Promise<void> {
-  await ensureCredentialHelper();
+  await ensureCredentialHelper(host);
   await run(['credential', 'approve'], describe(host, username, token));
 }
 
-/**
- * What the credential helper holds for a host, without prompting: an
- * unanswered lookup fails fast instead of asking a terminal or an askpass.
- */
 async function lookupStored(host: string): Promise<{ username: string; password: string } | null> {
-  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  // GCM_INTERACTIVE: Git Credential Manager would otherwise open its own
+  // sign-in window for what is meant to be a silent question.
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: '0',
+    GCM_INTERACTIVE: 'never',
+  };
   delete env.GIT_ASKPASS;
   delete env.SSH_ASKPASS;
   const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
@@ -90,18 +96,35 @@ async function lookupStored(host: string): Promise<{ username: string; password:
   return { username: /^username=(.*)$/m.exec(out)?.[1] ?? '', password };
 }
 
-/**
- * Whether git can already authenticate to a host on its own, so a sign-in is
- * not offered needlessly.
- */
+export async function storedUsername(host: string): Promise<string | null> {
+  return (await lookupStored(host))?.username ?? null;
+}
+
 export async function hasStoredCredential(host: string): Promise<boolean> {
   return (await lookupStored(host)) !== null;
 }
 
+const usernameKey = (host: string) => `credential.https://${host}.username`;
+
 /**
- * Erase whatever the system credential store holds for a host — typically a
- * stale password that keeps git failing while the app thinks it is covered.
+ * Tie a repository to a login: its own `.git/config` names the username, so
+ * git there (the app, or a terminal in that folder) asks the credential store
+ * for this user's token and no other. Outside the folder nothing changes.
  */
+export async function bindRepoUsername(
+  repoPath: string,
+  host: string,
+  username: string,
+): Promise<void> {
+  await run(['-C', repoPath, 'config', '--local', usernameKey(host), username]);
+}
+
+export async function unbindRepoUsername(repoPath: string, host: string): Promise<void> {
+  await run(['-C', repoPath, 'config', '--local', '--unset-all', usernameKey(host)]).catch(
+    () => {},
+  );
+}
+
 export async function forgetStoredCredential(host: string): Promise<boolean> {
   const stored = await lookupStored(host);
   if (!stored) return false;
@@ -109,7 +132,48 @@ export async function forgetStoredCredential(host: string): Promise<boolean> {
   return true;
 }
 
-/** Forget a stored credential. Best effort: a helper may have nothing to erase. */
 export async function rejectCredentials(host: string, username: string): Promise<void> {
   await run(['credential', 'reject'], describe(host, username)).catch(() => {});
+}
+
+export function helperCli(helper: string): CredentialHelperEntry['cli'] {
+  if (/\bgh(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'gh';
+  if (/\bglab(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'glab';
+  if (/(^|[\\/\s])(git-credential-)?manager(-core)?(\.exe)?$/.test(helper.trim())) return 'gcm';
+  return null;
+}
+
+const HELPER_KEY = /^credential\.(?:(.+)\.)?helper$/i;
+
+export async function listCredentialHelpers(): Promise<CredentialHelperEntry[]> {
+  const out = await run([
+    'config',
+    '--show-scope',
+    '--get-regexp',
+    '^credential\\..*helper$',
+  ]).catch(() => '');
+  const entries: CredentialHelperEntry[] = [];
+  for (const line of out.split('\n')) {
+    const match = /^(\w+)\t(\S+)\s?(.*)$/.exec(line);
+    if (!match) continue;
+    const [, rawScope, key, value] = match;
+    // Apple's git reports its bundled defaults as "unknown"; they act as system.
+    const scope = rawScope === 'global' ? 'global' : rawScope === 'local' ? 'local' : 'system';
+    const url = HELPER_KEY.exec(key)?.[1] ?? null;
+    const helper = value.trim();
+    // An empty value resets the list before it, rather than naming a helper.
+    if (!helper) {
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].url === url) entries.splice(i, 1);
+      }
+      continue;
+    }
+    entries.push({
+      url,
+      helper,
+      scope,
+      cli: helperCli(helper),
+    });
+  }
+  return entries;
 }

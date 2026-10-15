@@ -47,13 +47,9 @@ export function Footer() {
       <div className="shrink-0">
         <SidebarToggle />
       </div>
-      {/* Centred on the window rather than on the leftover space, so the
-          readout does not drift as the side blocks change width. */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs max-w-[45%]">
         <span className="text-blue shrink-0">●</span>
         <span className="text-subtext font-mono shrink-0">{hash}</span>
-        {/* One door to everything about how this repository authenticates. A
-            null source is still loading: better late than flashing a label. */}
         {remoteHost && (account || authSource) && (
           <>
             <span className="text-surface2 shrink-0">|</span>

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-/** Copies text and reports "copied" for a moment, for the button's icon or label. */
 export function useCopy(ms = 1500) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

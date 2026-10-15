@@ -19,7 +19,6 @@ function showPanel(tab: RightPanelTab) {
   }
 }
 
-/** The footer's right side: toggles for the tools docked on the right. */
 export function PanelButtons() {
   const { t } = useTranslation('logs');
   const { t: tt } = useTranslation('terminal');
@@ -30,7 +29,6 @@ export function PanelButtons() {
   useShortcut({ key: 'j', mod: 'cmd-or-ctrl' }, () => showPanel('logs'));
   useShortcut({ code: 'Backquote', mod: 'ctrl' }, () => showPanel('terminal'));
 
-  // Hidden under Settings/About, the panel is not "on" as far as the buttons go.
   const logsOpen = !overlayOpen && rightPanel === 'logs';
   const terminalOpen = !overlayOpen && rightPanel === 'terminal';
   const logsLabel = unread

@@ -55,7 +55,6 @@ export function TerminalPane({ id, visible, exitCode, onRestart }: TerminalPaneP
     const search = new SearchAddon();
     term.loadAddon(fit);
     term.loadAddon(search);
-    // A link in program output can point anywhere; ask before leaving the app.
     term.loadAddon(
       new WebLinksAddon((_event, uri) => {
         void useUiStore
@@ -132,7 +131,6 @@ export function TerminalPane({ id, visible, exitCode, onRestart }: TerminalPaneP
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
-    // Fresh sessions start at 80×24; tell the shell the real size at once.
     void terminalApi.resize(id, term.cols, term.rows).catch(() => {});
 
     const themeObserver = new MutationObserver(() => {

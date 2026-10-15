@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { getLocalStorage } from '../lib/storage';
 import type { ThemePreference } from '../types';
 
-/** 0 disables the fallback poll; the file watcher keeps working regardless. */
 export const AUTO_REFRESH_OPTIONS = [0, 10_000, 30_000, 60_000] as const;
 export type AutoRefreshMs = (typeof AUTO_REFRESH_OPTIONS)[number];
 
@@ -13,7 +12,6 @@ export type DiffFontSize = (typeof DIFF_FONT_SIZES)[number];
 export const TERMINAL_FONT_SIZES = [12, 13, 14] as const;
 export type TerminalFontSize = (typeof TERMINAL_FONT_SIZES)[number];
 
-/** Order drives the Settings dropdown; 'en' is the default (see i18n/config.ts). */
 export const LANGUAGES = ['uk', 'nl', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
@@ -24,17 +22,11 @@ interface SettingsState {
   autoRefreshMs: AutoRefreshMs;
   autoCheckUpdates: boolean;
   includePrereleases: boolean;
-  /**
-   * A version the user chose not to hear about again. Cleared by asking for a
-   * check explicitly, which is what that button means.
-   */
   skippedVersion: string | null;
-  /** A shell id from the main process's list; null picks the system default. */
   terminalShell: string | null;
   terminalFontSize: TerminalFontSize;
   diffFontSize: DiffFontSize;
   diffWrapLines: boolean;
-  /** Hides indentation-only changes; line staging is off meanwhile (see useFileDiff). */
   diffIgnoreWhitespace: boolean;
   setTheme: (theme: ThemePreference) => void;
   setAutoRefreshMs: (ms: AutoRefreshMs) => void;

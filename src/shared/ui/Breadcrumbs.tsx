@@ -3,7 +3,6 @@ import { cn } from './cn';
 
 export interface Crumb {
   label: string;
-  /** Omitted on the last crumb: it is the page you are already on. */
   onClick?: () => void;
 }
 

@@ -38,7 +38,6 @@ if (unpacked.length === 0) {
   process.exit(1);
 }
 
-/** The app's own executable: loading through it is what the real main process does. */
 function executableFor(unpackedDir) {
   const resources = path.dirname(unpackedDir);
   const candidates =

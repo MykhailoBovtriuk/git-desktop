@@ -57,6 +57,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'account:auth-source',
   'account:sign-in',
   'account:sign-in-token',
+  'account:probe-server',
+  'account:credential-helpers',
   'account:open-token-help',
   'account:cancel-sign-in',
   'account:sign-out',
@@ -86,7 +88,6 @@ const ALLOWED_CHANNELS = new Set<string>([
   'window:set-titlebar-overlay',
 ]);
 
-/** A push from main as a renderer subscription; the returned function unsubscribes. */
 function subscribe<Args extends unknown[]>(channel: string) {
   return (cb: (...args: Args) => void) => {
     const listener = (_e: IpcRendererEvent, ...args: unknown[]) => cb(...(args as Args));
@@ -105,14 +106,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke(channel, ...args);
   },
   onGitChanged: subscribe<[]>('repo:changed'),
-  // Sign-in finishes in the main process, minutes after the renderer asked for
-  // it and via a browser round trip — so the answer has to be pushed, not polled.
   onAccountChanged: subscribe<[]>('account:changed'),
-  // Payload pushes: asking back for the byte count on every frame of a 140 MB
-  // download, or for each log line, would be a round trip per repaint.
   onUpdateProgress: subscribe<[UpdateProgress]>('app:update-progress'),
   onLogEntry: subscribe<[LogEntry]>('log:entry'),
-  // Terminal output is the hottest push there is; it arrives batched per frame.
   onTerminalData: subscribe<[id: string, data: string]>('term:data'),
   onTerminalExit: subscribe<[id: string, exitCode: number]>('term:exit'),
   platform: process.platform,

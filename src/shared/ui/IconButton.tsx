@@ -6,16 +6,10 @@ type Tint = 'green' | 'red' | 'yellow' | 'blue' | 'subtext';
 type Size = 'sm' | 'md';
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  /** Pick one from shared/ui/icons — not straight from react-icons. */
   icon: IconType;
   tint?: Tint;
   size?: Size;
-  /** Spins the icon only, so the button surface keeps its hover/press feedback. */
   spinning?: boolean;
-  /**
-   * Makes it a toggle: blue and aria-pressed while on. Leave it out for a
-   * plain button, which then carries no pressed state at all.
-   */
   active?: boolean;
 }
 
@@ -27,7 +21,6 @@ const TINT: Record<Tint, string> = {
   subtext: 'text-subtext hover:text-text',
 };
 
-// md for chrome (titlebar, footer), sm for the dense file and stash rows.
 const PAD: Record<Size, string> = { sm: 'p-0.5', md: 'p-1' };
 const ICON_PX: Record<Size, number> = { sm: 14, md: 16 };
 

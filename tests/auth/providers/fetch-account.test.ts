@@ -1,10 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { providerById } from '../../../electron/auth/providers/registry';
 
-/**
- * The only place provider API shapes are translated, so an upstream rename
- * would surface here as a blank name or email.
- */
 function stubJson(routes: Record<string, unknown>) {
   vi.stubGlobal(
     'fetch',
@@ -44,8 +40,6 @@ describe('github', () => {
     });
   });
 
-  // GitHub hides emails by default. A blank address here would make git reject
-  // the very first commit, so the documented noreply form stands in.
   it('falls back to the noreply address when the email is hidden', async () => {
     stubJson({
       '/user/emails': [],
@@ -63,8 +57,6 @@ describe('github', () => {
 });
 
 describe('gitlab', () => {
-  // commit_email is the address GitLab attributes commits to; the account
-  // email is not always the same one.
   it('commits as the commit email, not the account email', async () => {
     stubJson({
       '/api/v4/user': {
@@ -138,16 +130,12 @@ describe('azure-devops', () => {
     expect(account).toMatchObject({ login: 'jane@contoso.com', email: 'jane@contoso.com' });
   });
 
-  // offline_access is what makes a refresh token appear; without it the hour-
-  // long access token expires with no way back short of a fresh sign-in.
   it('asks for offline access so the token can be refreshed', () => {
     expect(providerById('azure-devops')!.scopes).toContain('offline_access');
   });
 });
 
 describe('token', () => {
-  // The account comes from the form; there is no API to ask. Returning a
-  // hollow account instead would show a signed-in user with no name.
   it('refuses to invent an account', async () => {
     await expect(providerById('token')!.fetchAccount('git.acme.internal', 'tok')).rejects.toThrow();
   });

@@ -10,10 +10,8 @@ export interface TerminalHandlerOptions {
   getWindow?: () => BrowserWindow | null;
 }
 
-/** Paste of a large file is fine; a runaway renderer loop is not. */
 const MAX_WRITE = 1024 * 1024;
 
-/** The handle the rest of main needs: closing a repository's shells. */
 export interface TerminalControl {
   killRepo: (repoPath: string) => void;
   killAll: () => void;

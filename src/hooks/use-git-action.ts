@@ -8,7 +8,6 @@ import { classifyGitError } from '../lib/git-error-mapper';
 import { errorMessage } from '../lib/error-message';
 
 interface GitActionOptions<T> {
-  /** Error toast title; also the success one unless `successTitle` is given. */
   title: string;
   successTitle?: string;
   success?: string | ((result: T) => string);
@@ -19,6 +18,7 @@ export function useGitAction() {
   const addToast = useUiStore(s => s.addToast);
   const openSignIn = useAccountStore(s => s.openSignIn);
   const signInHost = useRepoStore(selectSignInHost);
+  const repoPath = useRepoStore(s => s.repoPath);
   const currentBranch = useRepoStore(s => s.currentBranch);
   const publishBranch = useRepoStore(s => s.publishBranch);
   const openRightPanel = useUiStore(s => s.openRightPanel);
@@ -37,13 +37,15 @@ export function useGitAction() {
       if (err instanceof CheckoutConflictError || err instanceof MergeConflictError) return false;
       const raw = errorMessage(err);
       const { kind, action } = classifyGitError(err);
+      if (action === 'signIn' && signInHost && repoPath && !useAccountStore.getState().phase) {
+        void openSignIn(signInHost, repoPath);
+      }
       const friendly = t(`error.${kind}`);
       const publishLabel = t('sync:publishBranch');
       addToast({
         variant: 'error',
         title: opts.title,
         message: friendly || raw,
-        // The friendly line hides git's own words; the log has them in full.
         details: {
           label: t('logs:showInLogs'),
           onClick: () => {
@@ -62,8 +64,8 @@ export function useGitAction() {
                     success: t('sync:success', { op: publishLabel }),
                   }),
               }
-            : action === 'signIn' && signInHost
-              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost) }
+            : action === 'signIn' && signInHost && repoPath
+              ? { label: t('signIn'), onClick: () => void openSignIn(signInHost, repoPath) }
               : undefined,
       });
       return false;

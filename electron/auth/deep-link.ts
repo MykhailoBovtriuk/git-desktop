@@ -3,11 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { PROTOCOL_SCHEME } from './oauth-config';
 
-/**
- * Getting the browser's redirect back into this process; each platform delivers
- * the URL differently and at a different time.
- */
-
 const PREFIX = `${PROTOCOL_SCHEME}://`;
 
 /**
@@ -26,16 +21,11 @@ export function registerProtocol(): void {
   }
 }
 
-/**
- * Whether this macOS bundle declares the scheme in Info.plist. Read as text,
- * not parsed: both plist forms store it verbatim.
- */
 export function bundleDeclaresScheme(execPath: string): boolean {
   try {
     const plist = path.resolve(path.dirname(execPath), '..', 'Info.plist');
     return fs.readFileSync(plist, 'latin1').includes(PROTOCOL_SCHEME);
   } catch {
-    // No bundle around this executable, which is an answer rather than a fault.
     return false;
   }
 }
@@ -44,10 +34,6 @@ export function findDeepLink(argv: string[]): string | null {
   return argv.find(arg => arg.startsWith(PREFIX)) ?? null;
 }
 
-/**
- * Start listening. Returns false when another instance holds the lock: this
- * process has forwarded its arguments and must quit.
- */
 export function initDeepLinks(onUrl: (url: string) => void): boolean {
   if (!app.requestSingleInstanceLock()) return false;
 

@@ -9,19 +9,17 @@ import type {
   SignInPhase,
 } from '../types';
 import { errorMessage } from '../lib/error-message';
+import { parseServerAddress, type ServerAddressError } from '../lib/server-address';
 
-/**
- * Signed-in accounts and the sign-in flow. Not persisted: the main process owns
- * accounts and tokens.
- */
 interface SignInTarget {
   host: string;
-  /** Null until the user picks one, for a host no provider claims. */
   providerId: ProviderId | null;
   options: ProviderOption[];
-  /** The repository this sign-in was started from, if any. */
-  repoPath: string | null;
+  repoPath: string;
+  existing: ProviderAccount | null;
 }
+
+export type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
 
 interface AccountState {
   accounts: ProviderAccount[];
@@ -30,164 +28,266 @@ interface AccountState {
   phase: SignInPhase | null;
   target: SignInTarget | null;
   error: string | null;
+  endpointError: EndpointError | null;
   busy: boolean;
-  /**
-   * Repositories whose sign-in prompt was dismissed; in memory only, since "not
-   * now" lasts one session.
-   */
   dismissedRepos: Set<string>;
 
-  /** The account for the open repository's host, as far as the renderer knows. */
   current: ProviderAccount | null;
-  /**
-   * What authenticates the open repository's remote; null until known. Cached:
-   * the lookup reaches into the OS keychain.
-   */
   authSource: AuthSource | null;
 
   loadAccounts: () => Promise<void>;
-  accountFor: (host: string | null) => ProviderAccount | null;
-  /** Point `current` at whoever is signed in to this host. */
-  refreshCurrent: (host: string | null) => void;
-  /** Re-ask the main process what authenticates this remote. */
-  refreshAuthSource: (host: string | null, protocol: RemoteProtocol | null) => Promise<void>;
-  openSignIn: (host: string, repoPath?: string | null) => Promise<void>;
-  chooseProvider: (providerId: ProviderId) => void;
-  setHost: (host: string) => void;
+  accountFor: (repoPath: string | null) => ProviderAccount | null;
+  refreshCurrent: (repoPath: string | null) => void;
+  refreshAuthSource: (
+    host: string | null,
+    protocol: RemoteProtocol | null,
+    repoPath: string | null,
+  ) => Promise<void>;
+  openSignIn: (host: string, repoPath: string) => Promise<void>;
+  beginSignIn: (providerId: ProviderId, repoPath: string) => Promise<void>;
+  submitEndpoint: (address: string) => Promise<void>;
+  chooseProvider: (providerId: ProviderId) => Promise<void>;
+  confirmReplace: () => void;
+  switchMethod: (method: 'browser' | 'token') => void;
   continueWithBrowser: (clientId?: string, clientSecret?: string) => Promise<void>;
   submitToken: (login: string, token: string) => Promise<void>;
   cancelSignIn: () => Promise<void>;
   dismissForRepo: (repoPath: string) => void;
-  signOut: (accountId: string) => Promise<void>;
-  /** Erase a credential stored outside the app, e.g. a stale Keychain password. */
+  signOut: (repoPath: string) => Promise<void>;
   forgetSystemCredential: (host: string) => Promise<void>;
 }
 
-export const useAccountStore = create<AccountState>()((set, get) => ({
-  accounts: [],
-  current: null,
-  authSource: null,
-  persistent: true,
-  loaded: false,
-  phase: null,
-  target: null,
-  error: null,
-  busy: false,
-  dismissedRepos: new Set(),
+const HOSTED_INSTEAD: Partial<Record<ProviderId, { host: string; provider: ProviderId }>> = {
+  'github-enterprise': { host: 'github.com', provider: 'github' },
+  'gitlab-self': { host: 'gitlab.com', provider: 'gitlab' },
+  'bitbucket-server': { host: 'bitbucket.org', provider: 'bitbucket' },
+  'azure-devops-server': { host: 'dev.azure.com', provider: 'azure-devops' },
+};
 
-  loadAccounts: async () => {
-    const snapshot = await accountApi.list();
-    set(s => ({
-      accounts: snapshot.accounts,
-      persistent: snapshot.persistent,
-      loaded: true,
-      // A failure reported here came from the browser round trip, which had no
-      // IPC call left to throw from. Surface it without clobbering a newer one.
-      error: snapshot.error ?? s.error,
-      // Arriving accounts mean the flow finished: nothing left to wait for.
-      ...(snapshot.error === null && s.phase === 'waiting' && hasHost(snapshot, s.target)
-        ? { phase: null, target: null }
-        : {}),
-      ...(snapshot.error ? { phase: 'error' as const } : {}),
-    }));
-  },
+function firstMethod(option: ProviderOption | undefined): SignInPhase {
+  return option?.configured ? 'browser' : 'token';
+}
 
-  accountFor: host => (host ? (get().accounts.find(a => a.host === host) ?? null) : null),
+export const useAccountStore = create<AccountState>()((set, get) => {
+  const proceed = async (providerId: ProviderId, host: string, repoPath: string) => {
+    const info = await accountApi.providersFor(host);
+    const existing = get().accounts.find(a => a.repoPath === repoPath) ?? null;
+    const option = info.options.find(o => o.id === providerId);
+    set({
+      target: { host, providerId, options: info.options, repoPath, existing },
+      phase: existing ? 'existing' : firstMethod(option),
+      endpointError: null,
+    });
+  };
 
-  refreshAuthSource: async (host, protocol) => {
-    if (!host) {
-      set({ authSource: null });
-      return;
-    }
-    const authSource = await accountApi.authSource(host, protocol).catch(() => null);
-    set({ authSource });
-  },
-
-  refreshCurrent: host =>
-    set(s => ({ current: host ? (s.accounts.find(a => a.host === host) ?? null) : null })),
-
-  openSignIn: async (host, repoPath = null) => {
+  const guarded = async (fn: () => Promise<void>) => {
     set({ busy: true, error: null });
     try {
-      const info = await accountApi.providersFor(host);
-      // A recognised host skips the picker, but only if this build can actually
-      // sign in to it.
-      const offered = info.options.some(o => o.id === info.providerId);
-      const onlyToken = info.options.length === 1 && info.options[0]?.id === 'token';
-      set({
-        target: {
-          host,
-          providerId: offered ? info.providerId : onlyToken ? 'token' : null,
-          options: info.options,
-          repoPath,
-        },
-        phase: offered ? 'browser' : onlyToken ? 'token' : 'choose',
-      });
+      await fn();
     } catch (err: unknown) {
       set({ phase: 'error', error: errorMessage(err) });
     } finally {
       set({ busy: false });
     }
-  },
+  };
 
-  chooseProvider: providerId =>
-    set(s => ({
-      target: s.target ? { ...s.target, providerId } : null,
-      phase: providerId === 'token' ? 'token' : 'browser',
-    })),
+  const checkServer = async (providerId: ProviderId, host: string): Promise<boolean> => {
+    if (providerId === 'token') return true;
+    const answer = await accountApi.probeServer(providerId, host);
+    if (answer === 'ok') return true;
+    set({ endpointError: answer });
+    return false;
+  };
 
-  setHost: host => set(s => ({ target: s.target ? { ...s.target, host } : null })),
+  return {
+    accounts: [],
+    current: null,
+    authSource: null,
+    persistent: true,
+    loaded: false,
+    phase: null,
+    target: null,
+    error: null,
+    endpointError: null,
+    busy: false,
+    dismissedRepos: new Set(),
 
-  continueWithBrowser: async (clientId, clientSecret) => {
-    const target = get().target;
-    if (!target?.providerId) return;
-    set({ busy: true, error: null });
-    try {
-      await accountApi.signIn(target.providerId, target.host, clientId, clientSecret);
-      // The browser now owns the next step; the answer arrives over
-      // 'account:changed', which is why this is a state and not an await.
-      set({ phase: 'waiting' });
-    } catch (err: unknown) {
-      set({ phase: 'error', error: errorMessage(err) });
-    } finally {
-      set({ busy: false });
-    }
-  },
+    loadAccounts: async () => {
+      const snapshot = await accountApi.list();
+      set(s => ({
+        accounts: snapshot.accounts,
+        persistent: snapshot.persistent,
+        loaded: true,
+        // A failure reported here came from the browser round trip, which had no
+        // IPC call left to throw from. Surface it without clobbering a newer one.
+        error: snapshot.error ?? s.error,
+        ...(snapshot.error === null && s.phase === 'waiting' && signedIn(snapshot, s)
+          ? { phase: null, target: null }
+          : {}),
+        ...(snapshot.error ? { phase: 'error' as const } : {}),
+      }));
+    },
 
-  submitToken: async (login, token) => {
-    const target = get().target;
-    if (!target) return;
-    set({ busy: true, error: null });
-    try {
-      await accountApi.signInWithToken(target.host, login, token, target.repoPath);
-      set({ phase: null, target: null });
+    accountFor: repoPath =>
+      repoPath ? (get().accounts.find(a => a.repoPath === repoPath) ?? null) : null,
+
+    refreshAuthSource: async (host, protocol, repoPath) => {
+      if (!host) {
+        set({ authSource: null });
+        return;
+      }
+      const authSource = await accountApi.authSource(host, protocol, repoPath).catch(() => null);
+      set({ authSource });
+    },
+
+    refreshCurrent: repoPath =>
+      set(s => ({
+        current: repoPath ? (s.accounts.find(a => a.repoPath === repoPath) ?? null) : null,
+      })),
+
+    openSignIn: (host, repoPath) =>
+      guarded(async () => {
+        const info = await accountApi.providersFor(host);
+        if (info.providerId) {
+          await proceed(info.providerId, host, repoPath);
+          return;
+        }
+        set({
+          target: {
+            host,
+            providerId: null,
+            options: info.options,
+            repoPath,
+            existing: get().accounts.find(a => a.repoPath === repoPath) ?? null,
+          },
+          phase: 'choose',
+          endpointError: null,
+        });
+      }),
+
+    beginSignIn: (providerId, repoPath) =>
+      guarded(async () => {
+        const info = await accountApi.providersFor(null);
+        const option = info.options.find(o => o.id === providerId);
+        if (!option) throw new Error(`Unknown provider: ${providerId}`);
+        if (!option.needsHost && option.defaultHost) {
+          await proceed(providerId, option.defaultHost, repoPath);
+          return;
+        }
+        set({
+          target: {
+            host: option.defaultHost ?? '',
+            providerId,
+            options: info.options,
+            repoPath,
+            existing: get().accounts.find(a => a.repoPath === repoPath) ?? null,
+          },
+          phase: 'endpoint',
+          endpointError: null,
+        });
+      }),
+
+    submitEndpoint: address =>
+      guarded(async () => {
+        const target = get().target;
+        if (!target?.providerId) return;
+        const parsed = parseServerAddress(address);
+        if (parsed.error) {
+          set({ endpointError: parsed.error });
+          return;
+        }
+        const hosted = HOSTED_INSTEAD[target.providerId];
+        if (hosted && parsed.host === hosted.host) {
+          await proceed(hosted.provider, hosted.host, target.repoPath);
+          return;
+        }
+        set({ target: { ...target, host: parsed.host }, endpointError: null });
+        if (!(await checkServer(target.providerId, parsed.host))) return;
+        await proceed(target.providerId, parsed.host, target.repoPath);
+      }),
+
+    chooseProvider: providerId =>
+      guarded(async () => {
+        const target = get().target;
+        if (!target) return;
+        set({ target: { ...target, providerId }, endpointError: null });
+        if (!(await checkServer(providerId, target.host))) return;
+        await proceed(providerId, target.host, target.repoPath);
+      }),
+
+    confirmReplace: () =>
+      set(s => {
+        const option = s.target?.options.find(o => o.id === s.target?.providerId);
+        return { phase: firstMethod(option) };
+      }),
+
+    switchMethod: method => set({ phase: method, error: null }),
+
+    continueWithBrowser: (clientId, clientSecret) =>
+      guarded(async () => {
+        const target = get().target;
+        if (!target?.providerId) return;
+        await accountApi.signIn(
+          target.providerId,
+          target.host,
+          target.repoPath,
+          clientId,
+          clientSecret,
+        );
+        // The browser now owns the next step; the answer arrives over
+        // 'account:changed', which is why this is a state and not an await.
+        set({ phase: 'waiting' });
+      }),
+
+    submitToken: async (login, token) => {
+      const target = get().target;
+      if (!target) return;
+      set({ busy: true, error: null });
+      try {
+        await accountApi.signInWithToken(
+          target.providerId ?? 'token',
+          target.host,
+          login,
+          token,
+          target.repoPath,
+        );
+        set({ phase: null, target: null });
+        await get().loadAccounts();
+      } catch (err: unknown) {
+        set({ error: errorMessage(err) });
+      } finally {
+        set({ busy: false });
+      }
+    },
+
+    cancelSignIn: async () => {
+      set({ phase: null, target: null, error: null, endpointError: null });
+      await accountApi.cancelSignIn().catch(() => {});
+    },
+
+    dismissForRepo: repoPath =>
+      set(s => ({ dismissedRepos: new Set(s.dismissedRepos).add(repoPath) })),
+
+    signOut: async repoPath => {
+      await accountApi.signOut(repoPath);
+      set(s => ({ current: s.current?.repoPath === repoPath ? null : s.current }));
       await get().loadAccounts();
-    } catch (err: unknown) {
-      set({ phase: 'error', error: errorMessage(err) });
-    } finally {
-      set({ busy: false });
-    }
-  },
+    },
 
-  cancelSignIn: async () => {
-    set({ phase: null, target: null, error: null });
-    await accountApi.cancelSignIn().catch(() => {});
-  },
+    forgetSystemCredential: async host => {
+      await accountApi.forgetSystemCredential(host);
+    },
+  };
+});
 
-  dismissForRepo: repoPath =>
-    set(s => ({ dismissedRepos: new Set(s.dismissedRepos).add(repoPath) })),
-
-  signOut: async accountId => {
-    await accountApi.signOut(accountId);
-    set(s => ({ current: s.current?.id === accountId ? null : s.current }));
-    await get().loadAccounts();
-  },
-
-  forgetSystemCredential: async host => {
-    await accountApi.forgetSystemCredential(host);
-  },
-}));
-
-function hasHost(snapshot: { accounts: ProviderAccount[] }, target: SignInTarget | null): boolean {
-  return !!target && snapshot.accounts.some(a => a.host === target.host);
+function signedIn(
+  snapshot: { accounts: ProviderAccount[] },
+  s: Pick<AccountState, 'target'>,
+): boolean {
+  const target = s.target;
+  if (!target) return false;
+  const now = snapshot.accounts.find(a => a.repoPath === target.repoPath);
+  // Re-signing a host changes nothing a list compares, except the moment it
+  // arrives: any change event while waiting on a replaced account means done.
+  return !!now;
 }

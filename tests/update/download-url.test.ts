@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isAllowedDownloadUrl } from '../../electron/update/assets';
 
-// This allowlist is all that stops a spoofed API response from pointing the
-// download elsewhere.
 describe('isAllowedDownloadUrl', () => {
   it('allows the download URLs releases of this project actually have', () => {
     for (const url of [

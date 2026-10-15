@@ -3,7 +3,6 @@ import { GitService } from '../git-service';
 import { assertString, assertStringArray, optionalBoolean } from '../ipc-validators';
 import { wrap, wrapLogged } from './wrap';
 
-/** One path by name, several by count: the full list is in the git command itself. */
 function pathsDetail(paths: unknown): string | undefined {
   if (!Array.isArray(paths) || paths.length === 0) return undefined;
   return paths.length === 1 ? String(paths[0]) : `${paths.length} files`;

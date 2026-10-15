@@ -1,7 +1,3 @@
-/**
- * The repository root plus a git path, joined with the platform's separator:
- * git always uses "/".
- */
 export function absolutePathIn(repoRoot: string | null | undefined, relative: string): string {
   if (!repoRoot) return relative;
 

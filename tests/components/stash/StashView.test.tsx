@@ -63,8 +63,6 @@ describe('StashView', () => {
   });
 });
 
-// Regression: the selection was a bare index, so after a drop it pointed at a
-// different stash.
 describe('StashView selection stability', () => {
   const stash = (msg: string, date: string) => ({ index: 0, message: msg, branch: 'main', date });
 
@@ -80,10 +78,10 @@ describe('StashView selection stability', () => {
     const a = stash('wip A', '2024-01-01');
     const b = stash('wip B', '2024-01-02');
     const c = stash('wip C', '2024-01-03');
-    const { repoState, uiState } = setup([a, b, c], 2); // C selected
+    const { repoState, uiState } = setup([a, b, c], 2);
 
     const { rerender } = render(<StashView />);
-    repoState.stashes = [b, c]; // A dropped elsewhere — C is now index 1
+    repoState.stashes = [b, c];
     rerender(<StashView />);
 
     expect(uiState.setSelectedStash).toHaveBeenCalledWith(1);
@@ -93,7 +91,7 @@ describe('StashView selection stability', () => {
     const { repoState, uiState } = setup([stash('wip A', '2024-01-01')], 0);
 
     const { rerender } = render(<StashView />);
-    repoState.stashes = [stash('wip D', '2024-02-02')]; // same length, different stash
+    repoState.stashes = [stash('wip D', '2024-02-02')];
     rerender(<StashView />);
 
     expect(uiState.setSelectedStash).toHaveBeenCalledWith(null);

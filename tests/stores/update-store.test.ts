@@ -98,7 +98,6 @@ describe('check', () => {
     expect(useUpdateStore.getState().phase).toBe('idle');
   });
 
-  // Nobody asked; the network being down is not news worth a red banner.
   it('swallows a failed startup check', async () => {
     vi.mocked(updateApi.check).mockRejectedValue(new Error('offline'));
 
@@ -153,8 +152,6 @@ describe('download', () => {
     expect(useUpdateStore.getState().error).toBeNull();
   });
 
-  // Reinstalling the running version: `latest` is that same release, so a
-  // cancel must not turn "up to date" into an offer to update to itself.
   it('returns to up to date when a reinstall is cancelled', async () => {
     useUpdateStore.setState({
       result: result({ status: 'up-to-date', currentVersion: '1.2.0', current: info('1.2.0') }),

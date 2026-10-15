@@ -28,8 +28,6 @@ export function WorkingTreeFiles() {
     })),
   );
 
-  // The Clipboard API can still refuse (unfocused window, denied permission);
-  // say why instead of failing silently.
   const copyPath = (path: string) => {
     void navigator.clipboard
       ?.writeText(absolutePathIn(repoPath, path))

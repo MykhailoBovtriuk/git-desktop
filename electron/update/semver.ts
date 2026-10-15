@@ -1,22 +1,15 @@
-/** Just enough semver to rank release tags, instead of a dependency. */
 export interface SemVer {
   major: number;
   minor: number;
   patch: number;
-  /** Dot-separated identifiers after the `-`; numeric ones arrive as numbers. */
   prerelease: (string | number)[];
 }
 
 const PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9a-z.-]+))?$/i;
 
-/**
- * `null` for anything that is not a version, so tags like `nightly` are
- * skipped.
- */
 export function parseSemver(raw: string): SemVer | null {
   if (typeof raw !== 'string') return null;
 
-  // Tags are written `v1.1.0`; build metadata never affects precedence.
   const cleaned = raw.trim().replace(/^v/i, '').split('+')[0];
   const match = PATTERN.exec(cleaned);
   if (!match) return null;
@@ -32,7 +25,6 @@ export function parseSemver(raw: string): SemVer | null {
   };
 }
 
-/** Negative when `a` precedes `b`, positive when it follows, 0 when equal. */
 export function compareSemver(a: SemVer, b: SemVer): number {
   if (a.major !== b.major) return a.major - b.major;
   if (a.minor !== b.minor) return a.minor - b.minor;
@@ -58,14 +50,9 @@ export function compareSemver(a: SemVer, b: SemVer): number {
     return String(left) < String(right) ? -1 : 1;
   }
 
-  // Equal so far: the one carrying more identifiers is the later of the two.
   return a.prerelease.length - b.prerelease.length;
 }
 
-/**
- * Whether `candidate` is worth offering to someone running `current`;
- * unparseable input never is.
- */
 export function isNewerVersion(candidate: string, current: string): boolean {
   const next = parseSemver(candidate);
   const now = parseSemver(current);

@@ -42,8 +42,6 @@ export function CommitForm() {
   }, [merging]);
 
   const hasStaged = status.staged.length > 0;
-  // git refuses to commit without an author, so warn before the user types.
-  // Unknown (not loaded yet) never blocks.
   const hasIdentity = identityKnown !== false;
   const canCommit = message.trim().length > 0 && (hasStaged || merging) && !loading && hasIdentity;
 
@@ -78,8 +76,6 @@ export function CommitForm() {
           placeholder={t('commitMessage')}
           rows={3}
         />
-        {/* Length is informational only — git imposes no limit, and neither do
-            we, so this never turns into a warning. */}
         <span className="absolute bottom-2 right-2 text-xs text-subtext">{message.length}</span>
       </div>
       {!hasIdentity && (

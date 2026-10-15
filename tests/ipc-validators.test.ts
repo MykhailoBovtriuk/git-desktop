@@ -100,27 +100,23 @@ describe('assertStashIndex', () => {
 });
 
 describe('assertCommitHash', () => {
-  it.each([
-    '4b825dc642cb6eb9a060e54bf8d69288fbee4904', // full SHA-1
-    'a'.repeat(64), // SHA-256
-    '4b82', // shortest abbreviation
-    'DEADBEEF', // uppercase hex
-  ])('accepts valid hash %j', hash => {
-    expect(() => assertCommitHash(hash, 'hash')).not.toThrow();
-  });
+  it.each(['4b825dc642cb6eb9a060e54bf8d69288fbee4904', 'a'.repeat(64), '4b82', 'DEADBEEF'])(
+    'accepts valid hash %j',
+    hash => {
+      expect(() => assertCommitHash(hash, 'hash')).not.toThrow();
+    },
+  );
 
-  // Regression: a hash starting with '-' reaches raw git as a flag, e.g.
-  // getCommitDiff('--output=/path') writes diff output to an arbitrary file.
   it.each([
-    '--output=/tmp/pwned', // flag injection
-    '-4b82', // leading dash
-    'HEAD', // not hex — refs must not pass here
-    'main', // branch name
-    '4b8', // too short (< 4)
-    'a'.repeat(65), // too long (> 64)
-    '4b825dc6 42cb', // whitespace
-    '4b825dc6\n42cb', // newline
-    '', // empty
+    '--output=/tmp/pwned',
+    '-4b82',
+    'HEAD',
+    'main',
+    '4b8',
+    'a'.repeat(65),
+    '4b825dc6 42cb',
+    '4b825dc6\n42cb',
+    '',
   ])('rejects invalid hash %j', hash => {
     expect(() => assertCommitHash(hash, 'hash')).toThrow();
   });
@@ -131,8 +127,6 @@ describe('assertCommitHash', () => {
 });
 
 describe('assertBranchName', () => {
-  // Regression: the old /[ -]/ check wrongly rejected hyphenated names,
-  // which are among the most common branch names in real repos.
   it.each([
     'main',
     'feature-branch',
@@ -148,25 +142,24 @@ describe('assertBranchName', () => {
     expect(() => assertBranchName(name, 'branch')).not.toThrow();
   });
 
-  // Regression: the old check let control chars / git metacharacters through.
   it.each([
-    '-foo', // leading dash → parsed as a git flag
-    '--force', // leading dash
-    'has space', // space
-    'line\nbreak', // newline (control char)
-    'tab\there', // tab (control char)
-    'tilde~1', // ~ forbidden in refs
-    'caret^2', // ^ forbidden
-    'colon:here', // : forbidden
-    'question?', // ? forbidden
-    'star*', // * forbidden
-    'bracket[x', // [ forbidden
-    'back\\slash', // \ forbidden
-    'dot..dot', // .. forbidden sequence
-    'at@{seq', // @{ forbidden sequence
-    'ends.lock', // .lock suffix forbidden
-    'trailing/', // trailing slash forbidden
-    'trailing.', // trailing dot forbidden
+    '-foo',
+    '--force',
+    'has space',
+    'line\nbreak',
+    'tab\there',
+    'tilde~1',
+    'caret^2',
+    'colon:here',
+    'question?',
+    'star*',
+    'bracket[x',
+    'back\\slash',
+    'dot..dot',
+    'at@{seq',
+    'ends.lock',
+    'trailing/',
+    'trailing.',
   ])('rejects invalid branch name %j', name => {
     expect(() => assertBranchName(name, 'branch')).toThrow();
   });

@@ -24,7 +24,6 @@ export interface CategoryDef {
   Component: ComponentType;
 }
 
-/** Menu order and page content in one place; labels are `settings:categories.<id>`. */
 export const CATEGORIES: CategoryDef[] = [
   { id: 'general', icon: GeneralIcon, Component: GeneralSection },
   { id: 'accounts', icon: UserIcon, Component: AccountsSection },

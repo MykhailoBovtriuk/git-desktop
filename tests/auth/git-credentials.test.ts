@@ -7,9 +7,9 @@ interface Call {
 }
 
 const calls: Call[] = [];
-/** Per-invocation behaviour, keyed by the git subcommand under test. */
 let configValue = '';
 let fillOutput = '';
+let regexpOutput = '';
 let failNext = false;
 
 vi.mock('child_process', () => ({
@@ -30,7 +30,8 @@ vi.mock('child_process', () => ({
         return;
       }
       if (args.includes('fill')) cb(null, fillOutput);
-      else cb(null, args.includes('--get') ? configValue : '');
+      else if (args.includes('--get-regexp')) cb(null, regexpOutput);
+      else cb(null, args.includes('--get') || args.includes('--get-urlmatch') ? configValue : '');
     });
     return { stdin: { end: (data: string) => (call.stdin = data) } };
   },
@@ -41,8 +42,6 @@ const credentials = await import('../../electron/auth/git-credentials');
 const find = (needle: string) => calls.find(c => c.args.join(' ').includes(needle));
 
 describe('allowedHelpers', () => {
-  // A credential helper is a command git executes, so the app writes only
-  // values it named itself — never something that reached it from outside.
   it('offers the platform helper and nothing on an unknown platform', () => {
     expect(credentials.allowedHelpers('darwin')).toEqual(['osxkeychain']);
     expect(credentials.allowedHelpers('win32')).toEqual(['manager', 'manager-core']);
@@ -51,8 +50,6 @@ describe('allowedHelpers', () => {
   });
 
   it('keeps a helper with arguments as one value', () => {
-    // Split into two argv entries, "--timeout=3600" would become a flag for
-    // `git config` itself rather than part of the helper command.
     expect(credentials.allowedHelpers('linux')[1]).toBe('cache --timeout=3600');
   });
 });
@@ -70,8 +67,6 @@ describe('ensureCredentialHelper', () => {
     expect(find('config --global credential.helper my-own-helper')).toBeUndefined();
   });
 
-  // Without a helper, `git credential approve` succeeds and stores nothing —
-  // a silent no-op that leaves every push failing after a successful sign-in.
   it('configures one when git has none', async () => {
     const helper = await credentials.ensureCredentialHelper();
     expect(helper).toBe(credentials.allowedHelpers()[0] ?? null);
@@ -88,7 +83,6 @@ describe('approveCredentials', () => {
     failNext = false;
   });
 
-  // An argument list is readable by every process on the machine via `ps`.
   it('passes the token over stdin, never on the command line', async () => {
     await credentials.approveCredentials('github.com', 'octocat', 's3cret-token');
 
@@ -106,7 +100,6 @@ describe('approveCredentials', () => {
     expect(reject.stdin).toBe('protocol=https\nhost=github.com\nusername=octocat\n\n');
   });
 
-  // A helper may have nothing to erase; that is the desired end state anyway.
   it('survives a failing reject', async () => {
     failNext = true;
     await expect(credentials.rejectCredentials('github.com', 'octocat')).resolves.toBeUndefined();
@@ -115,7 +108,8 @@ describe('approveCredentials', () => {
 
 describe('gitUsernameFor', () => {
   const base = {
-    id: 'x|octocat',
+    id: '/src/p',
+    repoPath: '/src/p',
     host: 'x',
     displayName: 'X',
     login: 'octocat',
@@ -128,8 +122,6 @@ describe('gitUsernameFor', () => {
     expect(credentials.gitUsernameFor({ ...base, providerId: 'github' })).toBe('octocat');
   });
 
-  // dev.azure.com ignores the username and reads the token from the password
-  // field; a fixed value keeps the stored credential stable across renames.
   it('sends a fixed username for Azure DevOps', () => {
     expect(credentials.gitUsernameFor({ ...base, providerId: 'azure-devops' })).toBe('oauth2');
   });
@@ -148,7 +140,6 @@ describe('hasStoredCredential', () => {
     expect(find('credential fill')?.stdin).toBe('protocol=https\nhost=github.com\n\n');
   });
 
-  // An empty password from an askpass stub is not a credential.
   it('is false when the answer carries no password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=\n';
     await expect(credentials.hasStoredCredential('github.com')).resolves.toBe(false);
@@ -175,8 +166,6 @@ describe('forgetStoredCredential', () => {
     failNext = false;
   });
 
-  // A helper erases the entry that matches what it is told, so it is told
-  // exactly what it answered with.
   it('erases the credential git would have used', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=ghp_x\n';
     await expect(credentials.forgetStoredCredential('github.com')).resolves.toBe(true);
@@ -196,5 +185,110 @@ describe('forgetStoredCredential', () => {
     const env = find('credential fill')?.env ?? {};
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
     expect(env.GIT_ASKPASS).toBeUndefined();
+  });
+});
+
+describe('listCredentialHelpers', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    regexpOutput = '';
+  });
+
+  it('reads every helper with its scope and URL', async () => {
+    regexpOutput = [
+      'unknown\tcredential.helper osxkeychain',
+      'global\tcredential.https://github.com.helper ',
+      'global\tcredential.https://github.com.helper !/opt/homebrew/bin/gh auth git-credential',
+      'global\tcredential.https://gitlab.com.helper !glab auth git-credential',
+      'system\tcredential.helper manager',
+    ].join('\n');
+
+    expect(await credentials.listCredentialHelpers()).toEqual([
+      { url: null, helper: 'osxkeychain', scope: 'system', cli: null },
+      {
+        url: 'https://github.com',
+        helper: '!/opt/homebrew/bin/gh auth git-credential',
+        scope: 'global',
+        cli: 'gh',
+      },
+      {
+        url: 'https://gitlab.com',
+        helper: '!glab auth git-credential',
+        scope: 'global',
+        cli: 'glab',
+      },
+      { url: null, helper: 'manager', scope: 'system', cli: 'gcm' },
+    ]);
+  });
+
+  it('drops helpers an empty value resets', async () => {
+    regexpOutput = [
+      'global\tcredential.https://github.com.helper store',
+      'global\tcredential.https://github.com.helper ',
+      'global\tcredential.https://github.com.helper !gh auth git-credential',
+    ].join('\n');
+    const list = await credentials.listCredentialHelpers();
+    expect(list.map(e => e.helper)).toEqual(['!gh auth git-credential']);
+  });
+
+  it('answers with nothing when git has none, or fails', async () => {
+    expect(await credentials.listCredentialHelpers()).toEqual([]);
+    failNext = true;
+    expect(await credentials.listCredentialHelpers()).toEqual([]);
+  });
+});
+
+describe('the silent credential lookup', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    fillOutput = '';
+  });
+
+  it('keeps Git Credential Manager from asking', async () => {
+    await credentials.hasStoredCredential('github.com');
+    expect(find('credential fill')?.env.GCM_INTERACTIVE).toBe('never');
+  });
+});
+
+describe('ensureCredentialHelper for a host', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    configValue = '';
+  });
+
+  it('asks git for the helper that applies to that host', async () => {
+    configValue = '!gh auth git-credential\n';
+    expect(await credentials.ensureCredentialHelper('github.com')).toBe('!gh auth git-credential');
+    expect(find('--get-urlmatch credential.helper https://github.com')).toBeDefined();
+    expect(find('config --global credential.helper')).toBeUndefined();
+  });
+});
+
+describe('binding a repository to a login', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    failNext = false;
+  });
+
+  it("writes the username into the repository's own config", async () => {
+    await credentials.bindRepoUsername('/src/p', 'github.com', 'octocat');
+    expect(
+      find('-C /src/p config --local credential.https://github.com.username octocat'),
+    ).toBeDefined();
+  });
+
+  it('removes it again, quietly when the folder is gone', async () => {
+    failNext = true;
+    await expect(credentials.unbindRepoUsername('/gone', 'github.com')).resolves.toBeUndefined();
+    expect(
+      find('-C /gone config --local --unset-all credential.https://github.com.username'),
+    ).toBeDefined();
+  });
+
+  it('reports which username git would use for a host', async () => {
+    fillOutput = 'protocol=https\nhost=github.com\nusername=octocat\npassword=tok\n';
+    expect(await credentials.storedUsername('github.com')).toBe('octocat');
+    fillOutput = '';
+    expect(await credentials.storedUsername('github.com')).toBeNull();
   });
 });

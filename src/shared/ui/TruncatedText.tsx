@@ -8,13 +8,10 @@ export interface TruncatedTextProps {
   children: string;
   as?: 'span' | 'p' | 'div';
   className?: string;
-  /** Full text when the shown one is a short form of it (a basename, say). */
   tooltip?: string;
-  /** Show `tooltip` even without an ellipsis, as long as it differs from the shown text. */
   alwaysTooltip?: boolean;
 }
 
-/** Single-line text with an ellipsis; hovering shows the full text only when it was cut. */
 export function TruncatedText({
   children,
   as: Tag = 'span',

@@ -14,8 +14,6 @@ describe('hostFromRemoteUrl', () => {
     expect(hostFromRemoteUrl('https://github.com/user/repo.git')).toBe('github.com');
   });
 
-  // scp syntax is not a URL: `new URL()` parses it as scheme "git" with an
-  // empty host, which is how an SSH remote used to silently lose its host.
   it('reads the host out of an scp-style SSH remote', () => {
     expect(hostFromRemoteUrl('git@gitlab.example.com:group/repo.git')).toBe('gitlab.example.com');
   });
@@ -26,7 +24,6 @@ describe('hostFromRemoteUrl', () => {
     );
   });
 
-  // Azure puts the organisation in the userinfo, which must not become the host.
   it('ignores the userinfo in an Azure DevOps remote', () => {
     expect(hostFromRemoteUrl('https://myorg@dev.azure.com/myorg/proj/_git/repo')).toBe(
       'dev.azure.com',
@@ -56,11 +53,7 @@ describe('resolveRemoteHost', () => {
     expect(await resolveRemoteHost('git@gitlab.com:g/r.git')).toBe('gitlab.com');
   });
 
-  // Regression: SSH aliases from ~/.ssh/config were discarded for lacking a
-  // dot.
   it('resolves an ssh config nickname to the host behind it', async () => {
-    // `ssh -G` on an unknown name echoes it back, which is the safe fallback;
-    // a name that really is configured resolves to its hostname.
     const alias = await resolveRemoteHost('git@definitely-not-configured-alias:o/r.git');
     expect(alias).toBeNull();
   });
@@ -68,7 +61,6 @@ describe('resolveRemoteHost', () => {
   it('treats a local path as no host at all', async () => {
     expect(await resolveRemoteHost('/srv/git/repo.git')).toBeNull();
     expect(await resolveRemoteHost('../sibling-repo')).toBeNull();
-    // A Windows drive letter is not an scp host named "c".
     expect(await resolveRemoteHost('C:\\Users\\me\\repo.git')).toBeNull();
     expect(await resolveRemoteHost('C:/Users/me/repo.git')).toBeNull();
     expect(await resolveRemoteHost(null)).toBeNull();
@@ -87,7 +79,6 @@ describe('protocolFromRemoteUrl', () => {
     expect(protocolFromRemoteUrl('http://git.example.com/owner/repo.git')).toBe('https');
   });
 
-  // Nothing a stored token applies to, so the sign-in offer must stay away.
   it('calls anything else neither', () => {
     expect(protocolFromRemoteUrl('git://github.com/owner/repo.git')).toBe('other');
     expect(protocolFromRemoteUrl('file:///srv/repo.git')).toBe('other');
@@ -114,7 +105,6 @@ describe('httpsUrlFromSshRemote', () => {
     );
   });
 
-  // Nothing to convert, or a path an https server would not recognise.
   it('refuses what is not an ssh remote', () => {
     expect(httpsUrlFromSshRemote('https://github.com/o/r.git', 'github.com')).toBeNull();
     expect(httpsUrlFromSshRemote('/srv/repo.git', 'github.com')).toBeNull();

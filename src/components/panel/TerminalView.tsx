@@ -55,8 +55,6 @@ export function TerminalView({ visible }: { visible: boolean }) {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLDivElement>(null);
-  // The first visit to a repository's terminal opens a shell; closing the last
-  // tab afterwards leaves it closed.
   const autoOpened = useRef(new Set<string>());
 
   const open = async (shellId: string | null) => {

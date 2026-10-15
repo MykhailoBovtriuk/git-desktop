@@ -14,13 +14,8 @@ export const terminalApi = {
   resize: (id: string, cols: number, rows: number) => invoke<null>('term:resize', id, cols, rows),
   kill: (id: string) => invoke<null>('term:kill', id),
   list: (repoPath: string) => invoke<TerminalSession[]>('term:list', repoPath),
-  /** Everything the session printed so far (trimmed), to replay into a fresh view. */
   buffer: (id: string) => invoke<string>('term:buffer', id),
   openLink: (url: string) => invoke<null>('term:open-link', url),
-  /**
-   * One session's output. A single IPC listener fans out by id: one per pane
-   * would make every chunk walk every pane.
-   */
   onSessionData: (id: string, listener: DataListener): (() => void) => {
     dataUnsubscribe ??= window.electronAPI.onTerminalData((sessionId, data) =>
       dataListeners.get(sessionId)?.forEach(fn => fn(data)),

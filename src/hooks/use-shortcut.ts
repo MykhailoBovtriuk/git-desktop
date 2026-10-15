@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { fromTerminal, isMac } from '../lib/keyboard';
 
 interface Shortcut {
-  /** Matched case-insensitively against `KeyboardEvent.key`. */
   key?: string;
   /** Matched against `KeyboardEvent.code`, for keys whose `key` varies by layout (Backquote). */
   code?: string;
@@ -14,7 +13,6 @@ interface Shortcut {
   mod: 'cmd-or-ctrl' | 'ctrl';
 }
 
-/** An app-wide keyboard shortcut without Shift or Alt. */
 export function useShortcut(shortcut: Shortcut, handler: () => void) {
   const handlerRef = useRef(handler);
   useEffect(() => {

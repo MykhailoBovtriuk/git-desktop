@@ -34,8 +34,11 @@ vi.mock('../../electron/auth/oauth-flow', () => ({
 
 const store = await import('../../electron/auth/token-store');
 
-const account = (host: string, login = 'me') => ({
-  id: host,
+const repo = (host: string) => `/src/${host}`;
+
+const account = (host: string, login = 'me', repoPath = repo(host)) => ({
+  id: repoPath,
+  repoPath,
   providerId: 'github' as const,
   host,
   displayName: 'GitHub',
@@ -48,7 +51,7 @@ const account = (host: string, login = 'me') => ({
 type Credential = Parameters<typeof store.saveCredential>[0];
 
 const credential = (host: string, over: Partial<Credential> = {}): Credential => ({
-  id: host,
+  repoPath: repo(host),
   host,
   account: account(host),
   accessToken: 'tok',
@@ -76,10 +79,9 @@ describe('token store', () => {
     await store.saveCredential(credential('github.com'));
     store.resetStoreCache();
     expect(await store.listAccounts()).toEqual([account('github.com')]);
-    expect(await store.getFreshToken('github.com')).toBe('tok');
+    expect(await store.getFreshToken(repo('github.com'))).toBe('tok');
   });
 
-  // Signing in to a work GitLab must not sign you out of github.com.
   it('keeps several hosts side by side', async () => {
     await store.saveCredential(credential('github.com'));
     await store.saveCredential(credential('gitlab.example.com'));
@@ -88,33 +90,28 @@ describe('token store', () => {
     const hosts = (await store.listAccounts()).map(a => a.host).sort();
     expect(hosts).toEqual(['github.com', 'gitlab.example.com']);
 
-    await store.clearCredential('github.com');
+    await store.clearCredential(repo('github.com'));
     store.resetStoreCache();
     expect((await store.listAccounts()).map(a => a.host)).toEqual(['gitlab.example.com']);
   });
 
-  // A plaintext token in a JSON file under the user's home is worse than
-  // asking them to sign in again, so nothing is written at all.
   it('writes no file when the OS offers no encryption', async () => {
     encryption.available = false;
     await store.saveCredential(credential('github.com'));
 
     await expect(fs.readFile(path.join(userData.dir, 'accounts.json'))).rejects.toThrow();
     expect(store.isPersistent()).toBe(false);
-    // Still usable for this session — just not across restarts.
-    expect(await store.getFreshToken('github.com')).toBe('tok');
+    expect(await store.getFreshToken(repo('github.com'))).toBe('tok');
   });
 
   it('does not touch a token that is still comfortably valid', async () => {
     await store.saveCredential(
       credential('gitlab.com', { expiresAt: Date.now() + 60 * 60 * 1000, refreshToken: 'r' }),
     );
-    expect(await store.getFreshToken('gitlab.com')).toBe('tok');
+    expect(await store.getFreshToken(repo('gitlab.com'))).toBe('tok');
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  // Bitbucket and GitLab tokens last two hours. Without this the session
-  // starts working and quietly stops mid-afternoon.
   it('refreshes a token that is about to expire and re-arms git', async () => {
     refresh.mockResolvedValue({
       accessToken: 'fresh',
@@ -125,27 +122,24 @@ describe('token store', () => {
       credential('gitlab.com', { expiresAt: Date.now() + 60_000, refreshToken: 'r' }),
     );
 
-    expect(await store.getFreshToken('gitlab.com')).toBe('fresh');
+    expect(await store.getFreshToken(repo('gitlab.com'))).toBe('fresh');
     expect(approve).toHaveBeenCalledWith('gitlab.com', 'me', 'fresh');
 
     store.resetStoreCache();
-    expect(await store.getFreshToken('gitlab.com')).toBe('fresh');
+    expect(await store.getFreshToken(repo('gitlab.com'))).toBe('fresh');
   });
 
-  // Some providers rotate refresh tokens and some do not; dropping the old one
-  // when none arrives would strand the account on its next refresh.
   it('keeps the previous refresh token when the provider sends none', async () => {
     refresh.mockResolvedValue({ accessToken: 'fresh', refreshToken: null, expiresAt: null });
     await store.saveCredential(
       credential('gitlab.com', { expiresAt: Date.now() + 60_000, refreshToken: 'keep-me' }),
     );
-    await store.getFreshToken('gitlab.com');
+    await store.getFreshToken(repo('gitlab.com'));
 
     refresh.mockClear();
     refresh.mockResolvedValue({ accessToken: 'fresher', refreshToken: null, expiresAt: null });
     store.resetStoreCache();
-    // expiresAt is now null, so nothing should be refreshed a second time.
-    expect(await store.getFreshToken('gitlab.com')).toBe('fresh');
+    expect(await store.getFreshToken(repo('gitlab.com'))).toBe('fresh');
     expect(refresh).not.toHaveBeenCalled();
   });
 
@@ -153,103 +147,81 @@ describe('token store', () => {
     await store.saveCredential(
       credential('bitbucket.org', { expiresAt: Date.now() - 1000, refreshToken: null }),
     );
-    expect(await store.getFreshToken('bitbucket.org')).toBeNull();
-    // The entry stays, so the UI can still name the account it is asking about.
-    expect(await store.accountForHost('bitbucket.org')).not.toBeNull();
+    expect(await store.getFreshToken(repo('bitbucket.org'))).toBeNull();
+    expect(await store.accountForRepo(repo('bitbucket.org'))).not.toBeNull();
   });
 
-  // `git credential` addresses by host, so signing in again on the same host
-  // replaces the account.
-  it('holds one account per host, the newest one', async () => {
+  it('keeps one account per repository, even on the same host', async () => {
     await store.saveCredential({
       ...credential('github.com'),
-      account: account('github.com', 'personal'),
+      repoPath: '/src/personal',
+      account: account('github.com', 'personal', '/src/personal'),
       accessToken: 'tok-personal',
     });
     await store.saveCredential({
       ...credential('github.com'),
-      account: account('github.com', 'work'),
+      repoPath: '/src/work',
+      account: account('github.com', 'work', '/src/work'),
       accessToken: 'tok-work',
     });
     store.resetStoreCache();
 
-    expect(await store.listAccounts()).toHaveLength(1);
-    expect((await store.accountForHost('github.com'))?.login).toBe('work');
-    expect(await store.getFreshToken('github.com')).toBe('tok-work');
+    expect(await store.listAccounts()).toHaveLength(2);
+    expect((await store.accountForRepo('/src/personal'))?.login).toBe('personal');
+    expect(await store.getFreshToken('/src/work')).toBe('tok-work');
+    expect((await store.credentialsOnHost('github.com')).map(c => c.repoPath).sort()).toEqual([
+      '/src/personal',
+      '/src/work',
+    ]);
+  });
+
+  it('signs in again over the same repository, replacing its account', async () => {
+    await store.saveCredential(credential('github.com', { accessToken: 'old' }));
+    await store.saveCredential({
+      ...credential('gitlab.com'),
+      repoPath: repo('github.com'),
+      account: account('gitlab.com', 'me', repo('github.com')),
+      accessToken: 'new',
+    });
+    expect((await store.accountForRepo(repo('github.com')))?.host).toBe('gitlab.com');
+    expect(await store.getFreshToken(repo('github.com'))).toBe('new');
   });
 
   it('reports no account for a host nobody signed in to', async () => {
-    expect(await store.accountForHost('nowhere.example')).toBeNull();
+    expect(await store.accountForRepo(repo('nowhere.example'))).toBeNull();
   });
 
-  // Upgrading must not sign the user out: the previous build wrote a bare
-  // array keyed by host, with no id on the entries.
-  it('reads the host-keyed file an older build wrote', async () => {
-    const legacy = [
-      {
-        host: 'github.com',
-        account: {
-          providerId: 'github',
-          host: 'github.com',
-          displayName: 'GitHub',
-          login: 'octocat',
-          name: 'Octo',
-          email: 'o@x',
-          avatarDataUrl: null,
-        },
-        accessTokenEnc: Buffer.from('enc:legacy-token').toString('base64'),
-        refreshTokenEnc: null,
-        expiresAt: null,
-        clientId: 'cid',
-        clientSecret: null,
-      },
-    ];
-    await fs.writeFile(path.join(userData.dir, 'accounts.json'), JSON.stringify(legacy));
-    store.resetStoreCache();
-
-    const accounts = await store.listAccounts();
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].id).toBe('github.com');
-    expect(await store.getFreshToken('github.com')).toBe('legacy-token');
-  });
-
-  // `host|login` ids and repository bindings collapse to one account per host.
-  it('collapses the host|login file a later build wrote', async () => {
-    const entry = (login: string, token: string) => ({
-      id: `github.com|${login}`,
+  it('drops the host-keyed entries older builds wrote', async () => {
+    const legacy = {
       host: 'github.com',
       account: {
         providerId: 'github',
         host: 'github.com',
         displayName: 'GitHub',
-        login,
-        name: login,
-        email: `${login}@x`,
+        login: 'octocat',
+        name: 'Octo',
+        email: 'o@x',
         avatarDataUrl: null,
       },
-      accessTokenEnc: Buffer.from(`enc:${token}`).toString('base64'),
+      accessTokenEnc: Buffer.from('enc:legacy-token').toString('base64'),
       refreshTokenEnc: null,
       expiresAt: null,
       clientId: 'cid',
       clientSecret: null,
-    });
+    };
+    await fs.writeFile(path.join(userData.dir, 'accounts.json'), JSON.stringify([legacy]));
+    store.resetStoreCache();
+    expect(await store.listAccounts()).toEqual([]);
+
     await fs.writeFile(
       path.join(userData.dir, 'accounts.json'),
-      JSON.stringify({
-        accounts: [entry('personal', 'tok-personal'), entry('work', 'tok-work')],
-        bindings: { '/src/project': 'github.com|work' },
-      }),
+      JSON.stringify({ accounts: [{ ...legacy, id: 'github.com|octocat' }] }),
     );
     store.resetStoreCache();
-
-    const accounts = await store.listAccounts();
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].id).toBe('github.com');
-    expect(accounts[0].login).toBe('personal');
-    expect(await store.getFreshToken('github.com')).toBe('tok-personal');
+    expect(await store.listAccounts()).toEqual([]);
   });
 
   it('reports no token for a host nobody signed in to', async () => {
-    expect(await store.getFreshToken('nowhere.example')).toBeNull();
+    expect(await store.getFreshToken(repo('nowhere.example'))).toBeNull();
   });
 });

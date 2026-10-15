@@ -1,11 +1,8 @@
 // Logs end up pasted into chats and issue trackers, so anything that can carry
 // a credential is masked before an entry leaves the git process handler.
 const PATTERNS: [RegExp, string][] = [
-  // https://user:token@host and https://token@host
   [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, '$1***@'],
-  // `-c http.extraheader=Authorization: Bearer …` and plain header echoes
   [/(authorization:\s*(?:basic|bearer|token)?\s*)\S+/gi, '$1***'],
-  // Provider token shapes: GitHub, GitLab, Bitbucket app passwords, generic JWTs
   [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, '***'],
   [/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, '***'],
   [/\bglpat-[A-Za-z0-9_-]{20,}\b/g, '***'],

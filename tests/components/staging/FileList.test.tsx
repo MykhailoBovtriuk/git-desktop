@@ -44,8 +44,6 @@ describe('FileList copy path', () => {
     expect(onCopyPath).toHaveBeenCalledWith('src/deep/other.ts');
   });
 
-  // The whole icon group rests on stopPropagation; copying a path is not a
-  // reason to change which file the diff pane is showing.
   it('does not change the selected file', () => {
     const { onSelect } = setup();
 
@@ -65,8 +63,6 @@ describe('FileList copy path', () => {
     expect(onCopyPath).toHaveBeenCalledWith('src/app.ts');
   });
 
-  // Copying moves nothing on screen, so the mark is the only sign the click
-  // landed at all.
   it('marks the row it copied, and only that row', () => {
     setup();
 
@@ -85,8 +81,6 @@ describe('FileList copy path', () => {
     expect(screen.getAllByTitle('copyPath')).toHaveLength(2);
   });
 
-  // The list is used elsewhere without a copy handler; it must not sprout a
-  // button that would do nothing.
   it('shows no copy button when no handler is given', () => {
     setup({ onCopyPath: undefined });
     expect(screen.queryByTitle('copyPath')).toBeNull();

@@ -3,10 +3,6 @@ import { useUiStore } from '../../stores/ui-store';
 import { IconButton, SettingsIcon, InfoIcon } from '../../shared/ui';
 import type { OverlayView } from '../../types';
 
-/**
- * The titlebar's way to Settings and About: shows which page is open and
- * closes it on a second click, like the panel toggles in the footer.
- */
 export function AppMenuButtons() {
   const { t } = useTranslation('common');
   const activeView = useUiStore(s => s.activeView);

@@ -47,8 +47,6 @@ describe('launchInstaller', () => {
     expect(openPath).not.toHaveBeenCalled();
   });
 
-  // NSIS cannot replace files this process holds open, so leaving is part of
-  // installing, not an afterthought.
   it('starts the Windows installer detached and then quits', async () => {
     const file = await fileNamed('Git-Desktop-Setup-x64-1.2.0.exe');
 
@@ -79,7 +77,6 @@ describe('launchInstaller', () => {
     expect(quit).not.toHaveBeenCalled();
   });
 
-  // Windows has no execute bits, so the mode check means nothing there.
   it.skipIf(process.platform === 'win32')(
     'makes an AppImage executable, shows it, and keeps running',
     async () => {
@@ -94,7 +91,6 @@ describe('launchInstaller', () => {
     },
   );
 
-  // A .deb needs root; pretending to install it would fail silently.
   it.skipIf(process.platform === 'win32')('only shows a deb', async () => {
     const file = await fileNamed('git-desktop-amd64-1.2.0.deb');
 

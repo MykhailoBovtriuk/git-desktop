@@ -7,7 +7,6 @@ interface Call {
 }
 
 const calls: Call[] = [];
-/** What the stand-in server does next: a status, or a transport failure. */
 let respond: () => Promise<Response> = () => Promise.resolve(new Response('', { status: 200 }));
 
 vi.stubGlobal('fetch', (url: string, init: { headers: Record<string, string> }) => {
@@ -34,8 +33,6 @@ describe('probeUrlFor', () => {
     );
   });
 
-  // Credentials already in the remote URL would be sent instead of the ones
-  // under test, and the answer would be about the wrong identity.
   it('drops credentials embedded in the remote', () => {
     expect(probeUrlFor('https://someone:secret@git.example.com/a/b.git')).toBe(
       'https://git.example.com/a/b.git/info/refs?service=git-upload-pack',
@@ -49,7 +46,6 @@ describe('verifyAgainstRemote', () => {
     await verifyAgainstRemote('https://git.example.com/a/b.git', 'alice', 'tok');
   });
 
-  // A public repository never challenges, so the header must be sent unasked.
   it('sends the credential unasked rather than waiting to be challenged', async () => {
     answers(200);
     await verifyAgainstRemote('https://git.example.com/a/b.git', 'alice', 'tok');
@@ -68,8 +64,6 @@ describe('verifyAgainstRemote', () => {
     }
   });
 
-  // GitHub answers 404 for a repository the credential may not see, so this is
-  // "the token is not enough" rather than "no such repository".
   it('reports a token that cannot reach the repository', async () => {
     answers(404);
     await expect(
@@ -77,8 +71,6 @@ describe('verifyAgainstRemote', () => {
     ).rejects.toThrow(/cannot reach that repository/i);
   });
 
-  // Saying "wrong token" here would send the user off to reissue a token that
-  // was never the problem.
   it('tells an unreachable server apart from a bad credential', async () => {
     respond = () => Promise.reject(new TypeError('fetch failed'));
     await expect(

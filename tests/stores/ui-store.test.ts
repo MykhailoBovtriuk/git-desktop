@@ -80,8 +80,6 @@ describe('ui-store', () => {
     expect(useUiStore.getState().selectedStash).toBeNull();
   });
 
-  // Promise-based confirm flow replacing window.confirm: a component awaits
-  // requestConfirm(), the ConfirmDialog host resolves it via resolveConfirm().
   describe('confirm flow', () => {
     it('requestConfirm exposes the request and resolves true on confirm', async () => {
       const promise = useUiStore.getState().requestConfirm({
@@ -132,7 +130,6 @@ describe('overlay views', () => {
     useUiStore.getState().openOverlayView('settings');
     expect(useUiStore.getState().activeView).toBe('settings');
 
-    // Closing goes back to the work view, never to the page shown before.
     useUiStore.getState().closeOverlays();
     expect(useUiStore.getState().activeView).toBe('graph');
   });

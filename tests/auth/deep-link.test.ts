@@ -55,8 +55,6 @@ describe('bundleDeclaresScheme', () => {
     expect(deepLink.bundleDeclaresScheme(exe)).toBe(true);
   });
 
-  // Binary plists store the scheme as plain text too, which is why this reads
-  // rather than parses.
   it('sees the scheme in a binary plist', () => {
     const exe = bundleWith(null);
     const plist = path.resolve(path.dirname(exe), '..', 'Info.plist');
@@ -113,22 +111,16 @@ describe('registerProtocol', () => {
 
   beforeEach(() => setAsDefault.mockClear());
 
-  // A plain `electron .` would point the scheme at `com.github.Electron`,
-  // stealing the callback from the installed app.
   it('claims nothing on macOS from a bundle that does not declare the scheme', () => {
     asPlatform('darwin', bundle(false), () => deepLink.registerProtocol());
     expect(setAsDefault).not.toHaveBeenCalled();
   });
 
-  // Both the packaged app and the development bundle declare it, and both are
-  // entitled to it.
   it('claims the scheme on macOS from a bundle that does declare it', () => {
     asPlatform('darwin', bundle(true), () => deepLink.registerProtocol());
     expect(setAsDefault).toHaveBeenCalledWith('git-desktop-auth');
   });
 
-  // Windows and Linux route by executable path, so a dev run can point the
-  // scheme at the project rather than at a bare electron with nothing to run.
   it('points the scheme at the project on Windows in development', () => {
     const previousDefaultApp = process.defaultApp;
     (process as { defaultApp?: boolean }).defaultApp = true;
@@ -165,8 +157,6 @@ describe('initDeepLinks', () => {
     vi.spyOn(process, 'argv', 'get').mockReturnValue(['electron', '.']);
   });
 
-  // Without the lock, a Windows redirect launches a second copy of the app and
-  // the first one waits forever for a callback that went elsewhere.
   it('reports the lock being held by another instance', () => {
     state.hasLock = false;
     expect(deepLink.initDeepLinks(vi.fn())).toBe(false);
@@ -181,8 +171,6 @@ describe('initDeepLinks', () => {
     expect(onUrl).toHaveBeenCalledWith('git-desktop-auth://oauth?code=abc');
   });
 
-  // A cold start triggered by the redirect itself fires open-url before the
-  // app is ready; dropping it there would lose the sign-in entirely.
   it('buffers a URL that arrives before the app is ready', async () => {
     const onUrl = vi.fn();
     deepLink.initDeepLinks(onUrl);
@@ -203,8 +191,6 @@ describe('initDeepLinks', () => {
     expect(onUrl).not.toHaveBeenCalled();
   });
 
-  // Windows and Linux relaunch the binary with the URL in argv; the running
-  // instance receives it through second-instance.
   it('delivers a URL that arrives in a second instance argv', async () => {
     const onUrl = vi.fn();
     deepLink.initDeepLinks(onUrl);

@@ -2,23 +2,17 @@ import { create } from 'zustand';
 import { logApi } from '../api/log-api';
 import type { LogEntry } from '../types';
 
-/** In memory at once; older pages come back from disk on request. */
 export const LOG_MEMORY_CAP = 1000;
 const PAGE = 200;
 
 interface LogState {
-  /** The repository the entries belong to; the panel shows no other. */
   repoPath: string | null;
-  /** Oldest first, the way a terminal scrolls. */
   entries: LogEntry[];
   hasMore: boolean;
   loadingMore: boolean;
-  /** Failures that arrived while the panel was closed. */
   unreadErrors: number;
-  /** The entry the panel should open and scroll to. */
   focusId: string | null;
   upsert: (entry: LogEntry, panelOpen: boolean) => void;
-  /** Switches to `repoPath`'s log: drops the previous one and loads the newest page. */
   load: (repoPath: string | null) => Promise<void>;
   loadOlder: () => Promise<void>;
   clear: () => Promise<void>;

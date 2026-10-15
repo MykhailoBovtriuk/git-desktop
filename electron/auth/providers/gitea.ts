@@ -1,4 +1,4 @@
-import { getJson, fetchAvatar } from '../http';
+import { getJson, fetchAvatar, probe } from '../http';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface GiteaUser {
@@ -8,13 +8,10 @@ interface GiteaUser {
   avatar_url: string | null;
 }
 
-/**
- * Gitea and its fork Forgejo share an API, so one definition covers both —
- * and Codeberg, which is a hosted Forgejo. PKCE is supported, so no secret.
- */
 export const gitea: ProviderDefinition = {
   id: 'gitea',
   displayName: 'Gitea / Forgejo',
+  group: 'other',
   knownHosts: ['codeberg.org'],
   usesPkce: true,
   scopes: ['read:user', 'write:repository'],
@@ -24,6 +21,12 @@ export const gitea: ProviderDefinition = {
     apiBase: `https://${host}/api/v1`,
   }),
   tokenHelpUrl: host => `https://${host}/user/settings/applications`,
+  probe: async host => {
+    const res = await probe(`https://${host}/api/v1/version`);
+    if (!res) return 'unreachable';
+    const body = res.body as { version?: unknown } | null;
+    return res.status === 200 && typeof body?.version === 'string' ? 'ok' : 'mismatch';
+  },
   fetchAccount: async (host, token) => {
     const user = await getJson<GiteaUser>(`https://${host}/api/v1/user`, token);
     return {

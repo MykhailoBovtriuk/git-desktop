@@ -12,7 +12,6 @@ const KEEP_DAYS: Record<Exclude<LogRetention, 'session'>, number> = {
   forever: Infinity,
 };
 export const DEFAULT_RETENTION: LogRetention = 'week';
-/** What a session keeps in memory: enough to scroll back, not a second copy of the disk. */
 const SESSION_CAP = 2000;
 const CONFIG_FILE = 'config.json';
 const META_FILE = 'meta.json';
@@ -24,7 +23,6 @@ function dayKey(ts: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** Local midnight that ends the day a file is named after. */
 function dayEnd(key: string): number {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d + 1).getTime();
@@ -56,11 +54,6 @@ export function repoFolderName(repoPath: string, platform = process.platform): s
   return `${name || 'repo'}-${hash}`;
 }
 
-/**
- * Finished entries, one folder per repository and one JSONL file per local day
- * inside it, so expiring them is deleting files and forgetting a repository is
- * deleting its folder. A null root keeps everything in memory.
- */
 export class LogStore {
   private retention: LogRetention = DEFAULT_RETENTION;
   private session: LogEntry[] = [];
@@ -96,12 +89,10 @@ export class LogStore {
     await this.prune();
   }
 
-  /** The folder for `repoPath`, or null when nothing goes to disk. */
   repoDir(repoPath: string): string | null {
     return this.root ? path.join(this.root, repoFolderName(repoPath)) : null;
   }
 
-  /** Called when a repository is opened: its folder exists from then on. */
   async ensureRepo(repoPath: string): Promise<void> {
     const dir = this.repoDir(repoPath);
     if (!dir) return;
@@ -109,7 +100,6 @@ export class LogStore {
     await fs.writeFile(path.join(dir, META_FILE), JSON.stringify({ path: repoPath }));
   }
 
-  /** Removing a repository from the app takes its log with it. */
   async forgetRepo(repoPath: string): Promise<void> {
     await this.writes;
     this.session = this.session.filter(e => e.repoPath !== repoPath);
@@ -117,7 +107,6 @@ export class LogStore {
     if (dir) await fs.rm(dir, { recursive: true, force: true });
   }
 
-  /** Only settled entries are kept; a running one is replaced by its outcome. */
   append(entry: LogEntry): Promise<void> {
     if (entry.status === 'running') return Promise.resolve();
     this.session.push(entry);
@@ -135,7 +124,6 @@ export class LogStore {
     return this.writes;
   }
 
-  /** A repository's entries, newest first, strictly older than `before`. */
   async list(repoPath: string, before = Infinity, limit = 200): Promise<LogEntry[]> {
     await this.writes;
     const dir = this.repoDir(repoPath);
@@ -177,7 +165,6 @@ export class LogStore {
     return { bytes, entries };
   }
 
-  /** Empties a repository's log but keeps its folder: the repository is still in the app. */
   async clear(repoPath: string): Promise<void> {
     await this.writes;
     this.session = this.session.filter(e => e.repoPath !== repoPath);
@@ -188,7 +175,6 @@ export class LogStore {
     }
   }
 
-  /** Deletes day files that ended before the retention window, in every repository's folder. */
   async prune(): Promise<void> {
     if (!this.root) return;
     await this.writes;
@@ -203,7 +189,6 @@ export class LogStore {
     }
   }
 
-  /** Oldest timestamp still kept on disk; 'session' keeps nothing there. */
   private cutoff(): number {
     if (this.retention === 'session') return Infinity;
     const days = KEEP_DAYS[this.retention];

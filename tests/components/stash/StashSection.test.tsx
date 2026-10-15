@@ -142,8 +142,6 @@ describe('StashSection', () => {
     );
   });
 
-  // Regression: section headers and bulk actions were hardcoded English
-  // ("Unstaged", "Stage All", "No changes") while ChangesSection used i18n.
   it('uses translated labels for section headers and bulk actions', () => {
     mockState(useRepoStore)({
       ...baseRepo,

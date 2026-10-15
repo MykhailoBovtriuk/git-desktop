@@ -1,11 +1,5 @@
-/**
- * The platform and keyboard rules the app's shortcuts share. Electron reports
- * the platform through preload; without it (tests, a plain browser) macOS is
- * assumed, which is where the app is mostly developed.
- */
 export const isMac = (): boolean => (window.electronAPI?.platform ?? 'darwin') === 'darwin';
 
-/** "⌘J" on macOS, "Ctrl+J" elsewhere: how a Cmd-or-Ctrl shortcut is written. */
 export const shortcutLabel = (key: string): string => (isMac() ? `⌘${key}` : `Ctrl+${key}`);
 
 /**

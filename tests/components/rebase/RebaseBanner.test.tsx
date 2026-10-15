@@ -45,7 +45,6 @@ describe('RebaseBanner', () => {
   it('shows the conflict count from unmerged status entries while rebasing', () => {
     render(<RebaseBanner />);
     expect(screen.getByText('rebaseConflict')).toBeInTheDocument();
-    // conflictingFilesCount is rendered (one 'U' file present).
     expect(screen.getByText('conflictingFilesCount')).toBeInTheDocument();
   });
 

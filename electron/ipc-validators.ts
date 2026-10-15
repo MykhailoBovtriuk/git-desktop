@@ -47,6 +47,8 @@ export function assertStashIndex(index: unknown): asserts index is number {
   assertNonNegativeInteger(index, 'index');
 }
 
+// A value starting with '-' reaches git as a flag: `--output=/path` would write
+// a diff to any file. Hex only, so no flag can get through.
 export function assertCommitHash(value: unknown, name: string): asserts value is string {
   assertString(value, name);
   if (!/^[0-9a-f]{4,64}$/i.test(value as string)) {
@@ -74,10 +76,6 @@ export function assertBranchName(value: unknown, name: string): asserts value is
   }
 }
 
-/**
- * A name and email headed for `git config`: one line each, as git stores them,
- * and an email that at least looks like one. Empty means unset.
- */
 export function assertIdentity(value: unknown): asserts value is { name: string; email: string } {
   if (!value || typeof value !== 'object') throw new Error('Invalid argument: identity');
   const { name, email } = value as Record<string, unknown>;
@@ -95,17 +93,12 @@ export function assertIdentity(value: unknown): asserts value is { name: string;
   }
 }
 
-/**
- * An optional flag: undefined is its default, anything but a boolean is a bug
- * in the renderer rather than a wish to honour. Returns the flag, false when absent.
- */
 export function optionalBoolean(value: unknown, name: string): boolean {
   if (value === undefined) return false;
   if (typeof value !== 'boolean') throw new Error(`Invalid argument: ${name} must be a boolean`);
   return value;
 }
 
-/** A terminal's columns or rows. */
 export function assertDimension(value: unknown, name: string): asserts value is number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 1000) {
     throw new Error(`Invalid argument: ${name} must be an integer between 1 and 1000`);

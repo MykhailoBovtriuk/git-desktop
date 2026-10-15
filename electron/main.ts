@@ -49,7 +49,6 @@ registerProtocol();
 
 const isPrimaryInstance = initDeepLinks(url => {
   void handleAuthCallback(url).then(() => {
-    // The user is looking at a browser tab right now; the result is in here.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -74,8 +73,6 @@ function createWindow() {
       ? { titleBarStyle: 'hiddenInset' }
       : {
           titleBarStyle: 'hidden',
-          // Startup colours only — the first render replaces them with the
-          // palette read from CSS variables (see src/hooks/use-theme.ts).
           titleBarOverlay: { color: '#181825', symbolColor: '#cdd6f4', height: 40 },
           autoHideMenuBar: true,
         };

@@ -47,9 +47,7 @@ const run = (overrides: Partial<Parameters<typeof downloadFile>[0]> = {}) =>
 
 describe('versionedFileName', () => {
   it('splices the version in before the extension', () => {
-    expect(versionedFileName('Git-Desktop-arm64.dmg', '1.2.0')).toBe(
-      'Git-Desktop-arm64-1.2.0.dmg',
-    );
+    expect(versionedFileName('Git-Desktop-arm64.dmg', '1.2.0')).toBe('Git-Desktop-arm64-1.2.0.dmg');
     expect(versionedFileName('Git-Desktop-Setup-x64.exe', '1.2.0')).toBe(
       'Git-Desktop-Setup-x64-1.2.0.exe',
     );
@@ -79,13 +77,10 @@ describe('downloadFile', () => {
 
     const written = await fs.readFile(path.join(dir, 'Git-Desktop-arm64-1.2.0.dmg'));
     expect([...written]).toEqual([1, 2, 3, 4, 5, 6]);
-    // The first chunk reports immediately; the last call is the completed one.
     expect(seen[0][0]).toBe(3);
     expect(seen[seen.length - 1]).toEqual([6, 6]);
   });
 
-  // TLS aside, the size from the release metadata is the only corroboration a
-  // download gets — a truncated body that ends cleanly must not be installed.
   it('rejects a body that does not match the published size', async () => {
     fetchMock.mockResolvedValue(response([new Uint8Array([1, 2])]));
 

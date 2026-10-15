@@ -12,10 +12,6 @@ export async function runGit(args: string[], opts: { timeout?: number } = {}): P
   return stdout;
 }
 
-/**
- * Where `git config` reads or writes: the user's global file, one
- * repository's own file, or a repository as git resolves it (local over global).
- */
 export type ConfigScope =
   | { kind: 'global' }
   | { kind: 'local'; repoRoot: string }
@@ -27,7 +23,6 @@ function configArgs(scope: ConfigScope): string[] {
   return ['-C', scope.repoRoot, 'config'];
 }
 
-/** Trimmed value, or '' when unset: git reports that as a non-zero exit. */
 export async function gitConfigGet(scope: ConfigScope, key: string): Promise<string> {
   try {
     return (await runGit([...configArgs(scope), '--get', key])).trim();

@@ -11,17 +11,12 @@ async function readIdentity(scope: ConfigScope): Promise<GitIdentity> {
   return { name, email };
 }
 
-/** The global author, and this repository's override when one is open. */
 export async function getIdentity(repoRoot: string | null): Promise<GitIdentities> {
   const global = await readIdentity(GLOBAL);
   if (!repoRoot) return { global, local: null };
   return { global, local: await readIdentity({ kind: 'local', repoRoot }) };
 }
 
-/**
- * Writes the author for one scope. An empty value unsets the key, which for a
- * repository means falling back to the global author.
- */
 export async function setIdentity(
   scope: 'global' | 'local',
   repoRoot: string | null,
@@ -38,18 +33,10 @@ export async function setIdentity(
   }
 }
 
-/**
- * Whether git has an author to commit as. Asked per repository so a local
- * override counts.
- */
 export async function hasIdentity(repoRoot: string): Promise<boolean> {
   return (await gitConfigGet({ kind: 'effective', repoRoot }, 'user.email')).length > 0;
 }
 
-/**
- * Give git a name and email from the account that just signed in. Only writes
- * what is missing, never replaces the user's choice.
- */
 export async function ensureGlobalIdentity(account: ProviderAccount): Promise<void> {
   const { name, email } = await readIdentity(GLOBAL);
   const nextName = account.name || account.login;

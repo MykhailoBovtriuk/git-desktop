@@ -19,7 +19,6 @@ vi.mock('../../../src/api/git-api', () => ({
     getCommitDiff: vi.fn(),
   },
 }));
-// Children pull their own store/api dependencies; they are not under test.
 vi.mock('../../../src/components/history/CommitList', () => ({
   CommitList: () => <div data-testid="commit-list" />,
 }));
@@ -56,7 +55,6 @@ function mockUiState(selectedCommit: string | null, selectedFile: string | null)
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(gitApi.getCommitDiff).mockResolvedValue([]);
-  // Selector-aware: HistoryView derives commits via a selector.
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
 });
 

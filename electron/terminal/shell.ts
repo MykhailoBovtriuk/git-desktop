@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import type { TerminalShell } from '../../src/types';
 
-/** What shell detection reads from the machine; swapped out in tests. */
 export interface ShellSystem {
   platform: NodeJS.Platform;
   env: NodeJS.ProcessEnv;
@@ -93,20 +92,14 @@ function windowsShells(sys: ShellSystem): ShellSpec[] {
   return out;
 }
 
-/** Shells found on this machine, the preferred one first. */
 export function detectShells(sys: ShellSystem = realSystem()): ShellSpec[] {
   return sys.platform === 'win32' ? windowsShells(sys) : posixShells(sys);
 }
 
-/** `id` when it names a detected shell, the first detected one otherwise. */
 export function pickShell(shells: ShellSpec[], id?: string | null): ShellSpec | null {
   return shells.find(s => s.id === id) ?? shells[0] ?? null;
 }
 
-/**
- * The app's own environment minus what only makes sense for its git calls:
- * here a person is at the keyboard and can answer a password prompt.
- */
 export function terminalEnv(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,

@@ -13,7 +13,6 @@ export const SETTINGS_CATEGORIES = [
 ] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
-/** The tool panel docked on the right; the footer's right-hand buttons open it. */
 export type RightPanelTab = 'logs' | 'terminal';
 
 const OVERLAY_VIEWS = new Set<ActiveView>(['settings', 'about']);
@@ -28,7 +27,6 @@ export interface ConfirmOptions {
 
 interface UiState {
   activeView: ActiveView;
-  /** The work view under Settings/About: where closing either of them lands. */
   previousView: ActiveView;
   selectedCommit: string | null;
   selectedFile: string | null;
@@ -41,7 +39,6 @@ interface UiState {
    * the dropdown closes the moment it is opened.
    */
   newBranchOpen: boolean;
-  /** The open repository's connection dialog: protocol and what authenticates it. */
   connectionOpen: boolean;
   rightPanel: RightPanelTab | null;
   /**
@@ -49,23 +46,16 @@ interface UiState {
    * its view stays mounted (hidden) so switching tabs never rebuilds xterm.
    */
   terminalMounted: boolean;
-  /** The Settings page shown on the right of its menu; kept for the session. */
   settingsCategory: SettingsCategory;
   setSettingsCategory: (category: SettingsCategory) => void;
-  /** Settings, straight on `category` when given (a link from elsewhere), else where it was left. */
   openSettings: (category?: SettingsCategory) => void;
-  /** The left column (changes, stash, history/graph); not remembered across launches. */
   sidebarOpen: boolean;
-  /** Over Settings/About it leaves the page and shows the sidebar instead. */
   toggleSidebar: () => void;
-  /** Opens the panel on `tab`, or closes it when that tab is already showing. */
   toggleRightPanel: (tab: RightPanelTab) => void;
   openRightPanel: (tab: RightPanelTab) => void;
   closeRightPanel: () => void;
   setActiveView: (view: ActiveView) => void;
-  /** Shows Settings or About; switching between them replaces, never stacks. */
   openOverlayView: (view: OverlayView) => void;
-  /** Closes Settings/About, back to the work view; a no-op anywhere else. */
   closeOverlays: () => void;
   openNewBranch: () => void;
   closeNewBranch: () => void;
@@ -105,9 +95,6 @@ export const useUiStore = create<UiState>()((set, get) => ({
   sidebarOpen: true,
 
   setActiveView: view => set({ activeView: view }),
-  // Settings and About are one place, not a stack: switching between them
-  // replaces the page, and closing either goes back to the work view the user
-  // left, never to the other page.
   openOverlayView: view =>
     set(s =>
       isOverlayView(s.activeView)

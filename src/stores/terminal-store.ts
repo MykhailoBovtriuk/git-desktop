@@ -3,21 +3,16 @@ import { terminalApi } from '../api/terminal-api';
 import type { TerminalSession, TerminalShell } from '../types';
 
 interface TerminalState {
-  /** null until asked: node-pty loads lazily in the main process. */
   available: boolean | null;
   unavailableReason: string | null;
   shells: TerminalShell[];
-  /** Live sessions per repository, in tab order. They outlive switching away. */
   sessions: Record<string, TerminalSession[]>;
   active: Record<string, string | null>;
-  /** Exit codes of sessions whose process ended but whose tab is still open. */
   exited: Record<string, number>;
-  /** Repositories whose sessions were fetched from main since this window loaded. */
   restored: Record<string, boolean>;
   init: () => Promise<void>;
   restore: (repoPath: string) => Promise<void>;
   create: (repoPath: string, shellId: string | null) => Promise<TerminalSession>;
-  /** Starts a fresh process in place of an exited one, keeping the tab where it was. */
   restart: (repoPath: string, id: string, shellId: string | null) => Promise<void>;
   close: (repoPath: string, id: string) => void;
   setActive: (repoPath: string, id: string) => void;
@@ -53,7 +48,6 @@ export const useTerminalStore = create<TerminalState>()((set, get) => ({
     });
   },
 
-  // 80×24 until the view measures itself and resizes; the shell redraws then.
   create: async (repoPath, shellId) => {
     const session = await terminalApi.create(repoPath, shellId, 80, 24);
     set(s => ({

@@ -7,7 +7,6 @@ import { LogStore, isLogRetention } from '../log/log-store';
 
 export interface LogHandlerOptions {
   getWindow?: () => BrowserWindow | null;
-  /** Root of the per-repository log folders; without it the log lives for the session only. */
   logDir?: string;
 }
 
@@ -18,14 +17,12 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
   const store = new LogStore(options.logDir ?? null);
   const ready = store.init();
 
-  // Running entries go to the panel straight away; only settled ones are kept.
   setLogSink(entry => {
     const win = options.getWindow?.() ?? null;
     if (win && !win.isDestroyed()) win.webContents.send('log:entry', entry);
     void ready.then(() => store.append(entry));
   });
 
-  // An app left open for a week still has to forget what the setting says.
   setInterval(() => void store.prune(), PRUNE_EVERY_MS).unref?.();
 
   ipcMain.handle('log:list', (_e, repoPath: unknown, before: unknown, limit: unknown) =>

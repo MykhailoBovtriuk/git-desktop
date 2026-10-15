@@ -29,7 +29,6 @@ function setupMocks({
   const mockCommit = commitImpl;
   const mockAddToast = vi.fn();
 
-  // Selector-aware: CommitForm and useGitAction both select from the stores.
   const repoState = {
     commit: mockCommit,
     status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
@@ -92,7 +91,6 @@ describe('CommitForm', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  // No maximum: the counter is informational only, never a warning or a block.
   it('counter keeps counting past any threshold and never turns into a warning', () => {
     setupMocks({ staged: ['file.ts'] });
     render(<CommitForm />);
@@ -155,8 +153,6 @@ describe('CommitForm', () => {
     );
   });
 
-  // Committing is impossible when neither the repository nor the global config
-  // names an author — git refuses outright, so the button must say so first.
   it('blocks committing when git has no identity anywhere', () => {
     setupMocks({ hasIdentity: false });
     render(<CommitForm />);
@@ -177,8 +173,6 @@ describe('CommitForm', () => {
     expect(screen.queryByText('noIdentity')).toBeNull();
   });
 
-  // The answer arrives one IPC round trip after the form renders. Blocking on
-  // "not known yet" would grey out the button on every repository open.
   it('does not block while the answer is still unknown', () => {
     setupMocks({ hasIdentity: null });
     render(<CommitForm />);

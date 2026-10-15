@@ -71,8 +71,6 @@ describe('NewBranchModal', () => {
     expect(screen.getByText('create').closest('button')).toBeDisabled();
   });
 
-  // Nothing uncommitted means there is nothing to decide, so the second step
-  // would be a question with one possible answer.
   it('creates straight away on a clean tree, with no question asked', async () => {
     vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
     vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
@@ -81,7 +79,9 @@ describe('NewBranchModal', () => {
     typeName('feature/login');
     fireEvent.click(screen.getByText('create'));
 
-    await waitFor(() => expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'bring'));
+    await waitFor(() =>
+      expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'bring'),
+    );
     expect(screen.queryByText('changesTitle')).toBeNull();
     expect(uiState.closeNewBranch).toHaveBeenCalled();
   });
@@ -99,7 +99,9 @@ describe('NewBranchModal', () => {
     expect(screen.getByText('changesTitle')).toBeTruthy();
 
     fireEvent.click(screen.getByText('bringAction'));
-    await waitFor(() => expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'bring'));
+    await waitFor(() =>
+      expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'bring'),
+    );
   });
 
   it('leaves the changes behind when asked to', async () => {
@@ -112,11 +114,11 @@ describe('NewBranchModal', () => {
     fireEvent.click(screen.getByText('create'));
     fireEvent.click(screen.getByText('leaveAction'));
 
-    await waitFor(() => expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'leave'));
+    await waitFor(() =>
+      expect(repoState.createBranch).toHaveBeenCalledWith('feature/login', 'leave'),
+    );
   });
 
-  // A name already taken is the common miss, and retyping it from scratch to
-  // fix one character would be its own small punishment.
   it('keeps the dialog open with the name intact when git refuses', async () => {
     runAction.mockResolvedValue(false);
     vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);

@@ -12,7 +12,6 @@ describe('Breadcrumbs', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     expect(onSettings).toHaveBeenCalledOnce();
-    // The current page is not a link to itself.
     expect(screen.queryByRole('button', { name: 'Account' })).toBeNull();
   });
 

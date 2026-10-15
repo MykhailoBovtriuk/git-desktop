@@ -8,7 +8,6 @@ import { useCopy } from '../../hooks/use-copy';
 import { Button, CheckIcon, CopyIcon, IconButton, TextInput, TrashIcon, cn } from '../../shared/ui';
 import { LogEntryRow } from './LogEntryRow';
 
-/** Within this many pixels of the bottom counts as following the tail. */
 const STICK_PX = 24;
 
 function Chip({
@@ -73,14 +72,11 @@ export function LogsView() {
     });
   }, [entries, query, errorsOnly, t]);
 
-  // New output keeps the view pinned to the bottom, unless the user scrolled up
-  // to read something.
   useLayoutEffect(() => {
     const el = listRef.current;
     if (el && following.current && !focusId) el.scrollTop = el.scrollHeight;
   }, [visible, focusId]);
 
-  // "Show in logs" from a toast: open that entry and bring it into view.
   useEffect(() => {
     if (!focusId) return;
     setErrorsOnly(false);

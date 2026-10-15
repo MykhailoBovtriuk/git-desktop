@@ -141,7 +141,6 @@ describe('StashList', () => {
     );
     fireEvent.click(screen.getAllByTitle('actions.drop')[0]);
 
-    // The click opens the in-app confirm dialog — approve it via the store.
     await waitFor(() => expect(useUiStore.getState().confirmRequest).not.toBeNull());
     useUiStore.getState().resolveConfirm(true);
 

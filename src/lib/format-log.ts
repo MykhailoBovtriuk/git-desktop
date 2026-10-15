@@ -1,6 +1,5 @@
 import type { LogCommand, LogEntry } from '../types';
 
-/** Quotes an argument only when a shell would split it, so the line pastes back. */
 function shellArg(arg: string): string {
   return /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replace(/'/g, `'\\''`)}'`;
 }
@@ -9,10 +8,6 @@ export function commandLine(command: LogCommand): string {
   return '$ ' + command.argv.map(shellArg).join(' ');
 }
 
-/**
- * Git redraws progress with carriage returns; only the last state of each line
- * is worth reading back.
- */
 export function cleanOutput(text: string): string {
   return text
     .split('\n')
@@ -39,7 +34,6 @@ export function formatDuration(ms: number | undefined): string {
 
 const MARK = { running: '…', success: '✓', error: '✗' } as const;
 
-/** Plain text in the shape of a terminal session, for the clipboard. */
 export function formatEntry(entry: LogEntry, title: string): string {
   const head = [
     `[${formatTime(entry.ts)}]`,

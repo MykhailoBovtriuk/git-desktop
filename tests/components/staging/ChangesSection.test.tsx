@@ -37,8 +37,6 @@ beforeEach(() => {
 });
 
 describe('ChangesSection error surfacing', () => {
-  // Regression: onClick={() => stageFiles(...)} left rejections unhandled —
-  // an index.lock failure produced zero feedback and the user kept clicking.
   it('shows an error toast when staging fails', async () => {
     repoState.stageFiles.mockRejectedValue(new Error('index.lock exists'));
     render(<ChangesSection />);
@@ -54,8 +52,6 @@ describe('ChangesSection error surfacing', () => {
     repoState.discardChanges.mockRejectedValue(new Error('discard boom'));
     render(<ChangesSection />);
 
-    // FileList exposes the per-file discard button by its title. The click
-    // opens the in-app confirm dialog — approve it through the store.
     fireEvent.click(screen.getByTitle('discard'));
     await waitFor(() => expect(useUiStore.getState().confirmRequest).not.toBeNull());
     useUiStore.getState().resolveConfirm(true);

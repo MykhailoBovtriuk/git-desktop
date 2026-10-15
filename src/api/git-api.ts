@@ -21,7 +21,6 @@ export const gitApi = {
       remoteProtocol: RemoteProtocol | null;
     }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
-  /** A repository leaving the app: deletes its logs and closes its terminals. */
   forgetRepo: (path: string) => invoke<null>('repo:forget', path),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
@@ -72,7 +71,6 @@ export const gitApi = {
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
   hasIdentity: () => invoke<boolean>('git:has-identity'),
   getIdentity: () => invoke<GitIdentities>('git:get-identity'),
-  /** An empty name or email unsets it; for 'local' that means the global one applies. */
   setIdentity: (scope: 'global' | 'local', identity: GitIdentity) =>
     invoke<null>('git:set-identity', scope, identity),
   readFile: (p: string) => invoke<string>('git:read-file', p),

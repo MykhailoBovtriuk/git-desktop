@@ -9,8 +9,6 @@ function Boom(): never {
 
 describe('ErrorBoundary', () => {
   beforeEach(() => {
-    // React logs the caught error to console.error during the boundary render;
-    // silence it so the test output stays clean.
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 

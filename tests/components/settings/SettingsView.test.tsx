@@ -5,7 +5,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { resolvedLanguage: 'en' } }),
 }));
-// Each page is covered on its own; here only the menu and the switching.
 vi.mock('../../../src/components/settings/GeneralSection', () => ({
   GeneralSection: () => <p>general page</p>,
 }));

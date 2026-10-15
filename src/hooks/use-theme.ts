@@ -25,8 +25,6 @@ export function useTheme() {
 
     const apply = () => {
       const resolved = resolveTheme(theme, media?.matches ?? true);
-      // Order matters: the dataset switch is what changes the CSS variables
-      // read next.
       document.documentElement.dataset.theme = resolved;
       const styles = getComputedStyle(document.documentElement);
       const color =
@@ -51,10 +49,6 @@ function subscribeToSystemTheme(onChange: () => void): () => void {
   return () => media.removeEventListener('change', onChange);
 }
 
-/**
- * The resolved theme, reactive, for components that must re-render when
- * 'system' flips.
- */
 export function useSystemPrefersDark(): boolean {
   return useSyncExternalStore(
     subscribeToSystemTheme,

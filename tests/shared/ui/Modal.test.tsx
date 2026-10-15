@@ -106,7 +106,6 @@ describe('Modal', () => {
     expect(dialog).toHaveFocus();
   });
 
-  // Focus trap: Tab must not escape to elements behind the overlay.
   it('wraps Tab from the last focusable element back to the first', () => {
     render(
       <>

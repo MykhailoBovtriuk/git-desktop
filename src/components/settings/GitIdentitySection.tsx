@@ -49,7 +49,6 @@ function IdentityFields({
   );
 }
 
-/** Who commits are authored as: git's own config, globally and per repository. */
 export function GitIdentitySection() {
   const { t } = useTranslation('settings');
   const repoPath = useRepoStore(s => s.repoPath);
@@ -97,7 +96,6 @@ export function GitIdentitySection() {
       setGlobal(fresh.global);
       setLocal(fresh.local ?? EMPTY);
       setOverride(isSet(fresh.local));
-      // The commit form's "no author" notice reads this.
       await useRepoStore.getState().loadIdentity();
       addToast({ variant: 'success', title: t('identity.title'), message: t('identity.saved') });
     } catch (err) {
@@ -107,7 +105,6 @@ export function GitIdentitySection() {
     }
   };
 
-  // What the next commit here will say, as git resolves it: local over global.
   const effective = override && saved.local !== null ? { ...global, ...pick(local) } : global;
 
   return (
@@ -150,7 +147,6 @@ export function GitIdentitySection() {
   );
 }
 
-/** Only the fields a repository actually overrides; the rest come from global. */
 function pick(id: GitIdentity): Partial<GitIdentity> {
   const out: Partial<GitIdentity> = {};
   if (id.name) out.name = id.name;

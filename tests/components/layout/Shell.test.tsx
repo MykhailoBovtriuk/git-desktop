@@ -2,7 +2,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-// Only the layout is under test; every screen and dialog is a stub.
 vi.mock('../../../src/components/layout/Titlebar', () => ({ Titlebar: () => null }));
 vi.mock('../../../src/components/layout/BareTitlebar', () => ({ BareTitlebar: () => null }));
 vi.mock('../../../src/components/layout/Footer', () => ({ Footer: () => null }));

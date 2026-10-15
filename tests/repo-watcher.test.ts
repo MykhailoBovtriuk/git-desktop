@@ -36,7 +36,7 @@ afterEach(() => {
 // clear the spy.
 const arm = async (root: string, onChange: ReturnType<typeof vi.fn>) => {
   watcher!.watch(root);
-  await sleep(450); // > DEBOUNCE_MS, so any startup-triggered callback lands
+  await sleep(450);
   onChange.mockClear();
 };
 
@@ -65,7 +65,6 @@ describe('RepoWatcher', () => {
     await arm(tmp, onChange);
 
     fs.writeFileSync(path.join(tmp, '.git', 'index.lock'), '');
-    // Give it well past the debounce window; a .lock write must not refresh.
     await sleep(500);
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -79,7 +78,7 @@ describe('RepoWatcher', () => {
       fs.writeFileSync(path.join(tmp, '.git', 'index'), `x${i}`);
     }
     await waitFor(() => onChange.mock.calls.length > 0);
-    await sleep(400); // ensure the debounce settled and nothing else fired
+    await sleep(400);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
@@ -97,7 +96,6 @@ describe('RepoWatcher', () => {
   it('does nothing when .git is absent', () => {
     const onChange = vi.fn();
     watcher = new RepoWatcher(onChange);
-    // Point at a dir with no .git — must not throw.
     const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'no-git-'));
     expect(() => watcher!.watch(bare)).not.toThrow();
     fs.rmSync(bare, { recursive: true, force: true });
@@ -108,7 +106,6 @@ describe('RepoWatcher', () => {
     watcher = new RepoWatcher(onChange);
     await arm(tmp, onChange);
 
-    // Second repo; watch() should drop the first watcher and follow the new one.
     const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-watcher2-'));
     fs.mkdirSync(path.join(tmp2, '.git', 'refs'), { recursive: true });
     fs.writeFileSync(path.join(tmp2, '.git', 'HEAD'), 'ref: refs/heads/main\n');

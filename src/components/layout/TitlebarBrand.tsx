@@ -1,10 +1,6 @@
 import { Badge } from '../../shared/ui';
 import { isMac } from '../../lib/keyboard';
 
-/**
- * The app name at the left of a titlebar, clear of the macOS traffic lights.
- * Shared so every titlebar keeps the same offset.
- */
 export function TitlebarBrand() {
   return (
     <>
@@ -17,8 +13,6 @@ export function TitlebarBrand() {
   );
 }
 
-/** Room for the Windows/Linux title bar overlay buttons at the right edge. */
 export function WindowControlsSpacer() {
-  // The OS draws the window buttons on the left on macOS, on the right elsewhere.
   return isMac() ? null : <div className="w-36 shrink-0" />;
 }

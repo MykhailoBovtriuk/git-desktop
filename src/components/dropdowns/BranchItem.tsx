@@ -8,8 +8,6 @@ interface BranchItemProps {
   isRemote: boolean;
   contextOpen: boolean;
   onToggleContext: () => void;
-  // Pull and push move HEAD's branch only, so they come for the current one:
-  // pull/push once it has an upstream, publish before that.
   onPull?: () => void;
   onPush?: () => void;
   onPublish?: () => void;
@@ -47,8 +45,6 @@ export function BranchItem({
           onClick={() => !current && onCheckout()}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
         >
-          {/* Only the current branch earns the accent — a blue dot on every
-              row was an indicator carrying no information. */}
           <span className={current ? 'text-blue' : 'text-subtext'}>{isRemote ? '○' : '●'}</span>
           <TruncatedText className="text-text max-w-40">{name}</TruncatedText>
         </button>

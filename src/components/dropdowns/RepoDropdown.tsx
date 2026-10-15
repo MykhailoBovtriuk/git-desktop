@@ -38,7 +38,6 @@ export function RepoDropdown({ onClose }: RepoDropdownProps) {
     await runAction(() => openDialog(), { title: t('addRepository') });
   };
 
-  // Removing deletes the repository's logs, and the open one is closed too.
   const handleRemove = async (path: string) => {
     const current = path === repoPath;
     const ok = await requestConfirm({

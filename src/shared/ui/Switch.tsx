@@ -4,7 +4,6 @@ export interface SwitchProps {
   checked: boolean;
   onToggle: () => void;
   label?: string;
-  /** Keeps the label for screen readers only, where a row title already says it. */
   hideLabel?: boolean;
   title?: string;
   className?: string;

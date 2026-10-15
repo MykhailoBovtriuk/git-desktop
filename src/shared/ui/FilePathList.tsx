@@ -6,12 +6,10 @@ export interface FilePathListProps {
   files: { path: string }[];
   selected: string | null;
   onSelect: (path: string) => void;
-  /** In px; defaults to w-48. */
   width?: number;
   children?: ReactNode;
 }
 
-/** The narrow file sidebar of a commit or stash detail view. */
 export function FilePathList({ files, selected, onSelect, width, children }: FilePathListProps) {
   return (
     <div

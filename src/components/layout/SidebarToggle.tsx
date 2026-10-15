@@ -4,13 +4,10 @@ import { shortcutLabel } from '../../lib/keyboard';
 import { useShortcut } from '../../hooks/use-shortcut';
 import { GitLogoIcon, cn } from '../../shared/ui';
 
-/** Git's own orange: the logo is shown in its colours while the sidebar is on. */
 const GIT_ORANGE = '#F05032';
 
-/** The footer's left corner: the Git logo shows and hides the left column. */
 export function SidebarToggle() {
   const { t } = useTranslation('common');
-  // Under Settings/About the sidebar is not on screen, whatever the flag says.
   const open = useUiStore(s => s.sidebarOpen && !isOverlayView(s.activeView));
   const toggleSidebar = useUiStore(s => s.toggleSidebar);
   const shortcut = shortcutLabel('B');

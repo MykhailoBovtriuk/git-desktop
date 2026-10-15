@@ -1,8 +1,6 @@
 import type { ButtonHTMLAttributes, HTMLAttributes } from 'react';
 import { cn } from './cn';
 
-// Inset and rounded: the panel keeps a p-2 frame, so the hover reads as a pill
-// rather than a stripe running into the panel's edges.
 const ROW =
   'flex items-center justify-between w-full px-2 py-1.5 rounded text-sm transition-colors';
 
@@ -24,7 +22,6 @@ export function DropdownItem({ tone = 'default', className, ...rest }: DropdownI
   );
 }
 
-/** Same row for items that hold their own buttons (open + "⋯"). */
 export function DropdownRow({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div {...rest} className={cn(ROW, 'hover:bg-surface1', className)} />;
 }

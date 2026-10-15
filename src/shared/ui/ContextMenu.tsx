@@ -7,17 +7,11 @@ const MENU_W = 176;
 export interface ContextMenuProps {
   open: boolean;
   anchorRef: RefObject<HTMLElement | null>;
-  /**
-   * "panel" opens beside the closest [data-dropdown-panel] instead of the
-   * trigger, for right-aligned panels where the menu would cover its own list.
-   * "below" drops down under the trigger, for menus opened from a toolbar.
-   */
   anchor?: 'button' | 'panel' | 'below';
   height: number;
   children: ReactNode;
 }
 
-/** Fixed-position "⋯" menu portal, shared by the repo and branch dropdowns. */
 export function ContextMenu({
   open,
   anchorRef,

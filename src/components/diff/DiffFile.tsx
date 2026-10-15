@@ -10,7 +10,6 @@ interface DiffFileProps {
   diff: FileDiff;
   baseHunkIndex: number;
   showHunkActions: boolean;
-  /** Whitespace is hidden from this working-tree diff, which turns hunk staging off. */
   whitespaceBlocksStaging?: boolean;
   isStaged: boolean;
   onHunk: (globalHunkIndex: number) => void;
@@ -31,7 +30,6 @@ export function DiffFile({
   const { t } = useTranslation('diff');
   const fontSize = useSettingsStore(s => s.diffFontSize);
   const wrap = useSettingsStore(s => s.diffWrapLines);
-  // text-xs's own ratio (12px/16px), kept at every size so rows stay as dense.
   const lineHeight = Math.round((fontSize * 4) / 3);
 
   // Flat row list so one virtualizer covers headers and lines alike. Without
@@ -66,7 +64,6 @@ export function DiffFile({
     overscan: 20,
   });
 
-  // Sizes measured at the old font or width are wrong now; measure afresh.
   useEffect(() => {
     rowVirtualizer.measure();
   }, [fontSize, wrap, rowVirtualizer]);

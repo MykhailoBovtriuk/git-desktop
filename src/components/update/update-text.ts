@@ -1,9 +1,5 @@
 import type { TFunction } from 'i18next';
 
-/**
- * Maps the update tokens onto the `update` namespace; anything else is a real
- * message shown as-is.
- */
 const ERROR_KEYS: Record<string, string> = {
   offline: 'errors.offline',
   'rate-limited': 'errors.rateLimited',

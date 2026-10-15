@@ -7,7 +7,6 @@ import { resetKeyCache } from '../../electron/auth/oauth-config';
 const github = providerById('github')!;
 const gitlab = providerById('gitlab')!;
 
-/** The state parameter the app just put in the authorize URL. */
 const stateOf = (url: string) => new URL(url).searchParams.get('state')!;
 
 describe('oauth flow', () => {
@@ -30,7 +29,7 @@ describe('oauth flow', () => {
   });
 
   it('builds an authorize URL carrying the client id, scopes and redirect', () => {
-    const url = new URL(beginSignIn({ provider: github, host: 'github.com' }));
+    const url = new URL(beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' }));
     expect(url.origin + url.pathname).toBe('https://github.com/login/oauth/authorize');
     expect(url.searchParams.get('client_id')).toBe('gh-id');
     expect(url.searchParams.get('redirect_uri')).toBe('git-desktop-auth://oauth');
@@ -39,21 +38,17 @@ describe('oauth flow', () => {
     expect(url.searchParams.get('state')).toBeTruthy();
   });
 
-  // GitHub has no PKCE for desktop clients, so the secret is the only thing
-  // binding the exchange to this app. Sending a challenge would be noise.
   it('omits the PKCE challenge for a provider that uses a secret', () => {
-    const url = new URL(beginSignIn({ provider: github, host: 'github.com' }));
+    const url = new URL(beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' }));
     expect(url.searchParams.get('code_challenge')).toBeNull();
   });
 
   it('sends an S256 challenge derived from the verifier for a PKCE provider', async () => {
-    const url = new URL(beginSignIn({ provider: gitlab, host: 'gitlab.com' }));
+    const url = new URL(beginSignIn({ provider: gitlab, host: 'gitlab.com', repoPath: '/src/p' }));
     const challenge = url.searchParams.get('code_challenge');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(challenge).toBeTruthy();
 
-    // The verifier only leaves this module in the token request, so that is
-    // where the pairing has to be checked.
     let sentVerifier = '';
     stubFetch(
       body => {
@@ -70,7 +65,7 @@ describe('oauth flow', () => {
   it('refuses a provider whose keys this build lacks', () => {
     delete process.env.OAUTH_GITHUB_ID;
     resetKeyCache();
-    expect(() => beginSignIn({ provider: github, host: 'github.com' })).toThrow(
+    expect(() => beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' })).toThrow(
       /No OAuth client id/,
     );
   });
@@ -81,18 +76,15 @@ describe('oauth flow', () => {
     );
   });
 
-  // The whole point of `state`: without this check anyone able to open a
-  // git-desktop-auth:// URL could hand us an account and have it stored as the
-  // user's own.
   it('rejects a callback whose state does not match', async () => {
-    beginSignIn({ provider: github, host: 'github.com' });
+    beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     await expect(
       completeSignIn('git-desktop-auth://oauth?code=abc&state=somebody-elses'),
     ).rejects.toThrow(/state did not match/);
   });
 
   it('spends the state, so a replay of the same callback fails', async () => {
-    const url = beginSignIn({ provider: github, host: 'github.com' });
+    const url = beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     const callback = `git-desktop-auth://oauth?code=abc&state=${stateOf(url)}`;
     stubFetch(() => ({ access_token: 'tok' }), { login: 'me', id: 1, name: 'Me', email: 'me@x' });
 
@@ -102,7 +94,7 @@ describe('oauth flow', () => {
 
   it('rejects a callback that arrives after the state has expired', async () => {
     vi.useFakeTimers();
-    const url = beginSignIn({ provider: github, host: 'github.com' });
+    const url = beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     vi.advanceTimersByTime(11 * 60 * 1000);
     await expect(
       completeSignIn(`git-desktop-auth://oauth?code=abc&state=${stateOf(url)}`),
@@ -110,7 +102,7 @@ describe('oauth flow', () => {
   });
 
   it('surfaces an error the provider put in the callback', async () => {
-    const url = beginSignIn({ provider: github, host: 'github.com' });
+    const url = beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     await expect(
       completeSignIn(
         `git-desktop-auth://oauth?error=access_denied&error_description=Nope&state=${stateOf(url)}`,
@@ -118,10 +110,8 @@ describe('oauth flow', () => {
     ).rejects.toThrow('Nope');
   });
 
-  // GitHub answers HTTP 200 with an error object. Trusting the status alone
-  // would turn a failed sign-in into an apparently successful one.
   it('treats an error body as a failure even on HTTP 200', async () => {
-    const url = beginSignIn({ provider: github, host: 'github.com' });
+    const url = beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     stubFetch(() => ({ error: 'bad_verification_code', error_description: 'Code expired' }));
     await expect(
       completeSignIn(`git-desktop-auth://oauth?code=abc&state=${stateOf(url)}`),
@@ -129,7 +119,7 @@ describe('oauth flow', () => {
   });
 
   it('returns the account and token on a successful exchange', async () => {
-    const url = beginSignIn({ provider: github, host: 'github.com' });
+    const url = beginSignIn({ provider: github, host: 'github.com', repoPath: '/src/p' });
     stubFetch(() => ({ access_token: 'tok', expires_in: 3600, refresh_token: 'ref' }), {
       login: 'octocat',
       id: 7,
@@ -140,6 +130,8 @@ describe('oauth flow', () => {
 
     const result = await completeSignIn(`git-desktop-auth://oauth?code=abc&state=${stateOf(url)}`);
     expect(result.account).toMatchObject({
+      id: '/src/p',
+      repoPath: '/src/p',
       providerId: 'github',
       host: 'github.com',
       login: 'octocat',
@@ -151,10 +143,6 @@ describe('oauth flow', () => {
   });
 });
 
-/**
- * One fetch stub for both halves of the flow: the POST to the token endpoint
- * and the GETs that follow it. `onToken` sees the encoded request body.
- */
 function stubFetch(
   onToken: (body: string) => Record<string, unknown>,
   user: Record<string, unknown> = {},

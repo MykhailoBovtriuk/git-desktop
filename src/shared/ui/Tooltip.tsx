@@ -11,7 +11,6 @@ export interface TooltipProps {
   children: ReactNode;
 }
 
-/** Fixed-position hint portal: below the anchor, flipped above when it would overflow. */
 export function Tooltip({ open, anchorRef, id, children }: TooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -37,7 +36,6 @@ export function Tooltip({ open, anchorRef, id, children }: TooltipProps) {
       id={id}
       role="tooltip"
       className="fixed z-[70] pointer-events-none bg-white text-black text-xs rounded px-2 py-1 shadow-xl max-w-sm break-words"
-      // Measured off-screen first so the flip/clamp can use the real size.
       style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, visibility: 'hidden' }}
     >
       {children}

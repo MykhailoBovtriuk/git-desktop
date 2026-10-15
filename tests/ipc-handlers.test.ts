@@ -20,8 +20,6 @@ describe('wrap', () => {
     expect(result).toEqual({ error: 'boom', code: 'GIT_ERROR' });
   });
 
-  // Regression: a validator's synchronous throw escaped the envelope instead of
-  // becoming { error, code }.
   it('converts synchronous throws into the error envelope', async () => {
     const result = await wrap(() => {
       throw new Error('Invalid argument: hash must be a commit hash');
@@ -45,7 +43,6 @@ describe('registered IPC channels', () => {
     return [...new Set(handle.mock.calls.map(c => c[0] as string))].sort();
   };
 
-  // Pushed to the renderer, not invoked, so no ipcMain.handle.
   const PUSH_EVENTS = new Set([
     'account:changed',
     'app:update-progress',

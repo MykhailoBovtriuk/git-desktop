@@ -7,26 +7,23 @@ import type { UpdateInfo } from '../../src/types';
  * The releases of this project. The list endpoint, not /releases/latest: needed
  * for pre-releases and for reinstalling.
  */
-const RELEASES_URL = 'https://api.github.com/repos/MykhailoBovtriuk/git-desktop/releases?per_page=20';
+const RELEASES_URL =
+  'https://api.github.com/repos/MykhailoBovtriuk/git-desktop/releases?per_page=20';
 const ACCEPT = 'application/vnd.github+json';
 
 /** Anonymous GitHub allows 60 requests an hour per IP — shared behind a NAT. */
 const CACHE_TTL_MS = 10 * 60_000;
-/** A floor even a deliberate "check now" respects, against a leaning finger. */
 const MIN_INTERVAL_MS = 30_000;
-/** Blind backoff when a rate-limited response does not say when it lifts. */
 const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
-/** Release notes are shown in a modal, not read in full. */
 const NOTES_LIMIT = 4_000;
 
-/**
- * Why a check failed, as a message the renderer can translate ('offline',
- * 'rate-limited'); anything else is shown as-is.
- */
 export type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
 
 export class UpdateError extends Error {
-  constructor(readonly reason: UpdateErrorReason, message?: string) {
+  constructor(
+    readonly reason: UpdateErrorReason,
+    message?: string,
+  ) {
     super(message ?? reason);
   }
 }
@@ -51,7 +48,6 @@ let cache: { at: number; releases: GithubRelease[] } | null = null;
 let inFlight: Promise<GithubRelease[]> | null = null;
 let rateLimitedUntil = 0;
 
-/** Tests only: the module state above outlives a single check by design. */
 export function resetReleaseCache(): void {
   cache = null;
   inFlight = null;
@@ -83,13 +79,11 @@ async function fetchReleases(force: boolean): Promise<GithubRelease[]> {
   const ttl = force ? MIN_INTERVAL_MS : CACHE_TTL_MS;
   if (cache && now - cache.at < ttl) return cache.releases;
 
-  // Being rate limited is not a reason to forget what we already know.
   if (now < rateLimitedUntil) {
     if (cache) return cache.releases;
     throw new UpdateError('rate-limited');
   }
 
-  // Two windows, or a double click, must not cost two of the sixty requests.
   if (inFlight) return inFlight;
 
   inFlight = getJson<GithubRelease[]>(RELEASES_URL, null, ACCEPT)
@@ -118,9 +112,7 @@ export interface LookupOptions {
 }
 
 export interface ReleaseLookup {
-  /** The highest version published, which may well be the one already running. */
   latest: UpdateInfo | null;
-  /** The release the running version came from, or null once it is gone. */
   current: UpdateInfo | null;
   checkedAt: number;
 }
@@ -130,8 +122,6 @@ function normalizeVersion(tag: string): string {
 }
 
 function toUpdateInfo(release: GithubRelease, opts: LookupOptions): UpdateInfo | null {
-  // A tag that is not a version cannot be ranked, so it is not a release as
-  // far as this check is concerned.
   if (!parseSemver(release.tag_name)) return null;
 
   const wanted = assetNameFor(opts.platform, opts.arch, opts.linuxPackage);
@@ -164,14 +154,11 @@ export async function lookupReleases(opts: LookupOptions): Promise<ReleaseLookup
   let current: UpdateInfo | null = null;
 
   for (const release of releases) {
-    // Drafts are invisible to anonymous callers anyway; filtering them is free.
     if (release.draft) continue;
 
     const info = toUpdateInfo(release, opts);
     if (!info) continue;
 
-    // Reinstalling what is running stays possible even when it is a
-    // pre-release the user no longer subscribes to.
     if (info.version === running) current = info;
 
     if (release.prerelease && !opts.includePrerelease) continue;

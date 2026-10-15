@@ -10,7 +10,6 @@ vi.mock('../../../src/stores/ui-store', () => ({
 }));
 vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
-  // useGitAction (pulled in for hunk staging) imports this.
   CheckoutConflictError: class CheckoutConflictError extends Error {},
   MergeConflictError: class MergeConflictError extends Error {},
 }));
@@ -73,7 +72,6 @@ beforeEach(() => {
   uiState.selectedCommit = null;
   repoState.status = { staged: [], unstaged: [{ path: 'a.txt', status: 'M', staged: false }] };
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
-  // Selector-aware: DiffViewer derives isStaged/inChanges via selectors.
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
 });
 
@@ -87,13 +85,10 @@ describe('DiffViewer', () => {
   it('does not show the error message when the diff loads successfully', async () => {
     vi.mocked(gitApi.getWorkingDiff).mockResolvedValue('');
     render(<DiffViewer />);
-    // Empty diff → "noDiffToDisplay", never the failure message.
     await waitFor(() => expect(screen.getByText('noDiffToDisplay')).toBeInTheDocument());
     expect(screen.queryByText('loadFailed')).not.toBeInTheDocument();
   });
 
-  // Regression: a partially staged file sits in BOTH lists; the diff source
-  // must follow the list the user clicked in, not "staged wins".
   describe('partially staged file', () => {
     beforeEach(() => {
       repoState.status = {
@@ -160,7 +155,6 @@ describe('DiffViewer', () => {
       vi.mocked(gitApi.getFileDiff).mockResolvedValue(RAW);
       render(<DiffViewer />);
 
-      // The hunk renders, but with no stage/unstage affordance.
       await waitFor(() => expect(screen.getByText(/@@ -1,1/)).toBeInTheDocument());
       expect(screen.queryByText('stageHunk')).not.toBeInTheDocument();
       expect(screen.queryByText('unstageHunk')).not.toBeInTheDocument();
@@ -175,8 +169,6 @@ describe('DiffViewer', () => {
     );
     render(<DiffViewer />);
     const line = await screen.findByText(/indented/);
-    // Content now sits inside a whitespace-pre wrapper (the +/- prefix is a
-    // sibling span); indentation is preserved as long as an ancestor sets it.
     expect(line.closest('.whitespace-pre')).not.toBeNull();
   });
 

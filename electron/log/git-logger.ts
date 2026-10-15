@@ -4,7 +4,6 @@ import type { SimpleGit } from 'simple-git';
 import type { LogCommand, LogEntry, LogOp } from '../../src/types';
 import { redact } from './redact';
 
-/** Per stream: a `git log -p` slipped into an operation must not bloat the file. */
 export const MAX_STREAM_CHARS = 64 * 1024;
 const TRUNCATED = '\n…[truncated]';
 
@@ -34,11 +33,6 @@ function collect(
   });
 }
 
-/**
- * Routes a git instance's process output into the operation being logged, if
- * any. Background reads (status polling, diffs) run outside `logged` and are
- * ignored, which keeps the log down to what the user actually did.
- */
 export function attachOutputLogger(git: SimpleGit): SimpleGit {
   return git.outputHandler((_bin, stdout, stderr, args) => {
     const entry = current.getStore();
@@ -63,7 +57,6 @@ function finalize(entry: LogEntry): LogEntry {
   };
 }
 
-/** Runs `fn` as one entry in the log: announced as running, then settled. */
 export async function logged<T>(
   op: LogOp,
   repoPath: string | null,

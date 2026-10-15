@@ -78,8 +78,6 @@ describe('useGitAction', () => {
     expect(lastToast()).toMatchObject({ variant: 'error', message: 'weird failure' });
   });
 
-  // checkout() throws CheckoutConflictError after opening its own modal — a
-  // toast on top of the modal would be noise.
   it('swallows CheckoutConflictError without a toast', async () => {
     const { result } = renderHook(() => useGitAction());
     const ok = await result.current(() => Promise.reject(new CheckoutConflictError()), {
@@ -89,8 +87,6 @@ describe('useGitAction', () => {
     expect(useUiStore.getState().toasts).toHaveLength(0);
   });
 
-  // merge() throws MergeConflictError after opening the conflict modal — the
-  // regression was a green "Merged" toast rendered next to that modal.
   it('swallows MergeConflictError without a toast', async () => {
     const { result } = renderHook(() => useGitAction());
     const ok = await result.current(() => Promise.reject(new MergeConflictError()), {
@@ -100,10 +96,12 @@ describe('useGitAction', () => {
     expect(useUiStore.getState().toasts).toHaveLength(0);
   });
 
-  // The hook used to take only `kind` from classifyGitError and drop `action`,
-  // so an auth failure reached the user as a dead end with nowhere to go.
   it('offers a way out of an authentication failure', async () => {
-    useRepoStore.setState({ remoteHost: 'github.com', remoteProtocol: 'https' });
+    useRepoStore.setState({
+      remoteHost: 'github.com',
+      remoteProtocol: 'https',
+      repoPath: '/src/p',
+    });
     const openSignIn = vi.fn().mockResolvedValue(undefined);
     useAccountStore.setState({ openSignIn });
     const { result } = renderHook(() => useGitAction());
@@ -117,13 +115,38 @@ describe('useGitAction', () => {
     expect(toast.action).toBeDefined();
 
     toast.action!.onClick();
-    // Aimed at the server that refused, not at a settings page the user would
-    // then have to navigate.
-    expect(openSignIn).toHaveBeenCalledWith('github.com');
+    expect(openSignIn).toHaveBeenCalledWith('github.com', '/src/p');
   });
 
-  // Nothing to sign in to: a button that opened an empty dialog would be worse
-  // than no button.
+  it('opens the sign-in for the refusing server straight away', async () => {
+    useRepoStore.setState({
+      remoteHost: 'gitlab.acme.com',
+      remoteProtocol: 'https',
+      repoPath: '/src/p',
+    });
+    const openSignIn = vi.fn().mockResolvedValue(undefined);
+    useAccountStore.setState({ openSignIn, phase: null });
+    const { result } = renderHook(() => useGitAction());
+
+    await result.current(() => Promise.reject(new Error('Authentication failed')), {
+      title: 'Push',
+    });
+    expect(openSignIn).toHaveBeenCalledWith('gitlab.acme.com', '/src/p');
+  });
+
+  it('leaves a sign-in already on screen alone', async () => {
+    useRepoStore.setState({ remoteHost: 'github.com', remoteProtocol: 'https' });
+    const openSignIn = vi.fn().mockResolvedValue(undefined);
+    useAccountStore.setState({ openSignIn, phase: 'waiting' });
+    const { result } = renderHook(() => useGitAction());
+
+    await result.current(() => Promise.reject(new Error('Authentication failed')), {
+      title: 'Push',
+    });
+    expect(openSignIn).not.toHaveBeenCalled();
+    useAccountStore.setState({ phase: null });
+  });
+
   it('omits the action when the repository has no remote', async () => {
     const { result } = renderHook(() => useGitAction());
     await result.current(() => Promise.reject(new Error('Authentication failed')), {
@@ -140,7 +163,6 @@ describe('useGitAction', () => {
     expect(lastToast().action).toBeUndefined();
   });
 
-  // The classifier knew the fix all along; the hook used to drop it.
   it('offers to publish a branch that has no upstream', async () => {
     const publishBranch = vi.fn().mockResolvedValue(undefined);
     useRepoStore.setState({ publishBranch });

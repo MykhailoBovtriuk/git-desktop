@@ -30,9 +30,6 @@ export function WelcomeScreen() {
         <Badge variant="beta">Beta</Badge>
       </h1>
       <p className="text-subtext text-sm">{t('tagline')}</p>
-      {/* One column as wide as the Settings/Info pair, so the main action
-          lines up with them. No titlebar or footer here, so the way to
-          Settings and About is part of the page itself. */}
       <div className="inline-flex flex-col gap-2 mt-2">
         <Button
           variant="primary"

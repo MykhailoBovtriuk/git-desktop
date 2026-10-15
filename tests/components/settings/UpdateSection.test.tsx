@@ -117,7 +117,6 @@ describe('UpdateSection', () => {
     expect(startDownload).toHaveBeenCalledWith('1.1.0');
   });
 
-  // Between a version bump and its release there is nothing to reinstall.
   it('disables reinstall when no release matches the running version', () => {
     setup({ result: { ...checked, current: null } });
     render(<UpdateSection />);

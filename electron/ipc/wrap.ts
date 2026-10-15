@@ -11,14 +11,12 @@ export function wrap<T>(fn: () => Promise<T>): Promise<IpcResult<T>> {
     }));
 }
 
-/** First line only: a commit body or a stray object has no place in a log title. */
 function detailOf(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const line = value.split('\n', 1)[0].trim();
   return line ? line.slice(0, 200) : undefined;
 }
 
-/** `wrap` for operations the user starts: the run and its git output go to the log. */
 export function wrapLogged<T>(
   op: LogOp,
   repo: { getRepoPath(): string | null },

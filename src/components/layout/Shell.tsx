@@ -53,8 +53,6 @@ export function Shell() {
   const sidebarOpen = useUiStore(s => s.sidebarOpen);
 
   if (!repoPath) {
-    // Without a repository there is no footer, so the welcome screen links to
-    // Settings/About itself.
     return (
       <>
         {showsOverlay ? (
@@ -80,8 +78,6 @@ export function Shell() {
       <Titlebar />
       <RebaseBanner />
       <div className="flex flex-1 overflow-hidden">
-        {/* Settings and About take over the whole content area — the sidebar is
-            about the open repository and has nothing to offer there. */}
         {showsOverlay ? (
           <main className="flex-1 overflow-hidden">
             <OverlayContent activeView={activeView} />

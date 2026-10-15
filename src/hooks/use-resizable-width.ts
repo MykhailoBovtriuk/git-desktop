@@ -6,10 +6,6 @@ function loadWidth(storageKey: string, min: number, max: number, initial: number
   return saved >= min && saved <= max ? saved : initial;
 }
 
-/**
- * A column width dragged with the mouse and remembered in localStorage. `edge`
- * is the side the handle sits on: a panel docked right grows as it moves left.
- */
 export function useResizableWidth(
   storageKey: string,
   min: number,

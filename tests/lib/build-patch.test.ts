@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildHunkPatch } from '../../src/lib/build-patch';
 
-// A modified file with two hunks.
 const TWO_HUNK = [
   'diff --git a/f.txt b/f.txt',
   'index 1111111..2222222 100644',

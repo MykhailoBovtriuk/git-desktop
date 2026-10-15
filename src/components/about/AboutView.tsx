@@ -28,7 +28,6 @@ export function AboutView() {
   const closeOverlays = useUiStore(s => s.closeOverlays);
   const addToast = useUiStore(s => s.addToast);
   const version = useAppVersion();
-  // Same rule as Settings: the titlebar toggle closes it when there is one.
   const repoOpen = useRepoStore(s => !!s.repoPath);
   useEscapeToClose(closeOverlays);
 

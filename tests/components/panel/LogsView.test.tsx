@@ -115,7 +115,6 @@ describe('PanelButtons', () => {
     });
     render(<PanelButtons />);
     const logs = screen.getAllByRole('button', { name: /toggle/ })[0];
-    // Hidden under the page, so not shown as on.
     expect(logs).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(logs);

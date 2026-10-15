@@ -7,7 +7,6 @@ import { DiscardIcon, IconButton, ResizeHandle, SegmentedControl } from '../../s
 import { LogsView } from './LogsView';
 import { TerminalView } from './TerminalView';
 
-/** Tools docked on the right of the content: the operation log and the terminal. */
 export function RightPanel() {
   const { t } = useTranslation('logs');
   const { t: tt } = useTranslation('terminal');

@@ -48,8 +48,6 @@ export function Titlebar() {
 
       <div className="flex-1 min-w-0" />
 
-      {/* Centred on the window, not between the side blocks: those differ in
-          width, so the group sat off-centre. */}
       <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[42%]">
         <DragRegion draggable={false} className="shrink-0">
           <AppMenuButtons />

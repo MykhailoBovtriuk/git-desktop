@@ -9,6 +9,5 @@ export const logApi = {
   getRetention: () => invoke<LogRetention>('log:get-retention'),
   setRetention: (retention: LogRetention) => invoke<null>('log:set-retention', retention),
   openFolder: (repoPath: string) => invoke<null>('log:open-folder', repoPath),
-  /** Running entries arrive too, then again once settled, under the same id. */
   onEntry: (cb: (entry: LogEntry) => void): (() => void) => window.electronAPI.onLogEntry(cb),
 };
