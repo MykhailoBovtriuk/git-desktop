@@ -37,6 +37,7 @@ const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): Provid
   configured: false,
   needsHost: true,
   needsClientId: true,
+  needsClientSecret: false,
   tokenHelpUrl: null,
   ...o,
 });
@@ -120,9 +121,9 @@ describe('account store', () => {
       expect(store().target?.providerId).toBe('github');
     });
 
-    it('takes a token for a known host this build cannot open a browser for', async () => {
+    it('still opens the browser step for a known host this build has no keys for', async () => {
       await store().openSignIn('gitlab.com', REPO);
-      expect(store().phase).toBe('token');
+      expect(store().phase).toBe('browser');
       expect(store().target?.providerId).toBe('gitlab');
     });
 
@@ -137,7 +138,7 @@ describe('account store', () => {
       await store().chooseProvider('gitlab-self');
 
       expect(api.probeServer).toHaveBeenCalledWith('gitlab-self', 'git.acme.internal');
-      expect(store().phase).toBe('token');
+      expect(store().phase).toBe('browser');
       expect(store().target?.providerId).toBe('gitlab-self');
     });
 
@@ -187,12 +188,12 @@ describe('account store', () => {
       expect(store().target?.host).toBe('');
     });
 
-    it('goes on to a token once the address checks out', async () => {
+    it('goes on to the browser once the address checks out', async () => {
       await store().beginSignIn('github-enterprise', REPO);
       await store().submitEndpoint('https://GHE.acme.com/some/repo');
 
       expect(api.probeServer).toHaveBeenCalledWith('github-enterprise', 'ghe.acme.com');
-      expect(store().phase).toBe('token');
+      expect(store().phase).toBe('browser');
       expect(store().target).toMatchObject({
         host: 'ghe.acme.com',
         providerId: 'github-enterprise',
@@ -251,6 +252,16 @@ describe('account store', () => {
     });
   });
 
+  it('takes a token for a service without OAuth', async () => {
+    api.providersFor.mockResolvedValue({
+      host: 'devops.acme.com',
+      providerId: 'azure-devops-server',
+      options: [...OPTIONS, option({ id: 'azure-devops-server', needsClientId: false })],
+    });
+    await store().openSignIn('devops.acme.com', REPO);
+    expect(store().phase).toBe('token');
+  });
+
   it('switches between the browser and a token', async () => {
     await store().beginSignIn('github', REPO);
     store().switchMethod('token');
@@ -307,6 +318,7 @@ describe('account store', () => {
   it('reports a rejected token without closing the form', async () => {
     api.signInWithToken.mockRejectedValue(new Error('401 Unauthorized'));
     await store().openSignIn('gitlab.com', REPO);
+    store().switchMethod('token');
     await store().submitToken('', 'bad');
 
     expect(store().phase).toBe('token');

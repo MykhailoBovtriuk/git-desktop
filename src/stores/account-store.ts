@@ -65,7 +65,7 @@ const HOSTED_INSTEAD: Partial<Record<ProviderId, { host: string; provider: Provi
 };
 
 function firstMethod(option: ProviderOption | undefined): SignInPhase {
-  return option?.configured ? 'browser' : 'token';
+  return option?.configured || option?.needsClientId ? 'browser' : 'token';
 }
 
 export const useAccountStore = create<AccountState>()((set, get) => {

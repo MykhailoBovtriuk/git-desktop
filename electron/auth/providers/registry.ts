@@ -82,6 +82,7 @@ export function providerOptions(host: string | null): ProviderOption[] {
       configured: p.id !== 'token' && p.oauth !== false && !ownApp,
       needsHost: NEEDS_HOST.has(p.id),
       needsClientId: ownApp,
+      needsClientSecret: ownApp && !p.usesPkce,
       tokenHelpUrl: host ? p.tokenHelpUrl(host) : null,
     };
   });

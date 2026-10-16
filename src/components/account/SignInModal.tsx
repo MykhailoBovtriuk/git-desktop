@@ -263,6 +263,9 @@ export function SignInModal() {
 
   const waiting = phase === 'waiting';
   const needsClientId = !!provider?.needsClientId;
+  const needsClientSecret = !!provider?.needsClientSecret;
+  const appMissing =
+    (needsClientId && !clientId.trim()) || (needsClientSecret && !clientSecret.trim());
 
   return (
     <Modal
@@ -272,7 +275,7 @@ export function SignInModal() {
         <Button
           variant="primary"
           size="sm"
-          disabled={busy || (needsClientId && !clientId.trim())}
+          disabled={busy || appMissing}
           onClick={() => void continueWithBrowser(clientId.trim(), clientSecret.trim())}
         >
           {waiting ? t('browser.reopen') : t('browser.continue')}
@@ -291,9 +294,7 @@ export function SignInModal() {
               onChange={e => setClientId(e.target.value)}
               placeholder={t('browser.clientIdPlaceholder')}
             />
-            {/* GitHub Enterprise is the only self-hosted provider whose flow
-                cannot use PKCE, so it is the only one that has to ask. */}
-            {provider?.id === 'github-enterprise' && (
+            {needsClientSecret && (
               <TextInput
                 variant="modal"
                 type="password"

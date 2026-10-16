@@ -8,7 +8,7 @@
     "waiting": "Waiting for you to authorize in the browser…",
     "clientIdPlaceholder": "Application (client) ID",
     "clientSecretPlaceholder": "Client secret",
-    "selfHostedHint": "Register an OAuth application on your server with the callback URL git-desktop-auth://oauth, then paste its client ID here.",
+    "selfHostedHint": "Register an OAuth application with the callback URL git-desktop-auth://oauth, then paste its client ID here.",
     "useToken": "Use a token instead"
   },
   "choose": {

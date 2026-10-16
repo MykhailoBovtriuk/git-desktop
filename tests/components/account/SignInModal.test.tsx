@@ -22,13 +22,19 @@ const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): Provid
   configured: false,
   needsHost: true,
   needsClientId: true,
+  needsClientSecret: false,
   tokenHelpUrl: null,
   ...o,
 });
 
 const OPTIONS: ProviderOption[] = [
   option({ id: 'gitlab-self', displayName: 'GitLab (self-managed)', group: 'gitlab-self' }),
-  option({ id: 'github-enterprise', displayName: 'GitHub Enterprise', group: 'github-enterprise' }),
+  option({
+    id: 'github-enterprise',
+    displayName: 'GitHub Enterprise',
+    group: 'github-enterprise',
+    needsClientSecret: true,
+  }),
   option({ id: 'azure-devops-server', displayName: 'Azure DevOps Server', needsClientId: false }),
   option({
     id: 'token',
@@ -112,6 +118,28 @@ describe('SignInModal', () => {
     setup({ providerId: 'gitlab-self', host: 'gitlab.acme.internal' });
     render(<SignInModal />);
     expect(screen.getByText('browser.continue').closest('button')).toBeDisabled();
+  });
+
+  it('asks for no secret when the provider uses PKCE', () => {
+    setup({ providerId: 'gitlab-self', host: 'gitlab.acme.internal' });
+    render(<SignInModal />);
+    expect(screen.queryByPlaceholderText('browser.clientSecretPlaceholder')).toBeNull();
+  });
+
+  it('hands off only once both the client id and secret are given', () => {
+    const actions = setup({ providerId: 'github-enterprise', host: 'ghe.acme.com' });
+    render(<SignInModal />);
+    const go = () => screen.getByText('browser.continue').closest('button')!;
+
+    fireEvent.change(screen.getByPlaceholderText('browser.clientIdPlaceholder'), {
+      target: { value: 'id-1' },
+    });
+    expect(go()).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('browser.clientSecretPlaceholder'), {
+      target: { value: 'shh' },
+    });
+    fireEvent.click(go());
+    expect(actions.continueWithBrowser).toHaveBeenCalledWith('id-1', 'shh');
   });
 
   it('offers to reopen the browser while waiting', () => {

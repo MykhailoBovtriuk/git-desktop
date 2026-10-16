@@ -119,6 +119,22 @@ describe('provider registry', () => {
     delete process.env.OAUTH_GITEA_ID;
   });
 
+  it('asks a build without keys for a secret only where the flow lacks PKCE', () => {
+    const secret = (id: string) =>
+      providerOptions('git.acme.internal').find(o => o.id === id)?.needsClientSecret;
+    for (const id of ['github', 'github-enterprise', 'bitbucket']) expect(secret(id)).toBe(true);
+    for (const id of ['gitlab', 'gitlab-self', 'gitea', 'azure-devops', 'bitbucket-server'])
+      expect(secret(id)).toBe(false);
+    for (const id of ['token', 'azure-devops-server']) expect(secret(id)).toBe(false);
+  });
+
+  it('asks for no secret once the build carries the keys', () => {
+    process.env.OAUTH_GITHUB_ID = 'abc';
+    process.env.OAUTH_GITHUB_SECRET = 'shh';
+    resetKeyCache();
+    expect(providerOptions(null).find(o => o.id === 'github')?.needsClientSecret).toBe(false);
+  });
+
   it('offers only a token for a service without OAuth', () => {
     const server = providerOptions('devops.acme.com').find(o => o.id === 'azure-devops-server');
     expect(server).toMatchObject({ configured: false, needsClientId: false, needsHost: true });

@@ -8,7 +8,7 @@
     "waiting": "Wachten tot je autoriseert in de browser…",
     "clientIdPlaceholder": "Toepassings-ID (client)",
     "clientSecretPlaceholder": "Clientgeheim",
-    "selfHostedHint": "Registreer een OAuth-toepassing op je server met de callback-URL git-desktop-auth://oauth en plak hier de client-ID.",
+    "selfHostedHint": "Registreer een OAuth-toepassing met de callback-URL git-desktop-auth://oauth en plak hier de client-ID.",
     "useToken": "Liever een token gebruiken"
   },
   "choose": {

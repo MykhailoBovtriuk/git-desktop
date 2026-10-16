@@ -130,6 +130,7 @@ export interface ProviderOption {
   configured: boolean;
   needsHost: boolean;
   needsClientId: boolean;
+  needsClientSecret: boolean;
   tokenHelpUrl: string | null;
 }
 
