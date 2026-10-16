@@ -66,8 +66,6 @@ describe('Accordion', () => {
         <span>content</span>
       </Accordion>,
     );
-    // Without a badge the header holds only the title and the arrow (children
-    // are not rendered while closed).
     const spans = container.querySelectorAll('span');
     expect(spans).toHaveLength(2);
   });
@@ -78,8 +76,6 @@ describe('Accordion', () => {
         <span>content</span>
       </Accordion>,
     );
-    // The header styling lives on the container div; the toggle button is a
-    // transparent overlay inside it.
     expect(screen.getByRole('button').parentElement).toHaveClass('bg-surface0');
   });
 

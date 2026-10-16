@@ -3,7 +3,12 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { ensureGlobalIdentity, hasIdentity } from '../../electron/auth/identity-bootstrap';
+import {
+  ensureGlobalIdentity,
+  getIdentity,
+  hasIdentity,
+  setIdentity,
+} from '../../electron/auth/identity-bootstrap';
 import { stripLegacyProfileKeys } from '../../electron/auth/legacy-cleanup';
 import type { ProviderAccount } from '../../src/types';
 
@@ -14,6 +19,7 @@ let realHome: string | undefined;
 
 const ACCOUNT: ProviderAccount = {
   id: 'github.com|octocat',
+  repoPath: '/src/p',
   providerId: 'github',
   host: 'github.com',
   displayName: 'GitHub',
@@ -50,8 +56,6 @@ describe('ensureGlobalIdentity', () => {
     expect(readGlobal('user.email')).toBe('octo@example.com');
   });
 
-  // Overwriting an address the user chose would misattribute their commits,
-  // invisibly, until someone noticed the wrong author on a branch.
   it('leaves an identity the user already set untouched', async () => {
     execFileSync('git', ['config', '--global', 'user.name', 'Existing Person']);
     execFileSync('git', ['config', '--global', 'user.email', 'existing@work.example']);
@@ -68,8 +72,6 @@ describe('ensureGlobalIdentity', () => {
     expect(readGlobal('user.email')).toBe('existing@work.example');
   });
 
-  // An account with no public email — GitHub hides them by default — must not
-  // write an empty address, which git would reject on the next commit.
   it('writes no email when the account has none', async () => {
     await ensureGlobalIdentity({ ...ACCOUNT, email: '' });
     expect(readGlobal('user.email')).toBe('');
@@ -103,11 +105,63 @@ describe('hasIdentity', () => {
     expect(await hasIdentity(repo)).toBe(true);
   });
 
-  // A repository-level override counts too — that is the whole reason the
-  // question is asked per repository rather than once for the machine.
   it('is true for a repository-level override alone', async () => {
     execFileSync('git', ['config', '--local', 'user.email', 'me@work.example'], { cwd: repo });
     expect(await hasIdentity(repo)).toBe(true);
+  });
+});
+
+describe('getIdentity / setIdentity', () => {
+  let repo: string;
+  const readLocal = (key: string) => {
+    try {
+      return execFileSync('git', ['config', '--local', '--get', key], {
+        cwd: repo,
+        encoding: 'utf8',
+      }).trim();
+    } catch {
+      return '';
+    }
+  };
+
+  beforeEach(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-id-'));
+    execFileSync('git', ['init'], { cwd: repo });
+  });
+
+  afterEach(() => {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  it('reads the global author, and no local one without a repository', async () => {
+    execFileSync('git', ['config', '--global', 'user.name', 'Ada']);
+    expect(await getIdentity(null)).toEqual({ global: { name: 'Ada', email: '' }, local: null });
+  });
+
+  it('writes the global author', async () => {
+    await setIdentity('global', null, { name: ' Ada Lovelace ', email: 'ada@example.com' });
+    expect(readGlobal('user.name')).toBe('Ada Lovelace');
+    expect(readGlobal('user.email')).toBe('ada@example.com');
+  });
+
+  it('keeps a repository override apart from the global author, and unsets it with empty values', async () => {
+    await setIdentity('global', null, { name: 'Ada', email: 'ada@home.example' });
+    await setIdentity('local', repo, { name: '', email: 'ada@work.example' });
+    expect(readLocal('user.email')).toBe('ada@work.example');
+    expect(await getIdentity(repo)).toEqual({
+      global: { name: 'Ada', email: 'ada@home.example' },
+      local: { name: '', email: 'ada@work.example' },
+    });
+
+    await setIdentity('local', repo, { name: '', email: '' });
+    expect(readLocal('user.email')).toBe('');
+    expect(readGlobal('user.email')).toBe('ada@home.example');
+  });
+
+  it('refuses a repository scope with no repository', async () => {
+    await expect(setIdentity('local', null, { name: 'a', email: '' })).rejects.toThrow(
+      /No repository/,
+    );
   });
 });
 
@@ -134,8 +188,6 @@ describe('stripLegacyProfileKeys', () => {
     }
   };
 
-  // core.sshCommand routes git around the token this app now stores, so a
-  // leftover from the removed profiles feature breaks authentication silently.
   it('removes the keys an older build wrote', async () => {
     execFileSync('git', ['config', '--local', 'core.sshCommand', 'ssh -i ~/.ssh/old'], {
       cwd: repo,
@@ -147,8 +199,6 @@ describe('stripLegacyProfileKeys', () => {
     expect(local('gitdesktop.profile')).toBe('');
   });
 
-  // This is the only place the app writes to somebody's repository unasked,
-  // so it must touch nothing beyond the two keys it put there itself.
   it('leaves every other setting alone', async () => {
     execFileSync('git', ['config', '--local', 'user.email', 'me@work.example'], { cwd: repo });
     execFileSync('git', ['config', '--local', 'core.autocrlf', 'input'], { cwd: repo });

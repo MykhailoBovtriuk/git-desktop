@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { assetNameFor, linuxPackageFormat } from '../../electron/update/assets';
 
 describe('assetNameFor', () => {
-  // Real release asset names from electron-builder.yml `artifactName`; this
-  // breaks first if those change.
   it('names every artifact the release workflow publishes', () => {
     const cases: [string, string, 'AppImage' | 'deb', string][] = [
       ['darwin', 'x64', 'deb', 'Git-Desktop-x64.dmg'],
@@ -21,8 +19,6 @@ describe('assetNameFor', () => {
     }
   });
 
-  // No build exists for these, so the UI has to fall back to the release page
-  // rather than download a name nobody published.
   it('returns null for combinations nothing is built for', () => {
     expect(assetNameFor('linux', 'ia32', 'deb')).toBeNull();
     expect(assetNameFor('freebsd', 'x64', 'deb')).toBeNull();

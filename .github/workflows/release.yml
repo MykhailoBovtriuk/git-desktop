@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ matrix.platform }})
+    name: Build (${{ matrix.platform }}${{ matrix.arch && format(' {0}', matrix.arch) || '' }})
     strategy:
       fail-fast: false
       matrix:
@@ -19,8 +19,14 @@ jobs:
             platform: win
           - os: macos-latest
             platform: mac
+          # node-pty has no Linux prebuild and compiles at `npm ci` for the
+          # runner's own arch, so each Linux arch builds on its own hardware.
           - os: ubuntu-latest
             platform: linux
+            arch: x64
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -61,11 +67,16 @@ jobs:
 
       - name: Package Linux artifacts
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux AppImage deb --x64 --arm64 --publish never
+        run: npx electron-builder --linux AppImage deb --${{ matrix.arch }} --publish never
+
+      # A terminal that cannot load is a silent placeholder in the app, so the
+      # packaged binary is checked here instead of by the first user.
+      - name: Check the packaged terminal module
+        run: node scripts/check-packaged-pty.mjs
 
       - uses: actions/upload-artifact@v7
         with:
-          name: installers-${{ matrix.platform }}
+          name: installers-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) || '' }}
           path: |
             release/*.exe
             release/*.dmg

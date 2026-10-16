@@ -25,7 +25,6 @@ describe('ContextMenu', () => {
   it('portals the menu to document.body when open', () => {
     render(<Harness open />);
     const item = screen.getByText('action');
-    // In a portal, not inside the harness wrapper.
     expect(item.closest('[data-dropdown-panel]')).toBeNull();
     expect(item.closest('div.fixed')).not.toBeNull();
   });

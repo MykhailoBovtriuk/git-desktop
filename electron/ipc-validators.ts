@@ -47,6 +47,8 @@ export function assertStashIndex(index: unknown): asserts index is number {
   assertNonNegativeInteger(index, 'index');
 }
 
+// A value starting with '-' reaches git as a flag: `--output=/path` would write
+// a diff to any file. Hex only, so no flag can get through.
 export function assertCommitHash(value: unknown, name: string): asserts value is string {
   assertString(value, name);
   if (!/^[0-9a-f]{4,64}$/i.test(value as string)) {
@@ -71,5 +73,34 @@ export function assertBranchName(value: unknown, name: string): asserts value is
     v.endsWith('.')
   ) {
     throw new Error(`Invalid argument: ${name} has an invalid ref format`);
+  }
+}
+
+export function assertIdentity(value: unknown): asserts value is { name: string; email: string } {
+  if (!value || typeof value !== 'object') throw new Error('Invalid argument: identity');
+  const { name, email } = value as Record<string, unknown>;
+  for (const [field, v] of [
+    ['name', name],
+    ['email', email],
+  ] as const) {
+    if (typeof v !== 'string' || v.length > 200 || /[\n\r\0]/.test(v)) {
+      throw new Error(`Invalid argument: ${field}`);
+    }
+  }
+  const trimmed = (email as string).trim();
+  if (trimmed && !/^[^\s@]+@[^\s@]+$/.test(trimmed)) {
+    throw new Error('Invalid argument: email');
+  }
+}
+
+export function optionalBoolean(value: unknown, name: string): boolean {
+  if (value === undefined) return false;
+  if (typeof value !== 'boolean') throw new Error(`Invalid argument: ${name} must be a boolean`);
+  return value;
+}
+
+export function assertDimension(value: unknown, name: string): asserts value is number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 1000) {
+    throw new Error(`Invalid argument: ${name} must be an integer between 1 and 1000`);
   }
 }

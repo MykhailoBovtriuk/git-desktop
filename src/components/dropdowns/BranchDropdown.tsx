@@ -79,8 +79,6 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       />
 
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
-        {/* The header row stays when the filter matches nothing: that is
-            exactly when the user wants to create the branch. */}
         <div className="flex items-center justify-between">
           <SectionLabel>{t('local')}</SectionLabel>
           <button
@@ -95,8 +93,6 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
         </div>
         {local.map(renderItem)}
 
-        {/* Fetch is what fills this section, so its header shows whenever
-            there is a remote — even before the first fetch brought anything. */}
         {(remoteHost || remote.length > 0) && (
           <>
             <div className="flex items-center justify-between mt-1">

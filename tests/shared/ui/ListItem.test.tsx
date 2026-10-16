@@ -40,8 +40,6 @@ describe('ListItem', () => {
     expect(screen.getByTestId('li')).toHaveClass('extra');
   });
 
-  // Every list in the app rides on this component, so a clickable row that
-  // the keyboard cannot reach is an app-wide accessibility hole.
   it('clickable rows are focusable buttons that react to Enter and Space', () => {
     const onClick = vi.fn();
     render(

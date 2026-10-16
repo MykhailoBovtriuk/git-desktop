@@ -56,8 +56,6 @@ afterEach(() => {
 
 describe('lookupReleases', () => {
   it('ranks releases by version, not by the order GitHub returns them', async () => {
-    // A patch cut from an old branch is the newest by date and the oldest by
-    // version — the reason the array is ranked rather than trusted.
     fetchMock.mockResolvedValue(ok([release('v1.0.3'), release('v1.2.0'), release('v1.1.0')]));
 
     const { latest } = await lookupReleases(mac);
@@ -106,7 +104,6 @@ describe('lookupReleases', () => {
     expect(latest?.assetSize).toBe(0);
   });
 
-  // A spoofed response could name our file and point it somewhere else.
   it('refuses an asset whose download URL is off the release path', async () => {
     fetchMock.mockResolvedValue(
       ok([
@@ -138,7 +135,6 @@ describe('lookupReleases', () => {
   it('leaves current null when no release matches the running version', async () => {
     fetchMock.mockResolvedValue(ok([release('v1.1.0')]));
 
-    // The normal state between a version bump and its release.
     const { current, latest } = await lookupReleases({ ...mac, currentVersion: '1.2.0' });
     expect(current).toBeNull();
     expect(latest?.version).toBe('1.1.0');
@@ -183,7 +179,6 @@ describe('rate limiting', () => {
 
     await expect(lookupReleases(mac)).rejects.toMatchObject({ reason: 'rate-limited' });
     await expect(lookupReleases({ ...mac, force: true })).rejects.toBeInstanceOf(UpdateError);
-    // The second call never reached the network.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

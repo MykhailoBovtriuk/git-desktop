@@ -16,6 +16,7 @@ vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
 
 const ACCOUNT: ProviderAccount = {
   id: 'github.com',
+  repoPath: '/src/p',
   providerId: 'github',
   host: 'github.com',
   displayName: 'GitHub',
@@ -78,7 +79,6 @@ describe('ConnectionModal', () => {
     expect(screen.getByText('https://github.com/o/r.git')).toBeTruthy();
   });
 
-  // On ssh a sign-in changes nothing, so the only way forward is the switch.
   it('names the ssh key and offers the switch to https, not a sign-in', () => {
     const { repo } = setup({ remoteProtocol: 'ssh', authSource: 'ssh' });
     render(<ConnectionModal />);
@@ -98,8 +98,6 @@ describe('ConnectionModal', () => {
     expect(repo.switchRemoteProtocol).not.toHaveBeenCalled();
   });
 
-  // The state right after switching to https on a fresh machine: the push that
-  // follows would fail, so the way out is the obvious button.
   it('offers a sign-in when nothing authenticates https', () => {
     const { ui, account } = setup({ authSource: 'none' });
     render(<ConnectionModal />);
@@ -110,8 +108,6 @@ describe('ConnectionModal', () => {
     expect(account.openSignIn).toHaveBeenCalledWith('github.com', '/tmp/r');
   });
 
-  // A stale Keychain password was the dead end: git kept using it and nothing
-  // offered to replace it.
   it('can forget a login stored outside the app, after asking', async () => {
     const { ui, account } = setup({ authSource: 'system' });
     render(<ConnectionModal />);
@@ -122,7 +118,7 @@ describe('ConnectionModal', () => {
 
     await waitFor(() => expect(account.forgetSystemCredential).toHaveBeenCalledWith('github.com'));
     expect(ui.requestConfirm).toHaveBeenCalledWith(expect.objectContaining({ danger: true }));
-    expect(account.refreshAuthSource).toHaveBeenCalledWith('github.com', 'https');
+    expect(account.refreshAuthSource).toHaveBeenCalledWith('github.com', 'https', '/tmp/r');
   });
 
   it('keeps the stored login when the confirmation is declined', async () => {
@@ -142,7 +138,7 @@ describe('ConnectionModal', () => {
     expect(screen.queryByText('connection.forget')).toBeNull();
     fireEvent.click(screen.getByText('section.signOut'));
 
-    await waitFor(() => expect(account.signOut).toHaveBeenCalledWith('github.com'));
+    await waitFor(() => expect(account.signOut).toHaveBeenCalledWith('/src/p'));
     expect(account.refreshAuthSource).toHaveBeenCalled();
   });
 

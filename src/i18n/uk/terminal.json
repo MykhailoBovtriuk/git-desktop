@@ -1,0 +1,21 @@
+{
+  "title": "Термінал",
+  "toggle": "Термінал ({{shortcut}})",
+  "newTerminal": "Новий термінал",
+  "newWithShell": "Новий термінал з…",
+  "close": "Закрити термінал",
+  "createFailed": "Не вдалося запустити термінал",
+  "exited": "[Процес завершився з кодом {{code}}. Натисніть Enter, щоб перезапустити.]",
+  "unavailable": "Термінал недоступний у цій системі.",
+  "empty": "Немає відкритих терміналів.",
+  "find": "Пошук (Enter, Shift+Enter)",
+  "openLinkTitle": "Відкрити посилання?",
+  "openLinkMessage": "{{url}} відкриється у браузері.",
+  "openLinkConfirm": "Відкрити",
+  "settings": {
+    "shell": "Shell",
+    "auto": "Автоматично",
+    "fontSize": "Розмір шрифту",
+    "shellHint": "Shell, з яким стартують нові термінали."
+  }
+}

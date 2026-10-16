@@ -1,7 +1,7 @@
 import { app, BrowserWindow, nativeImage, protocol, session } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
-import { registerIpcHandlers } from './ipc-handlers';
+import { killAllTerminals, registerIpcHandlers } from './ipc-handlers';
 import { resolveAppAssetPath } from './app-asset-path';
 import { RepoWatcher } from './repo-watcher';
 import { initDeepLinks, registerProtocol } from './auth/deep-link';
@@ -49,7 +49,6 @@ registerProtocol();
 
 const isPrimaryInstance = initDeepLinks(url => {
   void handleAuthCallback(url).then(() => {
-    // The user is looking at a browser tab right now; the result is in here.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -74,8 +73,6 @@ function createWindow() {
       ? { titleBarStyle: 'hiddenInset' }
       : {
           titleBarStyle: 'hidden',
-          // Startup colours only — the first render replaces them with the
-          // palette read from CSS variables (see src/hooks/use-theme.ts).
           titleBarOverlay: { color: '#181825', symbolColor: '#cdd6f4', height: 40 },
           autoHideMenuBar: true,
         };
@@ -192,9 +189,12 @@ app.whenReady().then(() => {
   registerIpcHandlers({
     onRepoOpened: root => repoWatcher.watch(root),
     getWindow: () => mainWindow,
+    logDir: path.join(app.getPath('userData'), 'logs'),
   });
   createWindow();
 });
+
+app.on('before-quit', () => killAllTerminals());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

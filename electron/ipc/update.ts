@@ -18,10 +18,6 @@ export interface UpdateHandlerOptions {
   getWindow?: () => BrowserWindow | null;
 }
 
-/**
- * Failures the UI has its own wording for travel as these tokens; anything else
- * is shown as-is.
- */
 const DEV_BUILD = 'dev-build';
 const NO_RELEASE = 'no-release';
 const NO_ASSET = 'no-asset';
@@ -43,7 +39,6 @@ let active: { controller: AbortController; version: string } | null = null;
  * to open any file on the machine. */
 let lastDownload: DownloadedUpdate | null = null;
 
-/** Tests only; the state above deliberately outlives a single call. */
 export function resetUpdateState(): void {
   active = null;
   lastDownload = null;
@@ -92,9 +87,7 @@ async function checkForUpdate(
     ...machine(),
   });
 
-  const available = lookup.latest
-    ? isNewerVersion(lookup.latest.version, currentVersion)
-    : false;
+  const available = lookup.latest ? isNewerVersion(lookup.latest.version, currentVersion) : false;
 
   return {
     status: available ? 'available' : 'up-to-date',
@@ -106,20 +99,15 @@ async function checkForUpdate(
   };
 }
 
-/** Both the update and the reinstall button come through here — reinstalling
- * is downloading the release whose tag matches the running version. */
 async function releaseFor(version: string): Promise<UpdateInfo> {
   const lookup = await lookupReleases({
     currentVersion: app.getVersion(),
-    // The version was named explicitly, so a pre-release is no surprise here.
     includePrerelease: true,
     force: false,
     ...machine(),
   });
 
-  const info = [lookup.latest, lookup.current].find(
-    candidate => candidate?.version === version,
-  );
+  const info = [lookup.latest, lookup.current].find(candidate => candidate?.version === version);
   if (!info) throw new Error(NO_RELEASE);
   if (!info.assetName) throw new Error(NO_ASSET);
   return info;
@@ -147,7 +135,8 @@ async function startDownload(version: unknown): Promise<DownloadedUpdate> {
           version: info.version,
           receivedBytes,
           totalBytes,
-          percent: totalBytes > 0 ? Math.min(100, Math.round((receivedBytes / totalBytes) * 100)) : 0,
+          percent:
+            totalBytes > 0 ? Math.min(100, Math.round((receivedBytes / totalBytes) * 100)) : 0,
           bytesPerSecond: Math.round(bytesPerSecond),
         }),
     });
@@ -171,12 +160,12 @@ export function registerUpdateHandlers(options: UpdateHandlerOptions = {}) {
     wrap(() => checkForUpdate(includePrerelease === true, force === true)),
   );
 
-  ipcMain.handle('app:download-update', (_e, version: unknown) => wrap(() => startDownload(version)));
+  ipcMain.handle('app:download-update', (_e, version: unknown) =>
+    wrap(() => startDownload(version)),
+  );
 
   ipcMain.handle('app:cancel-update-download', () =>
     wrap(async () => {
-      // Cancelling a download that already finished is not an error, it is a
-      // race the user won by a second.
       active?.controller.abort();
       return null;
     }),

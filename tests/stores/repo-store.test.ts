@@ -66,7 +66,6 @@ vi.mock('../../src/stores/account-store', () => ({
   useAccountStore: { getState: () => accountState },
 }));
 
-/** The main process decides what authenticates the remote; the store only asks. */
 const authSource = vi.fn(async (_host: string, _protocol: string | null) => 'none' as string);
 vi.mock('../../src/api/account-api', () => ({ accountApi: { authSource } }));
 
@@ -131,8 +130,6 @@ describe('repo-store', () => {
     const { MergeConflictError } = await import('../../src/stores/repo-store');
     vi.mocked(gitApi.merge).mockResolvedValueOnce({ success: false, conflicts: ['src/foo.ts'] });
     useRepoStore.setState({ currentBranch: 'main' });
-    // The throw is what stops callers from toasting "Merged" next to the
-    // conflict modal — the regression this test pins down.
     await expect(useRepoStore.getState().merge('feature')).rejects.toBeInstanceOf(
       MergeConflictError,
     );
@@ -219,7 +216,6 @@ describe('repo-store', () => {
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     (gitApi.getStashList as any).mockRejectedValueOnce(new Error('boom'));
     await expect(useRepoStore.getState().loadStashes()).rejects.toThrow('boom');
-    // refresh() collects the failure into the ⚠ indicator instead of hiding it.
     (gitApi.getStashList as any).mockRejectedValueOnce(new Error('boom'));
     await useRepoStore.getState().refresh();
     expect(useRepoStore.getState().lastRefreshError).toContain('boom');
@@ -229,8 +225,6 @@ describe('repo-store', () => {
     const { gitApi } = await import('../../src/api/git-api');
     await useRepoStore.getState().openRepo('/tmp/test-repo');
     await useRepoStore.getState().stashSave('my work');
-    // Manual stash flow forwards the `staged` flag; StashSection passes `true`,
-    // the store action forwards whatever it receives (undefined here).
     expect(gitApi.stashSave).toHaveBeenCalledWith('my work', undefined);
   });
 
@@ -359,8 +353,6 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().checkoutConflict).toBeNull();
   });
 
-  // Partial refresh: one failing loader must not discard the segments
-  // that succeeded, and refresh itself must resolve (not reject).
   it('refresh keeps successful segments when one loader fails', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ repoPath: '/tmp/test-repo' } as any);
@@ -381,8 +373,6 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().lastRefreshError).toBeNull();
   });
 
-  // Operation lock: a busyOperation marker is set for the duration of a
-  // tracked operation so auto-refresh can stand aside.
   it('runOperation sets busyOperation while running and clears it after', async () => {
     let observed: string | null = 'unset';
     await useRepoStore.getState().runOperation('commit', async () => {
@@ -425,7 +415,6 @@ describe('repo-store', () => {
   it('loadMoreCommits appends the next page and requests it at the current offset', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
-    // Distinct hashes (h200, h201) so this exercises plain append, not dedupe.
     const nextPage = [200, 201].map(i => ({
       hash: `h${i}`,
       abbreviatedHash: `h${i}`,
@@ -442,13 +431,11 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().hasMoreCommits).toBe(false);
   });
 
-  // With `--skip=N` a new commit shifts the page, so the last commit repeats;
-  // dedupe-on-append handles it.
   it('loadMoreCommits drops commits already present (dedupe on append)', async () => {
     const { gitApi } = await import('../../src/api/git-api');
-    const existing = makeCommits(5); // h0..h4
+    const existing = makeCommits(5);
     useRepoStore.setState({ commits: existing, hasMoreCommits: true } as any);
-    const dupOfLast = { ...existing[4] }; // h4 re-appears at the top of the page
+    const dupOfLast = { ...existing[4] };
     const h5 = { ...makeCommits(6)[5] };
     const h6 = { ...makeCommits(7)[6] };
     (gitApi.getLog as any).mockResolvedValueOnce([dupOfLast, h5, h6]);
@@ -457,7 +444,7 @@ describe('repo-store', () => {
 
     const hashes = useRepoStore.getState().commits.map((c: any) => c.hash);
     expect(hashes).toEqual(['h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
-    expect(new Set(hashes).size).toBe(hashes.length); // no duplicate keys
+    expect(new Set(hashes).size).toBe(hashes.length);
   });
 
   it('loadMoreCommits is a no-op when there are no more commits', async () => {
@@ -491,8 +478,6 @@ const deferred = <T>() => {
   return { promise, resolve, reject };
 };
 
-// Every loader captures a generation token; responses that resolve
-// after the repo was switched or a mutation ran must be discarded.
 describe('repo-store race conditions', () => {
   beforeEach(() => {
     useRepoStore.setState({
@@ -515,11 +500,11 @@ describe('repo-store race conditions', () => {
     const { gitApi } = await import('../../src/api/git-api');
     const slow = deferred<unknown[]>();
     (gitApi.getLog as any)
-      .mockImplementationOnce(() => slow.promise) // repo A — hangs
-      .mockResolvedValueOnce(makeCommits(1)); // repo B — fresh
+      .mockImplementationOnce(() => slow.promise)
+      .mockResolvedValueOnce(makeCommits(1));
     const first = useRepoStore.getState().openRepo('/a');
     await useRepoStore.getState().openRepo('/b');
-    slow.resolve(makeCommits(5)); // stale data for /a lands last
+    slow.resolve(makeCommits(5));
     await first;
     expect(useRepoStore.getState().commits).toHaveLength(1);
   });
@@ -558,11 +543,11 @@ describe('repo-store race conditions', () => {
     useRepoStore.setState({ commits: makeCommits(LOG_PAGE_SIZE), hasMoreCommits: true } as any);
     const slow = deferred<unknown[]>();
     (gitApi.getLog as any)
-      .mockImplementationOnce(() => slow.promise) // load more — hangs
-      .mockResolvedValueOnce(makeCommits(3)); // concurrent reload
+      .mockImplementationOnce(() => slow.promise)
+      .mockResolvedValueOnce(makeCommits(3));
     const more = useRepoStore.getState().loadMoreCommits();
     await useRepoStore.getState().loadLog();
-    slow.resolve(makeCommits(10)); // stale next page for the old offset
+    slow.resolve(makeCommits(10));
     await more;
     expect(useRepoStore.getState().commits).toHaveLength(3);
   });
@@ -575,8 +560,6 @@ describe('repo-store race conditions', () => {
   });
 });
 
-// After a mutation, everything the mutation may have changed must
-// be reloaded, and failure paths must still leave the UI in sync.
 describe('repo-store state consistency', () => {
   beforeEach(() => {
     useRepoStore.setState({
@@ -613,7 +596,6 @@ describe('repo-store state consistency', () => {
       new Error('CONFLICT (content): merge conflict in a.ts'),
     );
     await expect(useRepoStore.getState().migrateCheckout()).rejects.toThrow(/CONFLICT/);
-    // The branch DID switch before the pop failed — the UI must reflect it.
     expect(gitApi.getLog).toHaveBeenCalled();
     expect(gitApi.getBranches).toHaveBeenCalled();
   });
@@ -654,8 +636,6 @@ describe('creating a branch', () => {
     expect(gitApi.createBranch).toHaveBeenCalledWith('feature/login');
   });
 
-  // Order matters: stashing after the switch would park the work on the new
-  // branch.
   it('stashes against the branch being left, before switching', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     const calls: string[] = [];
@@ -671,7 +651,6 @@ describe('creating a branch', () => {
     await useRepoStore.getState().createBranch('feature/login', 'leave');
 
     expect(calls).toEqual(['stash', 'create']);
-    // -u, or an untracked file would follow along despite the choice.
     expect(gitApi.stashSave).toHaveBeenCalledWith('WIP on main', false, true);
   });
 });
@@ -695,8 +674,6 @@ describe('sign-in prompt on opening a repository', () => {
     authSource.mockResolvedValue('none');
   });
 
-  // Regression: at startup the repository reopens before account:list arrives,
-  // and the prompt was lost.
   it('waits for the account list instead of skipping the prompt', async () => {
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
@@ -718,8 +695,6 @@ describe('sign-in prompt on opening a repository', () => {
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
-  // An ssh remote uses a key: no prompt, but the answer is still fetched for
-  // the footer.
   it('says nothing for an ssh remote, but still learns what authenticates it', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.openRepo as any).mockResolvedValue({
@@ -735,8 +710,6 @@ describe('sign-in prompt on opening a repository', () => {
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
-  // The usual case on a machine somebody has worked on for years: the system
-  // credential store already holds the credential, so git needs nothing.
   it('says nothing when git can already authenticate on its own', async () => {
     authSource.mockResolvedValue('system');
     await useRepoStore.getState().openRepo('/tmp/r');
@@ -775,8 +748,6 @@ describe('restoring saved repositories', () => {
     await useRepoStore.persist.rehydrate();
   };
 
-  // Older builds saved other shapes here; one non-string entry used to crash
-  // every screen that shows a repository name.
   it('keeps only paths from a recent list written by an older build', async () => {
     await restore({
       repoPath: null,
@@ -806,8 +777,6 @@ describe('switching the remote protocol', () => {
     authSource.mockClear();
   });
 
-  // The dialog that asked shows the new state with its own sign-in button; a
-  // browser popping up unasked would be one surprise too many.
   it('moves the remote over and learns what now authenticates it', async () => {
     authSource.mockResolvedValue('none');
     await useRepoStore.getState().switchRemoteProtocol('https');
@@ -819,7 +788,6 @@ describe('switching the remote protocol', () => {
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
-  // Back on the key, an account has nothing to offer.
   it('does not ask to sign in after moving to ssh', async () => {
     useRepoStore.setState({ remoteProtocol: 'https' });
     const { gitApi } = await import('../../src/api/git-api');

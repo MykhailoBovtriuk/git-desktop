@@ -1,7 +1,11 @@
 import { ipcMain } from 'electron';
 import { GitService } from '../git-service';
-import { assertOptionalString, assertStashIndex } from '../ipc-validators';
-import { wrap } from './wrap';
+import { assertOptionalString, assertStashIndex, optionalBoolean } from '../ipc-validators';
+import { wrap, wrapLogged } from './wrap';
+
+function stashDetail(index: unknown): string | undefined {
+  return typeof index === 'number' ? `stash@{${index}}` : undefined;
+}
 
 export function registerStashHandlers(git: GitService) {
   ipcMain.handle('git:get-stash-list', () => wrap(() => git.getStashList()));
@@ -9,36 +13,36 @@ export function registerStashHandlers(git: GitService) {
   ipcMain.handle(
     'git:stash-save',
     (_e, message?: string, staged?: boolean, includeUntracked?: boolean) =>
-      wrap(() => {
+      wrapLogged('stash-save', git, message, () => {
         assertOptionalString(message, 'message');
-        if (staged !== undefined && typeof staged !== 'boolean') {
-          throw new Error('Invalid argument: staged must be a boolean');
-        }
-        if (includeUntracked !== undefined && typeof includeUntracked !== 'boolean') {
-          throw new Error('Invalid argument: includeUntracked must be a boolean');
-        }
-        return git.stashSave(message, staged ?? false, includeUntracked ?? false).then(() => null);
+        return git
+          .stashSave(
+            message,
+            optionalBoolean(staged, 'staged'),
+            optionalBoolean(includeUntracked, 'includeUntracked'),
+          )
+          .then(() => null);
       }),
   );
 
   ipcMain.handle('git:get-stash-top', () => wrap(() => git.getStashTop()));
 
   ipcMain.handle('git:stash-apply', (_e, index: number) =>
-    wrap(() => {
+    wrapLogged('stash-apply', git, stashDetail(index), () => {
       assertStashIndex(index);
       return git.stashApply(index).then(() => null);
     }),
   );
 
   ipcMain.handle('git:stash-pop', (_e, index: number) =>
-    wrap(() => {
+    wrapLogged('stash-pop', git, stashDetail(index), () => {
       assertStashIndex(index);
       return git.stashPop(index).then(() => null);
     }),
   );
 
   ipcMain.handle('git:stash-drop', (_e, index: number) =>
-    wrap(() => {
+    wrapLogged('stash-drop', git, stashDetail(index), () => {
       assertStashIndex(index);
       return git.stashDrop(index).then(() => null);
     }),

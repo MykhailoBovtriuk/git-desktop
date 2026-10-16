@@ -18,5 +18,33 @@
   "autoRefreshHint": "How often to poll the repository. Git operations (commit, checkout, stash) are picked up instantly; edits to files are noticed on the next poll — with Off, only on manual refresh.",
   "off": "Off",
   "seconds_one": "{{count}}s",
-  "seconds_other": "{{count}}s"
+  "seconds_other": "{{count}}s",
+  "categories": {
+    "general": "General",
+    "accounts": "Accounts",
+    "git": "Git",
+    "diff": "Diff",
+    "terminal": "Terminal",
+    "logs": "Logs",
+    "updates": "Updates"
+  },
+  "identity": {
+    "title": "Commit author",
+    "hint": "The name and email git records on every commit. Stored in your global git config, so the command line uses it too.",
+    "name": "Name",
+    "email": "Email",
+    "override": "Use a different author in {{repo}}",
+    "overrideHint": "For example a work email for this repository only. Saved in its .git/config.",
+    "effective": "Next commit here: {{who}}",
+    "missing": "No author set: git will refuse to commit.",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "diff": {
+    "fontSize": "Font size",
+    "wrap": "Wrap long lines",
+    "wrapHint": "Long lines break onto the next row instead of scrolling sideways.",
+    "ignoreWhitespace": "Ignore whitespace",
+    "ignoreWhitespaceHint": "Hides changes that only touch spaces and indentation. Staging single hunks is off while this is on."
+  }
 }

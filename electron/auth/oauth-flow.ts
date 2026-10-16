@@ -3,22 +3,14 @@ import type { ProviderAccount } from '../../src/types';
 import { keysFor, REDIRECT_URI } from './oauth-config';
 import { OAuthError, postToken, type TokenResponse } from './http';
 import { providerById } from './providers/registry';
-import { accountIdFor } from './account-id';
 import type { ProviderDefinition } from './providers/types';
 
-/**
- * The one sign-in engine, shared by every OAuth provider. Per-provider
- * differences arrive as a `ProviderDefinition`, never as a branch here.
- */
-
-/** A pending authorization. At most one at a time — this is a modal flow. */
 interface PendingFlow {
   state: string;
   providerId: ProviderDefinition['id'];
   host: string;
-  /** PKCE verifier, or null for the two providers that use a secret instead. */
+  repoPath: string;
   verifier: string | null;
-  /** Only set for self-hosted instances, where the user brings their own app. */
   clientId: string;
   clientSecret: string | null;
   issuedAt: number;
@@ -32,7 +24,6 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 
 let pending: PendingFlow | null = null;
 
-/** Exported for tests: lets a suite start from a known state. */
 export function resetPendingFlow(): void {
   pending = null;
 }
@@ -44,15 +35,11 @@ export function cancelSignIn(): void {
 export interface BeginOptions {
   provider: ProviderDefinition;
   host: string;
-  /** Supplied by the user for a self-hosted instance they registered an app on. */
+  repoPath: string;
   clientId?: string;
   clientSecret?: string;
 }
 
-/**
- * Builds the authorize URL and remembers what must match on return. Opens
- * nothing, so the module stays testable without Electron.
- */
 export function beginSignIn(opts: BeginOptions): string {
   const { provider, host } = opts;
   const baked = keysFor(provider.id);
@@ -86,6 +73,7 @@ export function beginSignIn(opts: BeginOptions): string {
     state,
     providerId: provider.id,
     host,
+    repoPath: opts.repoPath,
     verifier,
     clientId,
     clientSecret,
@@ -120,7 +108,6 @@ export async function completeSignIn(callbackUrl: string): Promise<SignInResult>
   const code = url.searchParams.get('code') ?? '';
   const error = url.searchParams.get('error');
 
-  // Whatever happens next, this state is spent.
   pending = null;
 
   if (error) {
@@ -147,12 +134,11 @@ export async function completeSignIn(callbackUrl: string): Promise<SignInResult>
 
   const token = await postToken(provider.endpoints(flow.host).tokenUrl, params);
   const fetched = await provider.fetchAccount(flow.host, token.accessToken);
-  const account: ProviderAccount = { ...fetched, id: accountIdFor(flow.host) };
+  const account: ProviderAccount = { ...fetched, id: flow.repoPath, repoPath: flow.repoPath };
 
   return { account, token, clientId: flow.clientId, clientSecret: flow.clientSecret };
 }
 
-/** A new access token from a refresh token, for the providers whose tokens expire. */
 export function refreshToken(
   provider: ProviderDefinition,
   host: string,
@@ -170,7 +156,6 @@ export function refreshToken(
   return postToken(provider.endpoints(host).tokenUrl, params);
 }
 
-/** RFC 7636: 43-128 unreserved characters. 32 random bytes base64url is 43. */
 function createVerifier(): string {
   return crypto.randomBytes(32).toString('base64url');
 }

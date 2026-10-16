@@ -19,6 +19,15 @@ files:
   - '!dist/*.blockmap'
   - '!dist/*.yml'
   - dist-electron/**/*
+# node-pty's native module and macOS spawn-helper are loaded and executed from
+# disk, which cannot happen from inside the asar archive.
+asarUnpack:
+  - node_modules/node-pty/**
+# node-pty is N-API, so the binary npm installed already fits Electron: macOS
+# and Windows x64/arm64 use its prebuilds, Linux compiles at `npm ci` on a
+# runner of the target arch. A rebuild here would cross-compile and could fail
+# the whole release; Windows ia32 simply ships without a terminal instead.
+npmRebuild: false
 mac:
   target:
     - target: dmg

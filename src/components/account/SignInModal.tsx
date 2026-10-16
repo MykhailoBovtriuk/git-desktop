@@ -7,16 +7,18 @@ import { accountApi } from '../../api/account-api';
 import { Button, Modal, TextInput } from '../../shared/ui';
 import type { ProviderId } from '../../types';
 
-/** The whole sign-in flow in one dialog: four states, not four screens. */
 export function SignInModal() {
   const { t } = useTranslation('account');
   const {
     phase,
     target,
     error,
+    endpointError,
     busy,
     chooseProvider,
-    setHost,
+    submitEndpoint,
+    confirmReplace,
+    switchMethod,
     continueWithBrowser,
     submitToken,
     cancelSignIn,
@@ -26,9 +28,12 @@ export function SignInModal() {
       phase: s.phase,
       target: s.target,
       error: s.error,
+      endpointError: s.endpointError,
       busy: s.busy,
       chooseProvider: s.chooseProvider,
-      setHost: s.setHost,
+      submitEndpoint: s.submitEndpoint,
+      confirmReplace: s.confirmReplace,
+      switchMethod: s.switchMethod,
       continueWithBrowser: s.continueWithBrowser,
       submitToken: s.submitToken,
       cancelSignIn: s.cancelSignIn,
@@ -38,6 +43,7 @@ export function SignInModal() {
   const repoPath = useRepoStore(s => s.repoPath);
 
   const [picked, setPicked] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [login, setLogin] = useState('');
@@ -45,16 +51,16 @@ export function SignInModal() {
 
   if (!phase || !target) return null;
 
-  const provider = target.options.find(o => o.id === (picked ?? target.providerId));
+  const provider = target.options.find(o => o.id === (target.providerId ?? picked));
+  const service = provider?.displayName ?? target.host;
   const cancel = () => {
     setPicked(null);
+    setAddress(null);
     setClientId('');
     setClientSecret('');
     setLogin('');
     setToken('');
-    // "Not now" is an answer about this repository, for this session — so
-    // re-opening it does not put the same dialog back in the user's way.
-    if (repoPath) dismissForRepo(repoPath);
+    if (target.repoPath && target.repoPath === repoPath) dismissForRepo(repoPath);
     void cancelSignIn();
   };
 
@@ -67,6 +73,9 @@ export function SignInModal() {
     </>
   );
 
+  const endpointMessage =
+    endpointError && t(`endpoint.error.${endpointError}`, { service: provider?.displayName ?? '' });
+
   if (phase === 'choose') {
     return (
       <Modal
@@ -77,8 +86,8 @@ export function SignInModal() {
           <Button
             variant="primary"
             size="sm"
-            disabled={!picked}
-            onClick={() => picked && chooseProvider(picked as ProviderId)}
+            disabled={!picked || busy}
+            onClick={() => picked && void chooseProvider(picked as ProviderId)}
           >
             {t('choose.continue')}
           </Button>,
@@ -98,28 +107,30 @@ export function SignInModal() {
                   checked={picked === option.id}
                   onChange={() => setPicked(option.id)}
                 />
-                <span className="text-text text-sm">{option.displayName}</span>
+                <span className="text-text text-sm">
+                  {option.id === 'token' ? t('token.otherServer') : option.displayName}
+                </span>
               </label>
             ))}
+          {endpointMessage && <p className="text-red text-xs mt-2">{endpointMessage}</p>}
         </div>
       </Modal>
     );
   }
 
-  if (phase === 'token') {
+  if (phase === 'endpoint') {
+    const value = address ?? target.host;
+    const submit = () => void submitEndpoint(value);
     return (
       <Modal
-        title={t('token.title', { host: target.host })}
-        subtitle={t('token.hint')}
+        title={t('endpoint.title', {
+          service: provider?.id === 'token' ? t('token.otherServer') : service,
+        })}
+        subtitle={t(`endpoint.hint.${provider?.group === 'other' ? 'other' : 'enterprise'}`)}
         onClose={cancel}
         footer={footer(
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={busy || !login.trim() || !token.trim()}
-            onClick={() => void submitToken(login.trim(), token.trim())}
-          >
-            {t('token.submit')}
+          <Button variant="primary" size="sm" disabled={busy || !value.trim()} onClick={submit}>
+            {t('choose.continue')}
           </Button>,
         )}
       >
@@ -127,19 +138,96 @@ export function SignInModal() {
           <TextInput
             variant="modal"
             autoFocus
-            value={login}
-            onChange={e => setLogin(e.target.value)}
-            placeholder={t('token.usernamePlaceholder')}
+            aria-label={t('endpoint.label')}
+            value={value}
+            onChange={e => setAddress(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && value.trim() && !busy) submit();
+            }}
+            placeholder={t(`endpoint.placeholder.${provider?.id ?? 'token'}`, {
+              defaultValue: t('endpoint.placeholder.token'),
+            })}
           />
+          {endpointMessage && <p className="text-red text-xs">{endpointMessage}</p>}
+        </div>
+      </Modal>
+    );
+  }
+
+  if (phase === 'existing' && target.existing) {
+    const who = target.existing.name || target.existing.login;
+    return (
+      <Modal
+        title={t('existing.title')}
+        onClose={cancel}
+        footer={footer(
+          <Button variant="primary" size="sm" onClick={confirmReplace}>
+            {t('existing.continue')}
+          </Button>,
+        )}
+      >
+        <p className="text-subtext text-sm">
+          {t('existing.body', {
+            name: who,
+            login: target.existing.login,
+            host: target.existing.host,
+          })}
+        </p>
+      </Modal>
+    );
+  }
+
+  const switchLink = (to: 'browser' | 'token', label: string) => (
+    <button
+      type="button"
+      onClick={() => switchMethod(to)}
+      className="text-blue text-xs hover:underline self-start"
+    >
+      {label}
+    </button>
+  );
+
+  if (phase === 'token') {
+    const needsLogin = !target.providerId || target.providerId === 'token';
+    const ready = !!token.trim() && (!needsLogin || !!login.trim());
+    const submit = () => void submitToken(needsLogin ? login.trim() : '', token.trim());
+    return (
+      <Modal
+        title={t('token.title', { host: target.host })}
+        subtitle={t('token.hint')}
+        onClose={cancel}
+        footer={footer(
+          <Button variant="primary" size="sm" disabled={busy || !ready} onClick={submit}>
+            {t('token.submit')}
+          </Button>,
+        )}
+      >
+        <div className="flex flex-col gap-2">
+          {needsLogin && (
+            <TextInput
+              variant="modal"
+              autoFocus
+              aria-label={t('token.usernamePlaceholder')}
+              value={login}
+              onChange={e => setLogin(e.target.value)}
+              placeholder={t('token.usernamePlaceholder')}
+            />
+          )}
           <TextInput
             variant="modal"
             type="password"
+            autoFocus={!needsLogin}
+            aria-label={t('token.tokenPlaceholder')}
             value={token}
             onChange={e => setToken(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && ready && !busy) submit();
+            }}
             placeholder={t('token.tokenPlaceholder')}
           />
-          {provider?.tokenHelpUrl && (
+          {provider?.id && provider.id !== 'token' && (
             <button
+              type="button"
               onClick={() =>
                 void accountApi.openTokenHelp(provider.id, target.host).catch(() => {})
               }
@@ -148,6 +236,9 @@ export function SignInModal() {
               {t('token.where')}
             </button>
           )}
+          {provider?.configured
+            ? switchLink('browser', t('token.useBrowser'))
+            : provider?.needsClientId && switchLink('browser', t('token.useOwnApp'))}
           {error && <p className="text-red text-xs">{error}</p>}
         </div>
       </Modal>
@@ -160,7 +251,7 @@ export function SignInModal() {
         title={t('error.title')}
         onClose={cancel}
         footer={footer(
-          <Button variant="primary" size="sm" onClick={() => chooseProvider('token')}>
+          <Button variant="primary" size="sm" onClick={() => switchMethod('token')}>
             {t('error.useToken')}
           </Button>,
         )}
@@ -170,8 +261,6 @@ export function SignInModal() {
     );
   }
 
-  // 'browser' and 'waiting' share a dialog, so pressing the button does not
-  // look like a step back.
   const waiting = phase === 'waiting';
   const needsClientId = !!provider?.needsClientId;
 
@@ -195,16 +284,9 @@ export function SignInModal() {
 
         {needsClientId && (
           <div className="flex flex-col gap-2">
-            {provider?.needsHost && (
-              <TextInput
-                variant="modal"
-                value={target.host}
-                onChange={e => setHost(e.target.value)}
-                placeholder={t('browser.hostPlaceholder')}
-              />
-            )}
             <TextInput
               variant="modal"
+              aria-label={t('browser.clientIdPlaceholder')}
               value={clientId}
               onChange={e => setClientId(e.target.value)}
               placeholder={t('browser.clientIdPlaceholder')}
@@ -215,6 +297,7 @@ export function SignInModal() {
               <TextInput
                 variant="modal"
                 type="password"
+                aria-label={t('browser.clientSecretPlaceholder')}
                 value={clientSecret}
                 onChange={e => setClientSecret(e.target.value)}
                 placeholder={t('browser.clientSecretPlaceholder')}
@@ -225,6 +308,7 @@ export function SignInModal() {
         )}
 
         {waiting && <p className="text-subtext text-xs">{t('browser.waiting')}</p>}
+        {!waiting && switchLink('token', t('browser.useToken'))}
         {error && <p className="text-red text-xs">{error}</p>}
       </div>
     </Modal>

@@ -6,10 +6,10 @@
     "continue": "Doorgaan met browser",
     "reopen": "Browser opnieuw openen",
     "waiting": "Wachten tot je autoriseert in de browser…",
-    "hostPlaceholder": "git.example.com",
     "clientIdPlaceholder": "Toepassings-ID (client)",
     "clientSecretPlaceholder": "Clientgeheim",
-    "selfHostedHint": "Registreer een OAuth-toepassing op je server met de callback-URL git-desktop-auth://oauth en plak hier de client-ID."
+    "selfHostedHint": "Registreer een OAuth-toepassing op je server met de callback-URL git-desktop-auth://oauth en plak hier de client-ID.",
+    "useToken": "Liever een token gebruiken"
   },
   "choose": {
     "title": "Inloggen bij {{host}}",
@@ -22,7 +22,10 @@
     "usernamePlaceholder": "Gebruikersnaam",
     "tokenPlaceholder": "Persoonlijk toegangstoken",
     "where": "Waar vind ik een token?",
-    "submit": "Inloggen"
+    "submit": "Inloggen",
+    "otherServer": "Andere Git-server",
+    "useBrowser": "Liever via de browser aanmelden",
+    "useOwnApp": "Liever met je eigen OAuth-app aanmelden"
   },
   "error": {
     "title": "Inloggen mislukt",
@@ -30,14 +33,10 @@
   },
   "section": {
     "title": "Accounts",
-    "hint": "De servers waarop je bent ingelogd. Elke server authenticeert zijn eigen repositories.",
-    "empty": "Nog op geen enkele server ingelogd.",
     "signOut": "Uitloggen",
-    "add": "Account toevoegen",
-    "hostPlaceholder": "github.com",
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
-    "connection": "Repositoryverbinding…",
-    "connectionHint": "SSH of HTTPS, en waarmee deze repository inlogt op {{host}}"
+    "repoHint": "Het account waarmee de repository {{repo}} zich aanmeldt. Elke repository meldt zich apart aan; terminals in de map gebruiken dezelfde aanmelding.",
+    "noRepo": "Open een repository om die aan te melden. Elke repository heeft een eigen account."
   },
   "signedInAs": "Ingelogd als {{name}} op {{host}}",
   "connection": {
@@ -57,5 +56,68 @@
     "forgetTitle": "Opgeslagen login vergeten",
     "forgetConfirm": "De login voor {{host}} uit de systeemopslag wissen? Git in een terminal gebruikt hem ook.",
     "failed": "Verbinding bijwerken is mislukt"
+  },
+  "endpoint": {
+    "title": "Aanmelden bij {{service}}",
+    "label": "Serveradres",
+    "hint": {
+      "enterprise": "Voer het adres van je server in, bijvoorbeeld het adres dat je in de browser opent.",
+      "other": "Voer het adres van de server in."
+    },
+    "placeholder": {
+      "github-enterprise": "https://github.example.com",
+      "gitlab-self": "https://gitlab.example.com",
+      "gitea": "https://codeberg.org",
+      "token": "https://git.example.com",
+      "bitbucket-server": "https://bitbucket.example.com",
+      "azure-devops-server": "https://devops.example.com"
+    },
+    "error": {
+      "invalid": "Dat lijkt geen serveradres. We verwachten iets als https://git.example.com.",
+      "insecure": "Alleen https wordt ondersteund: een token mag niet onversleuteld verstuurd worden.",
+      "mismatch": "Deze server lijkt geen {{service}}. Controleer het adres of kies een andere dienst.",
+      "unreachable": "De server is niet bereikbaar. Controleer het adres en je verbinding."
+    }
+  },
+  "existing": {
+    "title": "Deze repository is al aangemeld",
+    "body": "Hij meldt zich aan bij {{host}} als {{name}} (@{{login}}). Opnieuw aanmelden vervangt dat account alleen voor deze repository.",
+    "continue": "Opnieuw aanmelden"
+  },
+  "system": {
+    "title": "Inloggegevens van het systeem",
+    "hint": "Aanmeldingen die git zelf vindt, zonder account hier: een aanmelding in een terminal, Git Credential Manager of de systeemsleutelhanger. Repositories op die servers werken zo al.",
+    "none": "Git heeft geen credential helper ingesteld.",
+    "forUrl": "Voor {{url}}",
+    "forAll": "Voor elke server",
+    "cliHint": "Aanmelden vanuit een terminal:",
+    "cli": {
+      "gh": "GitHub CLI (gh)",
+      "glab": "GitLab CLI (glab)",
+      "gcm": "Git Credential Manager"
+    },
+    "scope": {
+      "system": "systeem",
+      "global": "globaal",
+      "local": "lokaal"
+    }
+  },
+  "service": {
+    "label": "Dienst",
+    "signIn": "Aanmelden bij {{service}}",
+    "signInOther": "Aanmelden met een token",
+    "hint": {
+      "github": "Meld je aan bij je GitHub.com-account om bij je repositories te kunnen.",
+      "github-enterprise": "Gebruik je GitHub Enterprise op je werk, meld je daar dan aan om bij je repositories te kunnen.",
+      "gitlab": "Meld je aan bij je GitLab.com-account om bij je repositories te kunnen.",
+      "gitlab-self": "Meld je aan bij een GitLab-server die je bedrijf of team zelf beheert.",
+      "bitbucket": "Meld je aan bij je Bitbucket Cloud-account (bitbucket.org).",
+      "bitbucket-server": "Meld je aan bij een Bitbucket Data Center-server met een HTTP access token.",
+      "azure-devops": "Meld je aan bij Azure DevOps Services (dev.azure.com) met je werk- of schoolaccount.",
+      "azure-devops-server": "Meld je aan bij een on-premises Azure DevOps Server met een personal access token.",
+      "gitea": "Meld je aan bij Codeberg of bij je eigen Gitea- of Forgejo-server.",
+      "token": "Elke andere Git-server via https: een gebruikersnaam en token, gecontroleerd tegen de geopende repository."
+    },
+    "other": "Overig"
   }
 }

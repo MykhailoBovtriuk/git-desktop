@@ -1,16 +1,10 @@
 #!/usr/bin/env node
-/**
- * Bakes OAuth client ids (and two secrets) into the build as JSON next to the
- * compiled main process. Missing values fall back to token sign-in.
- */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// A local .env.local keeps developers from having to export seven variables in
-// every shell. Deliberately minimal: KEY=value, # comments, no quoting rules.
 function loadEnvFile() {
   const file = path.join(root, '.env.local');
   if (!fs.existsSync(file)) return {};

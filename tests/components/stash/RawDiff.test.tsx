@@ -15,8 +15,6 @@ const SAMPLE = `diff --git a/a.txt b/a.txt
  context`;
 
 describe('RawDiff', () => {
-  // Regression: the placeholder was hardcoded English ("No diff") even in the
-  // uk locale — it must go through i18n like every other user-facing string.
   it('renders a translated placeholder when raw is empty', () => {
     render(<RawDiff raw="" />);
     expect(screen.getByText('diff:noDiffToDisplay')).toBeInTheDocument();

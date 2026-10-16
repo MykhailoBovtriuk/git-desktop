@@ -7,6 +7,7 @@ export interface ToastCardProps {
   title: string;
   message: string;
   action?: { label: string; onClick: () => void };
+  details?: { label: string; onClick: () => void };
   onDismiss: () => void;
 }
 
@@ -16,7 +17,7 @@ const BORDER: Record<Variant, string> = {
   info: 'border-blue',
 };
 
-export function ToastCard({ variant, title, message, action, onDismiss }: ToastCardProps) {
+export function ToastCard({ variant, title, message, action, details, onDismiss }: ToastCardProps) {
   return (
     <div
       className={cn(
@@ -27,10 +28,22 @@ export function ToastCard({ variant, title, message, action, onDismiss }: ToastC
       <div className="flex-1 min-w-0">
         <p className="text-text text-sm font-medium">{title}</p>
         <p className="text-subtext text-xs mt-0.5">{message}</p>
-        {action && (
-          <button onClick={action.onClick} className="text-blue text-xs underline mt-1">
-            {action.label}
-          </button>
+        {(action || details) && (
+          <div className="flex items-center gap-3 mt-1">
+            {action && (
+              <button onClick={action.onClick} className="text-blue text-xs underline">
+                {action.label}
+              </button>
+            )}
+            {details && (
+              <button
+                onClick={details.onClick}
+                className="text-subtext hover:text-text text-xs underline"
+              >
+                {details.label}
+              </button>
+            )}
+          </div>
         )}
       </div>
       <button onClick={onDismiss} className="text-subtext hover:text-text text-sm shrink-0">

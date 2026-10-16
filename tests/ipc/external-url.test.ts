@@ -1,7 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// The module pulls in electron only for its handlers; the allowlist itself is
-// pure, so a stub is enough to import it.
 vi.mock('electron', () => ({
   app: { getVersion: () => '0.0.0' },
   ipcMain: { handle: vi.fn() },
@@ -23,8 +21,6 @@ describe('isAllowedExternalUrl', () => {
     }
   });
 
-  // Adding a second origin is exactly where an allowlist springs a leak, so
-  // pin the lookalikes down.
   it('rejects lookalike hosts that merely start with an allowed one', () => {
     for (const url of [
       'https://github.com.evil.com/MykhailoBovtriuk/git-desktop',

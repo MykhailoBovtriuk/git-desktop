@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { UpdateProgress } from '../src/types';
+import type { LogEntry, UpdateProgress } from '../src/types';
 
 const ALLOWED_CHANNELS = new Set<string>([
   'git:open-repo',
@@ -47,6 +47,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:get-stash-top',
   'git:get-repo-path',
   'git:has-identity',
+  'git:get-identity',
+  'git:set-identity',
   'git:read-file',
   'git:write-file',
   'git:get-conflict-sides',
@@ -55,6 +57,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'account:auth-source',
   'account:sign-in',
   'account:sign-in-token',
+  'account:probe-server',
+  'account:credential-helpers',
   'account:open-token-help',
   'account:cancel-sign-in',
   'account:sign-out',
@@ -64,9 +68,35 @@ const ALLOWED_CHANNELS = new Set<string>([
   'app:download-update',
   'app:cancel-update-download',
   'app:install-update',
+  'log:list',
+  'log:stats',
+  'log:clear',
+  'log:get-retention',
+  'log:set-retention',
+  'log:open-folder',
+  'repo:forget',
+  'term:available',
+  'term:shells',
+  'term:create',
+  'term:write',
+  'term:resize',
+  'term:kill',
+  'term:list',
+  'term:buffer',
+  'term:open-link',
   'shell:open-external',
   'window:set-titlebar-overlay',
 ]);
+
+function subscribe<Args extends unknown[]>(channel: string) {
+  return (cb: (...args: Args) => void) => {
+    const listener = (_e: IpcRendererEvent, ...args: unknown[]) => cb(...(args as Args));
+    ipcRenderer.on(channel, listener);
+    return () => {
+      ipcRenderer.removeListener(channel, listener);
+    };
+  };
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   invoke: (channel: string, ...args: unknown[]) => {
@@ -75,24 +105,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
     return ipcRenderer.invoke(channel, ...args);
   },
-  onGitChanged: (cb: () => void) => {
-    const listener = () => cb();
-    ipcRenderer.on('repo:changed', listener);
-    return () => ipcRenderer.removeListener('repo:changed', listener);
-  },
-  // Sign-in finishes in the main process, minutes after the renderer asked for
-  // it and via a browser round trip — so the answer has to be pushed, not polled.
-  onAccountChanged: (cb: () => void) => {
-    const listener = () => cb();
-    ipcRenderer.on('account:changed', listener);
-    return () => ipcRenderer.removeListener('account:changed', listener);
-  },
-  // The only push that carries a payload: asking back for the byte count on
-  // every frame of a 140 MB download would be a round trip per repaint.
-  onUpdateProgress: (cb: (progress: UpdateProgress) => void) => {
-    const listener = (_e: IpcRendererEvent, progress: UpdateProgress) => cb(progress);
-    ipcRenderer.on('app:update-progress', listener);
-    return () => ipcRenderer.removeListener('app:update-progress', listener);
-  },
+  onGitChanged: subscribe<[]>('repo:changed'),
+  onAccountChanged: subscribe<[]>('account:changed'),
+  onUpdateProgress: subscribe<[UpdateProgress]>('app:update-progress'),
+  onLogEntry: subscribe<[LogEntry]>('log:entry'),
+  onTerminalData: subscribe<[id: string, data: string]>('term:data'),
+  onTerminalExit: subscribe<[id: string, exitCode: number]>('term:exit'),
   platform: process.platform,
 });

@@ -1,5 +1,5 @@
-import type { ProviderId } from '../../../src/types';
-import { getJson, fetchAvatar } from '../http';
+import type { AccountGroup, ProviderId } from '../../../src/types';
+import { getJson, fetchAvatar, probe, sendRevoke } from '../http';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface GitLabUser {
@@ -11,18 +11,16 @@ interface GitLabUser {
   avatar_url: string | null;
 }
 
-/**
- * GitLab supports PKCE, so no secret is needed. Self-managed instances are the
- * same service at another address.
- */
 function makeGitLabProvider(
   id: ProviderId,
   displayName: string,
+  group: AccountGroup,
   knownHosts: string[],
 ): ProviderDefinition {
   return {
     id,
     displayName,
+    group,
     knownHosts,
     usesPkce: true,
     // `write_repository` is what push needs; `api` alone does not cover git-over-HTTP.
@@ -33,6 +31,28 @@ function makeGitLabProvider(
       apiBase: `https://${host}/api/v4`,
     }),
     tokenHelpUrl: host => `https://${host}/-/user_settings/personal_access_tokens`,
+    probe: async host => {
+      const res = await probe(`https://${host}/api/v4/version`);
+      if (!res) return 'unreachable';
+      // Anonymous calls get a 401 with GitLab's own JSON shape; a signed-in
+      // session (cookies are never sent here) would get the version.
+      const body = res.body as { version?: unknown; message?: unknown } | null;
+      const gitlab =
+        res.headers.has('x-gitlab-meta') ||
+        (res.status === 200 && typeof body?.version === 'string') ||
+        (res.status === 401 && typeof body?.message === 'string');
+      return gitlab ? 'ok' : 'mismatch';
+    },
+    revokeToken: async ({ host, token, clientId, clientSecret }) => {
+      if (!clientId) return;
+      const params: Record<string, string> = { client_id: clientId, token };
+      if (clientSecret) params.client_secret = clientSecret;
+      await sendRevoke(`https://${host}/oauth/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(params).toString(),
+      });
+    },
     fetchAccount: async (host, token) => {
       const user = await getJson<GitLabUser>(`https://${host}/api/v4/user`, token);
       return {
@@ -50,5 +70,13 @@ function makeGitLabProvider(
   };
 }
 
-export const gitlab = makeGitLabProvider('gitlab', 'GitLab', ['gitlab.com', 'www.gitlab.com']);
-export const gitlabSelf = makeGitLabProvider('gitlab-self', 'GitLab (self-managed)', []);
+export const gitlab = makeGitLabProvider('gitlab', 'GitLab', 'gitlab', [
+  'gitlab.com',
+  'www.gitlab.com',
+]);
+export const gitlabSelf = makeGitLabProvider(
+  'gitlab-self',
+  'GitLab (self-managed)',
+  'gitlab-self',
+  [],
+);

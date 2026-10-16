@@ -6,8 +6,6 @@ const DEBOUNCE_MS = 300;
 
 export function useAutoRefresh() {
   const repoPath = useRepoStore(s => s.repoPath);
-  // The fallback poll catches changes the watcher misses; turning it off leaves
-  // watcher refreshes working.
   const pollMs = useSettingsStore(s => s.autoRefreshMs);
   useEffect(() => {
     if (!repoPath) return;

@@ -88,8 +88,6 @@ describe('Sidebar', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView } as any);
     render(<Sidebar />);
-    // The toggle is an overlay button that is a sibling of the title; reach it via
-    // the title's header container.
     const stashHeader = screen.getByText('stash:title').closest('div')!.parentElement!;
     fireEvent.click(stashHeader.querySelector('button')!);
     expect(setActiveView).toHaveBeenCalledWith('stash-create');
@@ -105,8 +103,6 @@ describe('Sidebar', () => {
     expect(setActiveView).toHaveBeenCalledWith('diff');
   });
 
-  // Inside the panel the handle covered the file lists' scrollbar, which then
-  // could not be grabbed at all.
   it('renders the resize handle outside the panel', () => {
     vi.mocked(useRepoStore).mockReturnValue(baseRepo as any);
     vi.mocked(useUiStore).mockReturnValue({ activeView: 'diff', setActiveView: vi.fn() } as any);

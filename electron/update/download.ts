@@ -5,15 +5,9 @@ import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { isAllowedDownloadUrl } from './assets';
 
-/** GitHub rejects requests without one, downloads included. */
 const USER_AGENT = 'git-desktop';
-/** A repaint every fifth of a second reads as smooth and costs nothing. */
 const PROGRESS_INTERVAL_MS = 200;
 
-/**
- * The name the installer is saved under, with the version added, since release
- * asset names carry none.
- */
 export function versionedFileName(assetName: string, version: string): string {
   const ext = path.extname(assetName);
   const base = ext ? assetName.slice(0, -ext.length) : assetName;
@@ -22,17 +16,12 @@ export function versionedFileName(assetName: string, version: string): string {
 
 export interface DownloadRequest {
   url: string;
-  /** From the release metadata; 0 when it was not published. */
   expectedSize: number;
   targetPath: string;
   onProgress: (received: number, total: number, bytesPerSecond: number) => void;
   signal: AbortSignal;
 }
 
-/**
- * Download an installer, reporting progress. Bytes go to a `.part` file renamed
- * only at the end, so no partial installer is left.
- */
 export async function downloadFile(req: DownloadRequest): Promise<void> {
   if (!isAllowedDownloadUrl(req.url)) {
     throw new Error(`Refusing to download from ${req.url}`);

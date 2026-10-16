@@ -11,7 +11,6 @@ vi.mock('../../src/stores/repo-store', () => ({
 const mockRefresh = vi.fn();
 const mockGetState = vi.fn(() => ({ refresh: mockRefresh }));
 
-// Captured onGitChanged callback so tests can emit a 'repo:changed' event.
 let gitChangedCb: (() => void) | null = null;
 const unsubscribe = vi.fn();
 const onGitChanged = vi.fn((cb: () => void) => {
@@ -59,7 +58,6 @@ describe('useAutoRefresh', () => {
     withRepo();
     renderHook(() => useAutoRefresh());
     gitChangedCb!();
-    // Nothing yet — the refresh is debounced.
     expect(mockRefresh).not.toHaveBeenCalled();
     vi.advanceTimersByTime(300);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
@@ -106,8 +104,6 @@ describe('useAutoRefresh', () => {
     expect(onGitChanged).toHaveBeenCalledTimes(1);
   });
 
-  // Auto-refresh must stand aside while a tracked git operation is in
-  // flight, so it never interleaves a stale snapshot mid-commit/checkout/merge.
   it('skips refresh while an operation is busy', () => {
     withRepo();
     mockGetState.mockReturnValue({ refresh: mockRefresh, busyOperation: 'commit' } as any);

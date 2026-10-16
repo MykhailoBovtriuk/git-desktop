@@ -19,6 +19,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
       title={toast.title}
       message={toast.message}
       action={toast.action}
+      details={toast.details}
       onDismiss={() => removeToast(toast.id)}
     />
   );

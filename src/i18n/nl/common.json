@@ -15,5 +15,8 @@
   "resizeSidebar": "Zijbalkbreedte aanpassen",
   "resizeCommitList": "Breedte commitlijst aanpassen",
   "resizeFileList": "Breedte bestandslijst aanpassen",
-  "resizeStashList": "Breedte stashlijst aanpassen"
+  "resizeStashList": "Breedte stashlijst aanpassen",
+  "info": "Info",
+  "hideSidebar": "Zijbalk verbergen ({{shortcut}})",
+  "showSidebar": "Zijbalk tonen ({{shortcut}})"
 }

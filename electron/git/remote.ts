@@ -1,5 +1,5 @@
 import { GitContext } from './context';
-import { accountForHost, getFreshToken } from '../auth/token-store';
+import { accountForRepo, getFreshToken } from '../auth/token-store';
 import {
   httpsUrlFromSshRemote,
   sshUrlFromHttpsRemote,
@@ -13,10 +13,6 @@ async function originRemote(ctx: GitContext) {
   return remotes.find(r => r.name === 'origin') ?? remotes[0];
 }
 
-/**
- * The origin URL, or null without a remote. SSH and HTTPS fail authentication
- * for different reasons.
- */
 export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
   const origin = await originRemote(ctx);
   return origin?.refs?.push || origin?.refs?.fetch || null;
@@ -26,10 +22,6 @@ export async function getRemoteUrl(ctx: GitContext): Promise<string | null> {
 const SSH_URL_KEY = 'gitdesktop-sshurl';
 const SSH_PUSH_URL_KEY = 'gitdesktop-sshpushurl';
 
-/**
- * Point origin at the same repository over the other protocol: https lets a
- * signed-in account's token authenticate it, ssh goes back to the key.
- */
 export async function switchRemoteProtocol(
   ctx: GitContext,
   to: 'ssh' | 'https',
@@ -59,8 +51,6 @@ export async function switchRemoteProtocol(
   } else {
     const fetchUrl = sshUrlFromHttpsRemote(fetch);
     if (!fetchUrl) throw new Error('The remote is not an https address');
-    // The address it had before, alias and all, as long as it is still the same
-    // repository.
     const remembered = async (key: string, httpsUrl: string) => {
       const url = (await repo.raw(['config', '--get', config(key)]).catch(() => '')).trim();
       if (!url) return null;
@@ -75,20 +65,15 @@ export async function switchRemoteProtocol(
   return resolveRemote(await getRemoteUrl(ctx));
 }
 
-/**
- * Refresh a short-lived token before git reads it; `getFreshToken` rewrites the
- * system credential on renewal.
- */
 async function refreshCredentialIfNeeded(ctx: GitContext): Promise<void> {
   try {
-    const host = await resolveRemoteHost(await getRemoteUrl(ctx));
-    if (!host) return;
-    const account = await accountForHost(host);
-    if (account) await getFreshToken(account.id);
-  } catch {
-    // Refreshing is an optimisation over letting git fail; never a reason to
-    // block the operation the user asked for.
-  }
+    const repoPath = ctx.repoPath;
+    if (!repoPath) return;
+    const account = await accountForRepo(repoPath);
+    if (account && account.host === (await resolveRemoteHost(await getRemoteUrl(ctx)))) {
+      await getFreshToken(repoPath);
+    }
+  } catch {}
 }
 
 export async function fetch(ctx: GitContext): Promise<void> {

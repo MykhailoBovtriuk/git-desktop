@@ -27,10 +27,6 @@ export function assetNameFor(
   return ASSETS[key] ?? null;
 }
 
-/**
- * Whether this Linux copy is the AppImage or the .deb, judged by
- * APPIMAGE/APPDIR and the execPath.
- */
 export function linuxPackageFormat(
   env: NodeJS.ProcessEnv = process.env,
   execPath: string = process.execPath,
@@ -46,10 +42,6 @@ export function linuxPackageFormat(
  */
 const DOWNLOAD_PREFIX = 'https://github.com/MykhailoBovtriuk/git-desktop/releases/download/';
 
-/**
- * An asset's URL, built from a validated tag and a name from the table rather
- * than taken from the API response.
- */
 export function downloadUrlFor(tag: string, assetName: string): string {
   return `${DOWNLOAD_PREFIX}${encodeURIComponent(tag)}/${encodeURIComponent(assetName)}`;
 }

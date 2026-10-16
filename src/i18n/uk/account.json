@@ -6,10 +6,10 @@
     "continue": "Продовжити в браузері",
     "reopen": "Відкрити браузер ще раз",
     "waiting": "Очікуємо на підтвердження в браузері…",
-    "hostPlaceholder": "git.example.com",
     "clientIdPlaceholder": "Application (client) ID",
     "clientSecretPlaceholder": "Client secret",
-    "selfHostedHint": "Зареєструйте OAuth-застосунок на своєму сервері з callback-адресою git-desktop-auth://oauth і вставте сюди його client ID."
+    "selfHostedHint": "Зареєструйте OAuth-застосунок на своєму сервері з callback-адресою git-desktop-auth://oauth і вставте сюди його client ID.",
+    "useToken": "Натомість увійти токеном"
   },
   "choose": {
     "title": "Вхід до {{host}}",
@@ -22,7 +22,10 @@
     "usernamePlaceholder": "Ім'я користувача",
     "tokenPlaceholder": "Персональний токен доступу",
     "where": "Де взяти токен?",
-    "submit": "Увійти"
+    "submit": "Увійти",
+    "otherServer": "Інший Git-сервер",
+    "useBrowser": "Натомість увійти через браузер",
+    "useOwnApp": "Натомість увійти через власний OAuth-застосунок"
   },
   "error": {
     "title": "Не вдалося увійти",
@@ -30,14 +33,10 @@
   },
   "section": {
     "title": "Акаунти",
-    "hint": "Сервери, до яких ви ввійшли. Кожен авторизує власні репозиторії.",
-    "empty": "Ще немає жодного входу.",
     "signOut": "Вийти",
-    "add": "Додати акаунт",
-    "hostPlaceholder": "github.com",
     "notPersistent": "У цій системі немає сховища ключів, доступного Git Desktop, тож токени зберігаються лише в пам'яті — після перезапуску доведеться увійти знову.",
-    "connection": "Підключення репозиторію…",
-    "connectionHint": "SSH чи HTTPS і чим цей репозиторій входить на {{host}}"
+    "repoHint": "Акаунт, яким входить репозиторій {{repo}}. Кожен репозиторій входить окремо; термінал у його папці працює з тим самим логіном.",
+    "noRepo": "Відкрийте репозиторій, щоб увійти для нього. У кожного репозиторію свій акаунт."
   },
   "signedInAs": "Ви ввійшли як {{name}} на {{host}}",
   "connection": {
@@ -57,5 +56,68 @@
     "forgetTitle": "Забути збережений логін",
     "forgetConfirm": "Стерти логін для {{host}} із системного сховища паролів? Git у терміналі теж ним користується.",
     "failed": "Не вдалося змінити підключення"
+  },
+  "endpoint": {
+    "title": "Вхід у {{service}}",
+    "label": "Адреса сервера",
+    "hint": {
+      "enterprise": "Введіть адресу свого сервера, наприклад ту, яку відкриваєте в браузері.",
+      "other": "Введіть адресу сервера."
+    },
+    "placeholder": {
+      "github-enterprise": "https://github.example.com",
+      "gitlab-self": "https://gitlab.example.com",
+      "gitea": "https://codeberg.org",
+      "token": "https://git.example.com",
+      "bitbucket-server": "https://bitbucket.example.com",
+      "azure-devops-server": "https://devops.example.com"
+    },
+    "error": {
+      "invalid": "Це не схоже на адресу сервера. Очікуємо щось на кшталт https://git.example.com.",
+      "insecure": "Підтримується лише https: токен не можна передавати без шифрування.",
+      "mismatch": "Цей сервер не схожий на {{service}}. Перевірте адресу або оберіть інший сервіс.",
+      "unreachable": "Не вдалося зв'язатися із сервером. Перевірте адресу та з'єднання."
+    }
+  },
+  "existing": {
+    "title": "Цей репозиторій уже ввійшов",
+    "body": "Він входить на {{host}} як {{name}} (@{{login}}). Повторний вхід замінить цей акаунт лише для цього репозиторію.",
+    "continue": "Увійти знову"
+  },
+  "system": {
+    "title": "Облікові дані із системи",
+    "hint": "Логіни, які git знаходить сам, без акаунта тут: вхід, зроблений у терміналі, Git Credential Manager або системне сховище паролів. Репозиторії на цих серверах працюють і так.",
+    "none": "У git не налаштовано жодного credential helper.",
+    "forUrl": "Для {{url}}",
+    "forAll": "Для всіх серверів",
+    "cliHint": "Щоб увійти з терміналу:",
+    "cli": {
+      "gh": "GitHub CLI (gh)",
+      "glab": "GitLab CLI (glab)",
+      "gcm": "Git Credential Manager"
+    },
+    "scope": {
+      "system": "системний",
+      "global": "глобальний",
+      "local": "локальний"
+    }
+  },
+  "service": {
+    "label": "Сервіс",
+    "signIn": "Увійти в {{service}}",
+    "signInOther": "Увійти токеном",
+    "hint": {
+      "github": "Увійдіть в акаунт GitHub.com, щоб працювати зі своїми репозиторіями.",
+      "github-enterprise": "Якщо на роботі у вас GitHub Enterprise, увійдіть у нього, щоб працювати з репозиторіями.",
+      "gitlab": "Увійдіть в акаунт GitLab.com, щоб працювати зі своїми репозиторіями.",
+      "gitlab-self": "Увійдіть на сервер GitLab, який ваша компанія чи команда тримає сама.",
+      "bitbucket": "Увійдіть в акаунт Bitbucket Cloud (bitbucket.org).",
+      "bitbucket-server": "Увійдіть на сервер Bitbucket Data Center за допомогою HTTP access token.",
+      "azure-devops": "Увійдіть в Azure DevOps Services (dev.azure.com) робочим або навчальним акаунтом.",
+      "azure-devops-server": "Увійдіть на локальний Azure DevOps Server за допомогою personal access token.",
+      "gitea": "Увійдіть у Codeberg або на власний сервер Gitea чи Forgejo.",
+      "token": "Будь-який інший Git-сервер через https: ім'я користувача й токен, перевірені на відкритому репозиторії."
+    },
+    "other": "Інше"
   }
 }

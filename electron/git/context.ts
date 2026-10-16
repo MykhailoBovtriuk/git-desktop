@@ -1,6 +1,7 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
+import { attachOutputLogger } from '../log/git-logger';
 
 export const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
@@ -23,14 +24,16 @@ export class GitContext {
     // simple-git's .env() replaces the child env, hence the merge over
     // process.env. Our unsafe values are hardcoded; allowUnsafeSshCommand is
     // only for removing core.sshCommand.
-    return simpleGit({
-      baseDir: dir,
-      unsafe: {
-        allowUnsafeAskPass: true,
-        allowUnsafeEditor: true,
-        allowUnsafeSshCommand: true,
-      },
-    }).env(credentialSafeEnv());
+    return attachOutputLogger(
+      simpleGit({
+        baseDir: dir,
+        unsafe: {
+          allowUnsafeAskPass: true,
+          allowUnsafeEditor: true,
+          allowUnsafeSshCommand: true,
+        },
+      }).env(credentialSafeEnv()),
+    );
   }
 
   async openRepo(dirPath: string): Promise<string> {

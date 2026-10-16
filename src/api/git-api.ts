@@ -1,4 +1,13 @@
-import type { AheadBehind, Commit, Branch, GitStatus, RemoteProtocol, StashEntry } from '../types';
+import type {
+  AheadBehind,
+  Commit,
+  Branch,
+  GitIdentities,
+  GitIdentity,
+  GitStatus,
+  RemoteProtocol,
+  StashEntry,
+} from '../types';
 import { invoke } from './invoke';
 
 type StatusResult = GitStatus & AheadBehind;
@@ -12,6 +21,7 @@ export const gitApi = {
       remoteProtocol: RemoteProtocol | null;
     }>('git:open-repo', path),
   openDialog: () => invoke<string | null>('git:open-dialog'),
+  forgetRepo: (path: string) => invoke<null>('repo:forget', path),
   getLog: (limit: number, offset: number) => invoke<Commit[]>('git:get-log', limit, offset),
   getHeadCommit: () => invoke<string | null>('git:get-head-commit'),
   getBranches: () => invoke<Branch[]>('git:get-branches'),
@@ -46,10 +56,12 @@ export const gitApi = {
     invoke<null>('git:delete-remote-branch', remote, branch),
   getCommitDiff: (hash: string) =>
     invoke<{ path: string; status: string }[]>('git:get-commit-diff', hash),
-  getFileDiff: (hash: string, filePath: string) =>
-    invoke<string>('git:get-file-diff', hash, filePath),
-  getWorkingDiff: (filePath: string) => invoke<string>('git:get-working-diff', filePath),
-  getStagedDiff: (filePath: string) => invoke<string>('git:get-staged-diff', filePath),
+  getFileDiff: (hash: string, filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-file-diff', hash, filePath, ignoreWhitespace),
+  getWorkingDiff: (filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-working-diff', filePath, ignoreWhitespace),
+  getStagedDiff: (filePath: string, ignoreWhitespace = false) =>
+    invoke<string>('git:get-staged-diff', filePath, ignoreWhitespace),
   getMergeConflicts: () => invoke<string[]>('git:get-merge-conflicts'),
   abortMerge: () => invoke<null>('git:abort-merge'),
   isMerging: () => invoke<boolean>('git:is-merging'),
@@ -58,6 +70,9 @@ export const gitApi = {
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
   getRepoPath: () => invoke<string | null>('git:get-repo-path'),
   hasIdentity: () => invoke<boolean>('git:has-identity'),
+  getIdentity: () => invoke<GitIdentities>('git:get-identity'),
+  setIdentity: (scope: 'global' | 'local', identity: GitIdentity) =>
+    invoke<null>('git:set-identity', scope, identity),
   readFile: (p: string) => invoke<string>('git:read-file', p),
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
   getConflictSides: (p: string) =>

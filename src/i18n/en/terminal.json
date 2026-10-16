@@ -1,0 +1,21 @@
+{
+  "title": "Terminal",
+  "toggle": "Terminal ({{shortcut}})",
+  "newTerminal": "New terminal",
+  "newWithShell": "New terminal with…",
+  "close": "Close terminal",
+  "createFailed": "Could not start a terminal",
+  "exited": "[Process exited with code {{code}}. Press Enter to restart.]",
+  "unavailable": "The terminal is not available on this system.",
+  "empty": "No terminals open.",
+  "find": "Find (Enter, Shift+Enter)",
+  "openLinkTitle": "Open link?",
+  "openLinkMessage": "{{url}} will open in your browser.",
+  "openLinkConfirm": "Open",
+  "settings": {
+    "shell": "Shell",
+    "auto": "Automatic",
+    "fontSize": "Font size",
+    "shellHint": "The shell new terminals start with."
+  }
+}

@@ -1,10 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import type { RepoState, RepoSlice } from './types';
 
-/**
- * Thrown when a merge stops on conflicts: the modal is already open, so callers
- * must not treat it as success.
- */
 export class MergeConflictError extends Error {
   constructor() {
     super('Merge stopped on conflicts');

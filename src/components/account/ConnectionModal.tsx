@@ -9,10 +9,6 @@ import { Button, Modal, SegmentedControl, UserIcon } from '../../shared/ui';
 
 type Protocol = 'ssh' | 'https';
 
-/**
- * Everything about how the open repository reaches its server, in one place:
- * which protocol, what authenticates it, and what can be done about either.
- */
 export function ConnectionModal() {
   const { t } = useTranslation('account');
   const { open, close, requestConfirm, addToast } = useUiStore(
@@ -46,7 +42,7 @@ export function ConnectionModal() {
   );
   const [busy, setBusy] = useState(false);
 
-  if (!open || !remoteHost) return null;
+  if (!open || !remoteHost || !repoPath) return null;
 
   const protocol: Protocol | null =
     remoteProtocol === 'ssh' || remoteProtocol === 'https' ? remoteProtocol : null;
@@ -67,8 +63,8 @@ export function ConnectionModal() {
   };
 
   const refresh = async () => {
-    account.refreshCurrent(remoteHost);
-    await account.refreshAuthSource(remoteHost, remoteProtocol);
+    account.refreshCurrent(repoPath);
+    await account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
   };
 
   const switchTo = (to: Protocol) => {
@@ -87,8 +83,6 @@ export function ConnectionModal() {
       await refresh();
     });
 
-  // The entry is shared with git in a terminal and anything else on the
-  // machine, so erasing it is worth a second look.
   const forget = () =>
     void act(async () => {
       const ok = await requestConfirm({
@@ -143,7 +137,7 @@ export function ConnectionModal() {
                 size="sm"
                 disabled={busy}
                 title={t('connection.signOutHint', { host: remoteHost })}
-                onClick={() => signOut(account.current!.id)}
+                onClick={() => signOut(account.current!.repoPath)}
               >
                 {t('section.signOut')}
               </Button>
@@ -176,7 +170,6 @@ export function ConnectionModal() {
   );
 }
 
-/** What authenticates the repository right now, in words. */
 function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string }) {
   const { t } = useTranslation('account');
   const { current, authSource } = useAccountStore(

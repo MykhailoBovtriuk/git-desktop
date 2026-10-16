@@ -29,7 +29,6 @@ function setupMocks({
   const mockCommit = commitImpl;
   const mockAddToast = vi.fn();
 
-  // Selector-aware: CommitForm and useGitAction both select from the stores.
   const repoState = {
     commit: mockCommit,
     status: { staged: staged.map(p => ({ path: p })), unstaged: [] },
@@ -37,16 +36,23 @@ function setupMocks({
     remoteHost: null,
     hasIdentity,
   };
-  const uiState = { addToast: mockAddToast, openOverlayView: vi.fn() };
+  const uiState = { addToast: mockAddToast, openSettings: vi.fn() };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
 
-  return { mockCommit, mockAddToast };
+  return { mockCommit, mockAddToast, uiState };
 }
 
 describe('CommitForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('sends a missing author straight to Settings › Git', () => {
+    const { uiState } = setupMocks({ staged: ['file.ts'], hasIdentity: false });
+    render(<CommitForm />);
+    fireEvent.click(screen.getByText('noIdentityAction'));
+    expect(uiState.openSettings).toHaveBeenCalledWith('git');
   });
 
   it('commit button is disabled when message is empty', () => {
@@ -85,7 +91,6 @@ describe('CommitForm', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  // No maximum: the counter is informational only, never a warning or a block.
   it('counter keeps counting past any threshold and never turns into a warning', () => {
     setupMocks({ staged: ['file.ts'] });
     render(<CommitForm />);
@@ -148,8 +153,6 @@ describe('CommitForm', () => {
     );
   });
 
-  // Committing is impossible when neither the repository nor the global config
-  // names an author — git refuses outright, so the button must say so first.
   it('blocks committing when git has no identity anywhere', () => {
     setupMocks({ hasIdentity: false });
     render(<CommitForm />);
@@ -170,8 +173,6 @@ describe('CommitForm', () => {
     expect(screen.queryByText('noIdentity')).toBeNull();
   });
 
-  // The answer arrives one IPC round trip after the form renders. Blocking on
-  // "not known yet" would grey out the button on every repository open.
   it('does not block while the answer is still unknown', () => {
     setupMocks({ hasIdentity: null });
     render(<CommitForm />);

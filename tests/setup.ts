@@ -1,7 +1,5 @@
 import '@testing-library/jest-dom';
 
-// Node-environment tests have no `localStorage`. Provide a minimal in-memory
-// polyfill so code paths that touch it directly don't throw during tests.
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map<string, string>();
   const memoryStorage: Storage = {

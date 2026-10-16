@@ -34,8 +34,6 @@ describe('parseConflicts', () => {
     expect(conflictOf(segs)).toMatchObject({ ours: ['mine'], theirs: ['theirs'] });
   });
 
-  // Regression: startsWith('=======') also matched content like a
-  // "========================" comment ruler, silently corrupting the file.
   it('does not treat longer runs of marker chars as markers', () => {
     const content =
       '<<<<<<< HEAD\nmine\n========\nstill mine\n=======\ntheirs\n>>>>>>>> not-a-marker\nstill theirs\n>>>>>>> feature';
@@ -49,7 +47,6 @@ describe('parseConflicts', () => {
     expect(segs).toEqual([{ type: 'common', lines: ['<<<<<<<not-a-marker', 'text'] }]);
   });
 
-  // Malformed input must never be silently reshuffled — keep it as plain text.
   it('treats an unterminated conflict block as common text', () => {
     const content = 'a\n<<<<<<< HEAD\nmine\n=======\ntheirs but no end';
     const segs = parseConflicts(content);
@@ -84,15 +81,11 @@ describe('rebuild', () => {
     expect(rebuild(resolve(segs, 'both'))).toBe('before\nmine\ntheirs\nafter');
   });
 
-  // Regression: joining string blocks with '\n' turned an empty side into a
-  // spurious blank line ("a\n\nb" instead of "a\nb").
   it('choosing an empty side does not insert a blank line', () => {
     const segs = parseConflicts('before\n<<<<<<< HEAD\n=======\ntheirs\n>>>>>>> feature\nafter');
     expect(rebuild(resolve(segs, 'ours'))).toBe('before\nafter');
   });
 
-  // Regression: unresolved blocks were re-serialized as "<<<<<<< HEAD ... >>>>>>>",
-  // losing the real labels (and the diff3 base section entirely).
   it('keeps unresolved blocks verbatim, including labels and diff3 base', () => {
     const diff3 =
       'a\n<<<<<<< ours-label\nmine\n||||||| base-label\nold\n=======\ntheirs\n>>>>>>> theirs-label\nb';

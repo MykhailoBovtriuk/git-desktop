@@ -1,16 +1,13 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useUpdateStore } from '../../stores/update-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { appApi } from '../../api/app-api';
+import { useAppVersion } from '../../hooks/use-app-version';
 import { Button, DownloadIcon, Switch, TruncatedText } from '../../shared/ui';
 import { updateErrorText } from '../update/update-text';
+import { SettingsSection } from './SettingsSection';
 
-/**
- * Where updates are asked for. Its own section: it needs a status line, a phase
- * button and two switches.
- */
 export function UpdateSection() {
   const { t } = useTranslation('update');
   const {
@@ -46,19 +43,7 @@ export function UpdateSection() {
       })),
     );
 
-  // Before the first check there is no result to read the version from, and
-  // the row should not sit empty until someone presses the button.
-  const [appVersion, setAppVersion] = useState<string | null>(null);
-  useEffect(() => {
-    let alive = true;
-    appApi
-      .getVersion()
-      .then(v => alive && setAppVersion(v))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const appVersion = useAppVersion();
 
   const version = result?.currentVersion ?? appVersion;
   const latest = result?.latest ?? null;
@@ -127,49 +112,57 @@ export function UpdateSection() {
   })();
 
   return (
-    <section className="border-b border-surface0 py-4 last:border-0">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-text text-sm font-medium">{t('title')}</h2>
-          <p className="text-subtext text-xs mt-0.5">{t('hint')}</p>
+    <>
+      <p className="text-subtext text-xs pt-1">{t('hint')}</p>
+
+      <section className="py-4 border-b border-surface0">
+        <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-text text-sm">{version ? t('currentVersion', { version }) : ''}</p>
+            {status && (
+              <TruncatedText as="p" className="text-subtext text-xs">
+                {status}
+              </TruncatedText>
+            )}
+          </div>
+          {action}
         </div>
+
+        {phase === 'downloading' && (
+          <div className="h-1.5 bg-surface2 rounded overflow-hidden mt-2">
+            <div
+              className={
+                progress?.totalBytes
+                  ? 'h-full bg-blue rounded'
+                  : 'h-full w-full bg-blue rounded animate-pulse'
+              }
+              style={progress?.totalBytes ? { width: `${progress.percent}%` } : undefined}
+            />
+          </div>
+        )}
+
+        {error && <p className="text-red text-xs mt-2">{updateErrorText(t, error)}</p>}
+      </section>
+
+      <SettingsSection title={t('autoCheck')} description={t('autoCheckHint')}>
         <Switch
           checked={autoCheckUpdates}
           onToggle={() => setAutoCheckUpdates(!autoCheckUpdates)}
           label={t('autoCheck')}
-          title={t('autoCheckHint')}
-          className="shrink-0"
+          hideLabel
         />
-      </div>
+      </SettingsSection>
 
-      <div className="bg-mantle rounded p-3 mt-3 flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-text text-sm">{version ? t('currentVersion', { version }) : ''}</p>
-          {status && (
-            <TruncatedText as="p" className="text-subtext text-xs">
-              {status}
-            </TruncatedText>
-          )}
-        </div>
-        {action}
-      </div>
+      <SettingsSection title={t('includePrerelease')} description={t('includePrereleaseHint')}>
+        <Switch
+          checked={includePrereleases}
+          onToggle={() => setIncludePrereleases(!includePrereleases)}
+          label={t('includePrerelease')}
+          hideLabel
+        />
+      </SettingsSection>
 
-      {phase === 'downloading' && (
-        <div className="h-1.5 bg-surface2 rounded overflow-hidden mt-2">
-          <div
-            className={
-              progress?.totalBytes
-                ? 'h-full bg-blue rounded'
-                : 'h-full w-full bg-blue rounded animate-pulse'
-            }
-            style={progress?.totalBytes ? { width: `${progress.percent}%` } : undefined}
-          />
-        </div>
-      )}
-
-      {error && <p className="text-red text-xs mt-2">{updateErrorText(t, error)}</p>}
-
-      <div className="mt-3">
+      <SettingsSection title={t('reinstall')} description={t('reinstallHint')}>
         <Button
           variant="surface"
           size="sm"
@@ -178,17 +171,7 @@ export function UpdateSection() {
         >
           {t('reinstall')}
         </Button>
-        <p className="text-subtext text-xs mt-1">{t('reinstallHint')}</p>
-      </div>
-
-      <div className="mt-3">
-        <Switch
-          checked={includePrereleases}
-          onToggle={() => setIncludePrereleases(!includePrereleases)}
-          label={t('includePrerelease')}
-        />
-        <p className="text-subtext text-xs mt-1">{t('includePrereleaseHint')}</p>
-      </div>
-    </section>
+      </SettingsSection>
+    </>
   );
 }

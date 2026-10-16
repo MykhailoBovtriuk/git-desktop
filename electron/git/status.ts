@@ -110,13 +110,19 @@ export async function applyPatch(
   }
 }
 
-export async function getWorkingDiff(ctx: GitContext, filePath: string): Promise<string> {
+const wsArgs = (ignoreWhitespace?: boolean) => (ignoreWhitespace ? ['-w'] : []);
+
+export async function getWorkingDiff(
+  ctx: GitContext,
+  filePath: string,
+  ignoreWhitespace = false,
+): Promise<string> {
   const git = ctx.ensureRepo();
   const status = await git.status();
   if (status.not_added.includes(filePath)) {
     return synthesizeUntrackedDiff(ctx, filePath);
   }
-  return git.diff(['--', filePath]);
+  return git.diff([...wsArgs(ignoreWhitespace), '--', filePath]);
 }
 
 async function synthesizeUntrackedDiff(ctx: GitContext, filePath: string): Promise<string> {
@@ -156,6 +162,10 @@ async function synthesizeUntrackedDiff(ctx: GitContext, filePath: string): Promi
   }
 }
 
-export async function getStagedDiff(ctx: GitContext, filePath: string): Promise<string> {
-  return ctx.ensureRepo().diff(['--cached', '--', filePath]);
+export async function getStagedDiff(
+  ctx: GitContext,
+  filePath: string,
+  ignoreWhitespace = false,
+): Promise<string> {
+  return ctx.ensureRepo().diff(['--cached', ...wsArgs(ignoreWhitespace), '--', filePath]);
 }

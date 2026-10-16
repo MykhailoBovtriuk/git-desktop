@@ -3,12 +3,9 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUpdateStore } from '../../stores/update-store';
 import { appApi } from '../../api/app-api';
 import { Button, DownloadIcon, Modal } from '../../shared/ui';
-import { formatBytes, updateErrorText } from './update-text';
+import { updateErrorText } from './update-text';
+import { formatBytes } from '../../lib/format-bytes';
 
-/**
- * One dialog through every phase: update, downloading and ready are one
- * decision in progress.
- */
 export function UpdateModal() {
   const { t } = useTranslation('update');
   const {
@@ -63,8 +60,6 @@ export function UpdateModal() {
       >
         <div className="flex flex-col gap-2">
           <div className="h-1.5 bg-surface2 rounded overflow-hidden">
-            {/* Without a Content-Length there is no percentage to draw, so the
-                bar says "working" instead of pretending to know. */}
             <div
               className={
                 total === 0
@@ -143,11 +138,8 @@ export function UpdateModal() {
     );
   }
 
-  // Checking again, or found nothing: there is no offer to make right now.
   if (phase !== 'available' || !latest) return null;
 
-  // A dev run, or a machine the release has no installer for, can still be
-  // told a new version exists — it just gets the page instead of a download.
   const canDownload = !!result?.canInstall && !!latest.assetName;
 
   return (

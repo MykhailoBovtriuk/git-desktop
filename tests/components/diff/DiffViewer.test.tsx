@@ -10,7 +10,6 @@ vi.mock('../../../src/stores/ui-store', () => ({
 }));
 vi.mock('../../../src/stores/repo-store', () => ({
   useRepoStore: vi.fn(),
-  // useGitAction (pulled in for hunk staging) imports this.
   CheckoutConflictError: class CheckoutConflictError extends Error {},
   MergeConflictError: class MergeConflictError extends Error {},
 }));
@@ -19,8 +18,10 @@ vi.mock('../../../src/stores/repo-store', () => ({
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getTotalSize: () => count * 16,
-    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ index, start: index * 16 })),
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({ index, start: index * 16 })),
     measureElement: () => {},
+    measure: () => {},
   }),
 }));
 vi.mock('../../../src/api/git-api', () => ({
@@ -35,6 +36,7 @@ import { DiffViewer } from '../../../src/components/diff/DiffViewer';
 import { useUiStore } from '../../../src/stores/ui-store';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { gitApi } from '../../../src/api/git-api';
+import { useSettingsStore } from '../../../src/stores/settings-store';
 
 const stageHunk = vi.fn().mockResolvedValue(undefined);
 const unstageHunk = vi.fn().mockResolvedValue(undefined);
@@ -59,13 +61,17 @@ const uiState = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useSettingsStore.setState({
+    diffIgnoreWhitespace: false,
+    diffWrapLines: false,
+    diffFontSize: 12,
+  });
   uiState.selectedFile = 'a.txt';
   uiState.selectedFileArea = 'unstaged';
   uiState.activeView = 'changes';
   uiState.selectedCommit = null;
   repoState.status = { staged: [], unstaged: [{ path: 'a.txt', status: 'M', staged: false }] };
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
-  // Selector-aware: DiffViewer derives isStaged/inChanges via selectors.
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
 });
 
@@ -79,13 +85,10 @@ describe('DiffViewer', () => {
   it('does not show the error message when the diff loads successfully', async () => {
     vi.mocked(gitApi.getWorkingDiff).mockResolvedValue('');
     render(<DiffViewer />);
-    // Empty diff → "noDiffToDisplay", never the failure message.
     await waitFor(() => expect(screen.getByText('noDiffToDisplay')).toBeInTheDocument());
     expect(screen.queryByText('loadFailed')).not.toBeInTheDocument();
   });
 
-  // Regression: a partially staged file sits in BOTH lists; the diff source
-  // must follow the list the user clicked in, not "staged wins".
   describe('partially staged file', () => {
     beforeEach(() => {
       repoState.status = {
@@ -98,7 +101,7 @@ describe('DiffViewer', () => {
       uiState.selectedFileArea = 'unstaged';
       vi.mocked(gitApi.getWorkingDiff).mockResolvedValue('');
       render(<DiffViewer />);
-      await waitFor(() => expect(gitApi.getWorkingDiff).toHaveBeenCalledWith('a.txt'));
+      await waitFor(() => expect(gitApi.getWorkingDiff).toHaveBeenCalledWith('a.txt', false));
       expect(gitApi.getStagedDiff).not.toHaveBeenCalled();
     });
 
@@ -106,7 +109,7 @@ describe('DiffViewer', () => {
       uiState.selectedFileArea = 'staged';
       vi.mocked(gitApi.getStagedDiff).mockResolvedValue('');
       render(<DiffViewer />);
-      await waitFor(() => expect(gitApi.getStagedDiff).toHaveBeenCalledWith('a.txt'));
+      await waitFor(() => expect(gitApi.getStagedDiff).toHaveBeenCalledWith('a.txt', false));
       expect(gitApi.getWorkingDiff).not.toHaveBeenCalled();
     });
   });
@@ -152,7 +155,6 @@ describe('DiffViewer', () => {
       vi.mocked(gitApi.getFileDiff).mockResolvedValue(RAW);
       render(<DiffViewer />);
 
-      // The hunk renders, but with no stage/unstage affordance.
       await waitFor(() => expect(screen.getByText(/@@ -1,1/)).toBeInTheDocument());
       expect(screen.queryByText('stageHunk')).not.toBeInTheDocument();
       expect(screen.queryByText('unstageHunk')).not.toBeInTheDocument();
@@ -167,8 +169,44 @@ describe('DiffViewer', () => {
     );
     render(<DiffViewer />);
     const line = await screen.findByText(/indented/);
-    // Content now sits inside a whitespace-pre wrapper (the +/- prefix is a
-    // sibling span); indentation is preserved as long as an ancestor sets it.
     expect(line.closest('.whitespace-pre')).not.toBeNull();
+  });
+
+  describe('view settings', () => {
+    const RAW =
+      'diff --git a/a.txt b/a.txt\nindex 1111111..2222222 100644\n--- a/a.txt\n+++ b/a.txt\n@@ -1,1 +1,1 @@\n-old\n+new\n';
+
+    it('asks git to ignore whitespace and turns hunk staging off in Changes', async () => {
+      useSettingsStore.setState({ diffIgnoreWhitespace: true });
+      vi.mocked(gitApi.getWorkingDiff).mockResolvedValue(RAW);
+      render(<DiffViewer />);
+      expect(await screen.findByText('whitespaceHidden')).toBeInTheDocument();
+      expect(gitApi.getWorkingDiff).toHaveBeenCalledWith('a.txt', true);
+      expect(screen.queryByText('stageHunk')).not.toBeInTheDocument();
+    });
+
+    it('ignores whitespace in history without any staging note', async () => {
+      useSettingsStore.setState({ diffIgnoreWhitespace: true });
+      uiState.activeView = 'history';
+      uiState.selectedCommit = 'abc1234' as any;
+      vi.mocked(gitApi.getFileDiff).mockResolvedValue(RAW);
+      render(<DiffViewer />);
+      await waitFor(() =>
+        expect(gitApi.getFileDiff).toHaveBeenCalledWith('abc1234', 'a.txt', true),
+      );
+      expect(screen.queryByText('whitespaceHidden')).not.toBeInTheDocument();
+    });
+
+    it('uses the chosen font size and wraps long lines when asked', async () => {
+      useSettingsStore.setState({ diffFontSize: 14, diffWrapLines: true });
+      vi.mocked(gitApi.getWorkingDiff).mockResolvedValue(RAW);
+      const { container } = render(<DiffViewer />);
+      await screen.findByText('stageHunk');
+      const pane = container.querySelector('.font-mono') as HTMLElement;
+      expect(pane.style.fontSize).toBe('14px');
+      expect(pane.style.lineHeight).toBe('19px');
+      expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+      expect(container.querySelector('.whitespace-pre')).toBeNull();
+    });
   });
 });

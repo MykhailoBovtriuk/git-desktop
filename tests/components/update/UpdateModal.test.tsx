@@ -93,8 +93,6 @@ describe('UpdateModal', () => {
     expect(startDownload).toHaveBeenCalledWith('1.2.0');
   });
 
-  // A dev build must never launch an installer over the real app; it still
-  // hears about the release, just as a link.
   it('offers the release page when this build cannot install', () => {
     const { startDownload } = setup({ res: result({ canInstall: false }) });
     render(<UpdateModal />);

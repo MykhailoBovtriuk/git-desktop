@@ -5,10 +5,6 @@
 
 const USER_AGENT = 'git-desktop';
 
-/**
- * The advertisement URL for a remote, with any embedded credentials dropped so
- * they do not replace the ones being checked.
- */
 export function probeUrlFor(remoteUrl: string): string {
   const url = new URL(remoteUrl);
   url.username = '';
@@ -19,10 +15,6 @@ export function probeUrlFor(remoteUrl: string): string {
   return url.toString();
 }
 
-/**
- * Resolves when the credential works against `remoteUrl`, rejects with a
- * message the sign-in dialog can show otherwise.
- */
 export async function verifyAgainstRemote(
   remoteUrl: string,
   username: string,
@@ -35,14 +27,10 @@ export async function verifyAgainstRemote(
       headers: {
         Authorization: `Basic ${basic}`,
         'User-Agent': USER_AGENT,
-        // Asking for the smart protocol; a server that only speaks the dumb one
-        // answers anyway, and the status is all this reads.
         Accept: 'application/x-git-upload-pack-advertisement',
       },
     });
   } catch {
-    // DNS, TLS, no route. Not a verdict on the token, and saying so matters:
-    // "wrong token" sends the user to reissue a token that was fine.
     throw new Error('Could not reach the server to check this token');
   }
 

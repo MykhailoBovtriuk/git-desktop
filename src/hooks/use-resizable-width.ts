@@ -6,16 +6,22 @@ function loadWidth(storageKey: string, min: number, max: number, initial: number
   return saved >= min && saved <= max ? saved : initial;
 }
 
-/** A column width dragged with the mouse and remembered in localStorage. */
-export function useResizableWidth(storageKey: string, min: number, max: number, initial = min) {
+export function useResizableWidth(
+  storageKey: string,
+  min: number,
+  max: number,
+  initial = min,
+  edge: 'left' | 'right' = 'right',
+) {
   const [width, setWidth] = useState(() => loadWidth(storageKey, min, max, initial));
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = width;
+    const sign = edge === 'left' ? -1 : 1;
     const onMove = (ev: MouseEvent) =>
-      setWidth(Math.min(max, Math.max(min, startWidth + ev.clientX - startX)));
+      setWidth(Math.min(max, Math.max(min, startWidth + sign * (ev.clientX - startX))));
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);

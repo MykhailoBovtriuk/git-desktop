@@ -18,7 +18,6 @@
   --color-sky: var(--gd-sky);
 }
 
-/* Dark — Catppuccin Mocha. Also the fallback when no theme is resolved yet. */
 :root {
   --gd-base: #1e1e2e;
   --gd-mantle: #181825;
@@ -44,8 +43,6 @@
   --gd-graph-8: #89dceb;
 }
 
-/* Light — Catppuccin Latte, the direct counterpart of the dark palette above,
-   so every surface/accent keeps the same role and contrast ordering. */
 :root[data-theme='light'] {
   --gd-base: #eff1f5;
   --gd-mantle: #e6e9ef;
@@ -75,7 +72,10 @@ body {
   margin: 0;
   background: var(--gd-base);
   color: var(--gd-text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   overflow: hidden;
   /* No global `user-select: none`: users must be able to copy hashes, paths and
      diffs. Chrome opts out with `select-none`. */

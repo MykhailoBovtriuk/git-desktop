@@ -15,42 +15,63 @@ vi.mock('../../../src/api/account-api', () => ({
   accountApi: { openTokenHelp: vi.fn().mockResolvedValue(null) },
 }));
 
+const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): ProviderOption => ({
+  displayName: o.id,
+  group: 'other',
+  defaultHost: null,
+  configured: false,
+  needsHost: true,
+  needsClientId: true,
+  tokenHelpUrl: null,
+  ...o,
+});
+
 const OPTIONS: ProviderOption[] = [
-  {
-    id: 'gitlab-self',
-    displayName: 'GitLab (self-managed)',
-    configured: true,
-    needsHost: true,
-    needsClientId: true,
-    tokenHelpUrl: null,
-  },
-  {
+  option({ id: 'gitlab-self', displayName: 'GitLab (self-managed)', group: 'gitlab-self' }),
+  option({ id: 'github-enterprise', displayName: 'GitHub Enterprise', group: 'github-enterprise' }),
+  option({ id: 'azure-devops-server', displayName: 'Azure DevOps Server', needsClientId: false }),
+  option({
     id: 'token',
     displayName: 'Personal access token',
-    configured: true,
-    needsHost: true,
     needsClientId: false,
     tokenHelpUrl: 'https://git.acme.internal',
-  },
-  {
+  }),
+  option({
     id: 'github',
     displayName: 'GitHub',
+    group: 'github',
+    defaultHost: 'github.com',
     configured: true,
     needsHost: false,
     needsClientId: false,
-    tokenHelpUrl: null,
-  },
+  }),
 ];
+
+const EXISTING = {
+  id: 'github.com',
+  providerId: 'github' as const,
+  host: 'github.com',
+  displayName: 'GitHub',
+  login: 'octocat',
+  name: 'The Octocat',
+  email: '',
+  avatarDataUrl: null,
+};
 
 function setup({
   phase = 'browser' as SignInPhase | null,
   providerId = 'github' as string | null,
   host = 'github.com',
   error = null as string | null,
+  endpointError = null as string | null,
+  existing = null as typeof EXISTING | null,
+  repoPath = '/tmp/repo' as string | null,
 } = {}) {
   const actions = {
     chooseProvider: vi.fn(),
-    setHost: vi.fn(),
+    submitEndpoint: vi.fn(),
+    confirmReplace: vi.fn(),
+    switchMethod: vi.fn(),
     continueWithBrowser: vi.fn().mockResolvedValue(undefined),
     submitToken: vi.fn().mockResolvedValue(undefined),
     cancelSignIn: vi.fn().mockResolvedValue(undefined),
@@ -58,8 +79,9 @@ function setup({
   };
   const state = {
     phase,
-    target: phase ? { host, providerId, options: OPTIONS, repoPath: '/tmp/repo' } : null,
+    target: phase ? { host, providerId, options: OPTIONS, repoPath, existing } : null,
     error,
+    endpointError,
     busy: false,
     ...actions,
   };
@@ -86,15 +108,12 @@ describe('SignInModal', () => {
     expect(actions.continueWithBrowser).toHaveBeenCalled();
   });
 
-  // A self-hosted instance registers its own OAuth app, so the client id has
-  // to come from the user — and until it does there is nothing to send.
   it('requires a client id before handing off to a self-hosted server', () => {
     setup({ providerId: 'gitlab-self', host: 'gitlab.acme.internal' });
     render(<SignInModal />);
     expect(screen.getByText('browser.continue').closest('button')).toBeDisabled();
   });
 
-  // A closed tab or a browser that never opened would otherwise be a dead end.
   it('offers to reopen the browser while waiting', () => {
     const actions = setup({ phase: 'waiting' });
     render(<SignInModal />);
@@ -109,8 +128,7 @@ describe('SignInModal', () => {
     render(<SignInModal />);
 
     expect(screen.getByText('GitLab (self-managed)')).toBeTruthy();
-    expect(screen.getByText('Personal access token')).toBeTruthy();
-    // github.com is not something you can pick for a different host.
+    expect(screen.getByText('token.otherServer')).toBeTruthy();
     expect(screen.queryByText('GitHub')).toBeNull();
 
     fireEvent.click(screen.getByText('GitLab (self-managed)'));
@@ -138,18 +156,15 @@ describe('SignInModal', () => {
     expect(screen.getByText('token.submit').closest('button')).toBeDisabled();
   });
 
-  // The browser flow can fail for reasons the token path does not share, so
-  // the error state has to leave a way forward rather than only a Cancel.
   it('offers the token path after a failed browser sign-in', () => {
     const actions = setup({ phase: 'error', error: 'state did not match' });
     render(<SignInModal />);
 
     expect(screen.getByText('state did not match')).toBeTruthy();
     fireEvent.click(screen.getByText('error.useToken'));
-    expect(actions.chooseProvider).toHaveBeenCalledWith('token');
+    expect(actions.switchMethod).toHaveBeenCalledWith('token');
   });
 
-  // "Not now" must not come back the next time the same repository is opened.
   it('remembers the repository when the dialog is dismissed', () => {
     const actions = setup();
     render(<SignInModal />);
@@ -157,5 +172,86 @@ describe('SignInModal', () => {
     fireEvent.click(screen.getByText('common:cancel'));
     expect(actions.dismissForRepo).toHaveBeenCalledWith('/tmp/repo');
     expect(actions.cancelSignIn).toHaveBeenCalled();
+  });
+
+  it('does not remember a repository for a sign-in started from Settings', () => {
+    const actions = setup({ repoPath: null });
+    render(<SignInModal />);
+    fireEvent.click(screen.getByText('common:cancel'));
+    expect(actions.dismissForRepo).not.toHaveBeenCalled();
+  });
+
+  it('asks a self-hosted service for its address', () => {
+    const actions = setup({ phase: 'endpoint', providerId: 'github-enterprise', host: '' });
+    render(<SignInModal />);
+
+    expect(screen.getByText('endpoint.title')).toBeTruthy();
+    expect(screen.getByText('choose.continue').closest('button')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('endpoint.label'), {
+      target: { value: 'ghe.acme.com' },
+    });
+    fireEvent.click(screen.getByText('choose.continue'));
+    expect(actions.submitEndpoint).toHaveBeenCalledWith('ghe.acme.com');
+  });
+
+  it('explains an address that was not accepted', () => {
+    setup({
+      phase: 'endpoint',
+      providerId: 'github-enterprise',
+      host: 'x',
+      endpointError: 'mismatch',
+    });
+    render(<SignInModal />);
+    expect(screen.getByText('endpoint.error.mismatch')).toBeTruthy();
+  });
+
+  it('warns before replacing an account on the same server', () => {
+    const actions = setup({ phase: 'existing', existing: EXISTING });
+    render(<SignInModal />);
+
+    expect(screen.getByText('existing.title')).toBeTruthy();
+    fireEvent.click(screen.getByText('existing.continue'));
+    expect(actions.confirmReplace).toHaveBeenCalled();
+  });
+
+  it('asks only for the token when the service names the user itself', () => {
+    const actions = setup({
+      phase: 'token',
+      providerId: 'github-enterprise',
+      host: 'ghe.acme.com',
+    });
+    render(<SignInModal />);
+
+    expect(screen.queryByPlaceholderText('token.usernamePlaceholder')).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('token.tokenPlaceholder'), {
+      target: { value: 'ghp_x' },
+    });
+    fireEvent.click(screen.getByText('token.submit'));
+    expect(actions.submitToken).toHaveBeenCalledWith('', 'ghp_x');
+  });
+
+  it('offers the own-OAuth-app way in for a self-hosted service', () => {
+    const actions = setup({
+      phase: 'token',
+      providerId: 'github-enterprise',
+      host: 'ghe.acme.com',
+    });
+    render(<SignInModal />);
+    fireEvent.click(screen.getByText('token.useOwnApp'));
+    expect(actions.switchMethod).toHaveBeenCalledWith('browser');
+  });
+
+  it('offers a token from the browser step', () => {
+    const actions = setup();
+    render(<SignInModal />);
+    fireEvent.click(screen.getByText('browser.useToken'));
+    expect(actions.switchMethod).toHaveBeenCalledWith('token');
+  });
+
+  it('offers no browser for a token-only service', () => {
+    setup({ phase: 'token', providerId: 'azure-devops-server', host: 'devops.acme.com' });
+    render(<SignInModal />);
+    expect(screen.queryByText('token.useOwnApp')).toBeNull();
+    expect(screen.queryByText('token.useBrowser')).toBeNull();
   });
 });

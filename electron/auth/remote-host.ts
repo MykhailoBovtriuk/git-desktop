@@ -1,12 +1,8 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { gitConfigGet, runGit } from '../git/exec';
 
 const run = promisify(execFile);
-
-/**
- * The host a remote URL points at. `git@host:path` is scp syntax, not a URL, so
- * it gets its own branch.
- */
 
 /**
  * scp-like syntax: [user@]host:path, where the part after ":" is not a port.
@@ -32,19 +28,11 @@ export function hostFromRemoteUrl(remoteUrl: string | null | undefined): string 
   }
 }
 
-/**
- * One spelling per host: lowercase (DNS is case-insensitive) and without the
- * trailing dot.
- */
 function normalize(host: string): string {
   const lower = host.toLowerCase();
   return lower.endsWith('.') ? lower.slice(0, -1) : lower;
 }
 
-/**
- * How git authenticates to a remote. An ssh remote uses a key, so a sign-in
- * offer is pointless there.
- */
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
 
 export function protocolFromRemoteUrl(remoteUrl: string | null | undefined): RemoteProtocol | null {
@@ -58,11 +46,6 @@ export function protocolFromRemoteUrl(remoteUrl: string | null | undefined): Rem
   return 'other';
 }
 
-/**
- * The https address of the same repository as an ssh remote, so a signed-in
- * account's token can reach it. `host` is the resolved one: an ssh alias
- * means nothing to an https server. Null when there is nothing to convert.
- */
 export function httpsUrlFromSshRemote(
   remoteUrl: string | null | undefined,
   host: string,
@@ -85,10 +68,6 @@ export function httpsUrlFromSshRemote(
   return `https://${host}/${repoPath}`;
 }
 
-/**
- * The scp-style ssh address of an https remote: `git@host:path`. The user and
- * port of an https url mean nothing to ssh, so both are dropped.
- */
 export function sshUrlFromHttpsRemote(remoteUrl: string | null | undefined): string | null {
   if (protocolFromRemoteUrl(remoteUrl) !== 'https') return null;
   let url: URL;
@@ -102,15 +81,10 @@ export function sshUrlFromHttpsRemote(remoteUrl: string | null | undefined): str
   return `git@${url.hostname}:${repoPath}`;
 }
 
-/** True for a host git can reach over the network — i.e. not a local path. */
 export function isNetworkHost(host: string | null): host is string {
   return !!host && host.length > 0 && !host.startsWith('.') && !host.includes('/');
 }
 
-/**
- * What an SSH host alias from ~/.ssh/config resolves to, via `ssh -G` (no
- * connection). Cached: the config does not change mid-session.
- */
 const aliasCache = new Map<string, string>();
 
 async function resolveSshAlias(host: string): Promise<string> {
@@ -123,29 +97,20 @@ async function resolveSshAlias(host: string): Promise<string> {
     const line = stdout.split('\n').find(l => l.startsWith('hostname '));
     const value = line?.slice('hostname '.length).trim();
     if (value) resolved = value.toLowerCase();
-  } catch {
-    // No ssh on PATH, a host it cannot parse, or no answer in time: the
-    // original is the best answer available, and a wrong guess is worse.
-  }
+  } catch {}
   aliasCache.set(host, resolved);
   return resolved;
 }
 
-/** Exported for tests: lets a suite start from a known state. */
 export function resetAliasCache(): void {
   aliasCache.clear();
 }
 
-/**
- * The host to treat a remote as belonging to, with SSH nicknames resolved.
- * Returns null for a remote git would not reach over the network.
- */
 export async function resolveRemoteHost(
   remoteUrl: string | null | undefined,
 ): Promise<string | null> {
   const host = hostFromRemoteUrl(remoteUrl);
   if (!isNetworkHost(host)) return null;
-  // A name with a dot is already a hostname; only a bare nickname needs asking.
   const resolved = host.includes('.') ? host : await resolveSshAlias(host);
   return isNetworkHost(resolved) && resolved.includes('.') ? resolved : null;
 }
@@ -156,7 +121,6 @@ export interface ResolvedRemote {
   protocol: RemoteProtocol | null;
 }
 
-/** The address with the host and protocol read from it: all three answers come from one URL. */
 export async function resolveRemote(remoteUrl: string | null | undefined): Promise<ResolvedRemote> {
   return {
     url: remoteUrl?.trim() || null,
@@ -171,23 +135,14 @@ export async function resolveRemote(remoteUrl: string | null | undefined): Promi
  */
 export async function originUrlFor(repoRoot: string): Promise<string | null> {
   try {
-    const { stdout } = await run('git', ['-C', repoRoot, 'remote']);
-    const names = stdout
+    const names = (await runGit(['-C', repoRoot, 'remote']))
       .split('\n')
       .map(n => n.trim())
       .filter(Boolean);
     const chosen = names.includes('origin') ? 'origin' : names[0];
     if (!chosen) return null;
-    const { stdout: url } = await run('git', [
-      '-C',
-      repoRoot,
-      'config',
-      '--get',
-      `remote.${chosen}.url`,
-    ]);
-    return url.trim() || null;
+    return (await gitConfigGet({ kind: 'effective', repoRoot }, `remote.${chosen}.url`)) || null;
   } catch {
-    // Not a repository, or a remote with no URL configured.
     return null;
   }
 }

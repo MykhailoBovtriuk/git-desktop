@@ -71,7 +71,8 @@ export async function getFileDiff(
   ctx: GitContext,
   hash: string,
   filePath: string,
+  ignoreWhitespace = false,
 ): Promise<string> {
   const range = await commitRange(ctx, hash);
-  return ctx.ensureRepo().diff([...range, '--', filePath]);
+  return ctx.ensureRepo().diff([...(ignoreWhitespace ? ['-w'] : []), ...range, '--', filePath]);
 }

@@ -6,10 +6,10 @@
     "continue": "Continue With Browser",
     "reopen": "Open Browser Again",
     "waiting": "Waiting for you to authorize in the browser…",
-    "hostPlaceholder": "git.example.com",
     "clientIdPlaceholder": "Application (client) ID",
     "clientSecretPlaceholder": "Client secret",
-    "selfHostedHint": "Register an OAuth application on your server with the callback URL git-desktop-auth://oauth, then paste its client ID here."
+    "selfHostedHint": "Register an OAuth application on your server with the callback URL git-desktop-auth://oauth, then paste its client ID here.",
+    "useToken": "Use a token instead"
   },
   "choose": {
     "title": "Sign in to {{host}}",
@@ -22,7 +22,10 @@
     "usernamePlaceholder": "Username",
     "tokenPlaceholder": "Personal access token",
     "where": "Where do I get a token?",
-    "submit": "Sign In"
+    "submit": "Sign In",
+    "otherServer": "Other Git server",
+    "useBrowser": "Sign in with the browser instead",
+    "useOwnApp": "Sign in with your own OAuth app instead"
   },
   "error": {
     "title": "Sign-in failed",
@@ -30,14 +33,10 @@
   },
   "section": {
     "title": "Accounts",
-    "hint": "The servers you are signed in to. Each one authenticates its own repositories.",
-    "empty": "Not signed in to any server yet.",
     "signOut": "Sign Out",
-    "add": "Add account",
-    "hostPlaceholder": "github.com",
     "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting.",
-    "connection": "Repository connection…",
-    "connectionHint": "SSH or HTTPS, and what signs this repository in to {{host}}"
+    "repoHint": "The account the repository {{repo}} signs in with. Every repository signs in on its own; terminals in its folder use the same login.",
+    "noRepo": "Open a repository to sign it in. Every repository has its own account."
   },
   "signedInAs": "Signed in as {{name}} on {{host}}",
   "connection": {
@@ -57,5 +56,68 @@
     "forgetTitle": "Forget stored login",
     "forgetConfirm": "Erase the login for {{host}} from the system credential store? Git in a terminal uses it too.",
     "failed": "Could not update the connection"
+  },
+  "endpoint": {
+    "title": "Sign in to {{service}}",
+    "label": "Server address",
+    "hint": {
+      "enterprise": "Enter the address of your server, for example the one you open in the browser.",
+      "other": "Enter the address of the server."
+    },
+    "placeholder": {
+      "github-enterprise": "https://github.example.com",
+      "gitlab-self": "https://gitlab.example.com",
+      "gitea": "https://codeberg.org",
+      "token": "https://git.example.com",
+      "bitbucket-server": "https://bitbucket.example.com",
+      "azure-devops-server": "https://devops.example.com"
+    },
+    "error": {
+      "invalid": "That does not look like a server address. We expect something like https://git.example.com.",
+      "insecure": "Only https is supported: a token must not travel unencrypted.",
+      "mismatch": "This server does not look like {{service}}. Check the address or pick another service.",
+      "unreachable": "Could not reach the server. Check the address and your connection."
+    }
+  },
+  "existing": {
+    "title": "This repository is already signed in",
+    "body": "It signs in to {{host}} as {{name}} (@{{login}}). Signing in again replaces that account for this repository only.",
+    "continue": "Sign In Again"
+  },
+  "system": {
+    "title": "Credentials from the system",
+    "hint": "Logins git already finds on its own, without an account here: a sign-in made in a terminal, Git Credential Manager or the system keychain. Repositories on those servers work as they are.",
+    "none": "Git has no credential helper configured.",
+    "forUrl": "For {{url}}",
+    "forAll": "For every server",
+    "cliHint": "To sign in from a terminal:",
+    "cli": {
+      "gh": "GitHub CLI (gh)",
+      "glab": "GitLab CLI (glab)",
+      "gcm": "Git Credential Manager"
+    },
+    "scope": {
+      "system": "system",
+      "global": "global",
+      "local": "local"
+    }
+  },
+  "service": {
+    "label": "Service",
+    "signIn": "Sign In to {{service}}",
+    "signInOther": "Sign In with a Token",
+    "hint": {
+      "github": "Sign in to your GitHub.com account to access your repositories.",
+      "github-enterprise": "If you use GitHub Enterprise at work, sign in to it to access your repositories.",
+      "gitlab": "Sign in to your GitLab.com account to access your repositories.",
+      "gitlab-self": "Sign in to a GitLab server your company or team runs itself.",
+      "bitbucket": "Sign in to your Bitbucket Cloud account (bitbucket.org).",
+      "bitbucket-server": "Sign in to a Bitbucket Data Center server with an HTTP access token.",
+      "azure-devops": "Sign in to Azure DevOps Services (dev.azure.com) with your work or school account.",
+      "azure-devops-server": "Sign in to an on-premises Azure DevOps Server with a personal access token.",
+      "gitea": "Sign in to Codeberg or to a Gitea or Forgejo server of your own.",
+      "token": "Any other Git server over https: a username and a token, checked against the repository you have open."
+    },
+    "other": "Other"
   }
 }

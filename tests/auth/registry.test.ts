@@ -30,8 +30,6 @@ describe('provider registry', () => {
     expect(providerForHost('codeberg.org')?.id).toBe('gitea');
   });
 
-  // Most Git servers are somebody's own instance. "Unknown" is a question for
-  // the user, not a failure.
   it('claims nothing for an unknown host', () => {
     expect(providerForHost('git.acme.internal')).toBeNull();
   });
@@ -40,8 +38,6 @@ describe('provider registry', () => {
     expect(providerForHost('GitHub.com')?.id).toBe('github');
   });
 
-  // A provider whose flow this build cannot finish must not appear in the
-  // picker: choosing it would dead-end at the token exchange.
   it('hides a provider whose client id this build lacks', () => {
     expect(isConfigured('gitlab')).toBe(false);
     process.env.OAUTH_GITLAB_ID = 'abc';
@@ -58,8 +54,6 @@ describe('provider registry', () => {
     expect(isConfigured('github')).toBe(true);
   });
 
-  // These need no baked-in key, so a fork without secrets still has a way in.
-  // Regression: Gitea was hidden without its own client id.
   it('always offers the self-hosted and token paths', () => {
     for (const id of ['token', 'gitlab-self', 'github-enterprise', 'gitea'] as const) {
       expect(isConfigured(id), id).toBe(true);
@@ -78,8 +72,6 @@ describe('provider registry', () => {
     expect(options.find(o => o.id === 'token')?.needsHost).toBe(true);
   });
 
-  // Regression: an address and a client id are separate questions; asking
-  // Codeberg for an id disabled sign-in.
   it('asks for a client id only when the build has none', () => {
     process.env.OAUTH_GITEA_ID = 'gt-id';
     resetKeyCache();
@@ -93,6 +85,43 @@ describe('provider registry', () => {
     expect(providerOptions('git.acme.internal').find(o => o.id === 'gitea')?.needsClientId).toBe(
       true,
     );
+  });
+
+  it('lists every provider, saying which can open a browser', () => {
+    const options = providerOptions(null);
+    expect(options.map(o => o.id)).toEqual(allProviders().map(p => p.id));
+    expect(options.find(o => o.id === 'github')).toMatchObject({
+      group: 'github',
+      defaultHost: 'github.com',
+      configured: false,
+    });
+    process.env.OAUTH_GITHUB_ID = 'abc';
+    process.env.OAUTH_GITHUB_SECRET = 'shh';
+    resetKeyCache();
+    expect(providerOptions(null).find(o => o.id === 'github')?.configured).toBe(true);
+  });
+
+  it('groups providers the way Settings lists them', () => {
+    const group = (id: string) => providerOptions(null).find(o => o.id === id)?.group;
+    expect(group('github-enterprise')).toBe('github-enterprise');
+    expect(group('gitlab')).toBe('gitlab');
+    expect(group('gitlab-self')).toBe('gitlab-self');
+    for (const id of ['azure-devops', 'bitbucket', 'gitea', 'token'])
+      expect(group(id)).toBe('other');
+  });
+
+  it("does not offer Codeberg's client id to another Gitea", () => {
+    process.env.OAUTH_GITEA_ID = 'gt-id';
+    resetKeyCache();
+    expect(providerOptions('git.acme.internal').find(o => o.id === 'gitea')?.needsClientId).toBe(
+      true,
+    );
+    delete process.env.OAUTH_GITEA_ID;
+  });
+
+  it('offers only a token for a service without OAuth', () => {
+    const server = providerOptions('devops.acme.com').find(o => o.id === 'azure-devops-server');
+    expect(server).toMatchObject({ configured: false, needsClientId: false, needsHost: true });
   });
 
   it('resolves every provider it lists by id', () => {

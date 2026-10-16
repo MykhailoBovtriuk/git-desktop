@@ -26,7 +26,6 @@ describe('StashList row actions', () => {
 
     for (const action of ['actions.apply', 'actions.pop', 'actions.drop']) {
       const btn = screen.getByTitle(action);
-      // The emoji these replaced (📋 ↩ ✕) rendered as text and ignored `tint`.
       expect(btn.querySelector('svg'), `${action} should render an svg icon`).not.toBeNull();
       expect(btn.textContent, `${action} should carry no glyph text`).toBe('');
     }

@@ -3,10 +3,6 @@ import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 
 let instance: Promise<HighlighterCore> | null = null;
 
-/**
- * Themes load up front so the theme toggle never waits; grammars (~80-180 KB
- * each) load on demand.
- */
 function getCore(): Promise<HighlighterCore> {
   if (!instance) {
     instance = createHighlighterCore({
@@ -44,9 +40,9 @@ export async function getHighlighterFor(lang: string): Promise<HighlighterCore> 
     const load = LANG_LOADERS[lang];
     if (load) {
       const mod = (await load()) as { default?: unknown };
-      await highlighter.loadLanguage((mod.default ?? mod) as Parameters<
-        HighlighterCore['loadLanguage']
-      >[0]);
+      await highlighter.loadLanguage(
+        (mod.default ?? mod) as Parameters<HighlighterCore['loadLanguage']>[0],
+      );
     }
   }
   return highlighter;

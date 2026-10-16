@@ -2,7 +2,6 @@ import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { UpdateInfo } from '../../src/types';
 
-// Built the way the handler builds it: backslashes on Windows.
 const DOWNLOADED = path.join('/tmp/downloads', 'Git-Desktop-arm64-1.2.0.dmg');
 
 const mocks = vi.hoisted(() => ({
@@ -98,7 +97,6 @@ describe('app:check-for-update', () => {
     expect(data).toMatchObject({ status: 'up-to-date' });
   });
 
-  // Every reload would otherwise spend one of sixty hourly requests.
   it('skips the network in a dev run unless the check was asked for', async () => {
     mocks.appState.isPackaged = false;
 
@@ -173,7 +171,6 @@ describe('app:download-update', () => {
     expect(error).toBe('no-release');
   });
 
-  // A dev session must never launch an installer over the real install.
   it('refuses to download from a dev run', async () => {
     mocks.appState.isPackaged = false;
     const { error } = await call('app:download-update', '1.2.0');
@@ -188,8 +185,6 @@ describe('app:install-update and app:cancel-update-download', () => {
     expect(mocks.launchInstaller).not.toHaveBeenCalled();
   });
 
-  // The path comes from the main process own state: taking one from the
-  // renderer would be a way to open any file on the machine.
   it('installs the file it downloaded itself', async () => {
     await call('app:download-update', '1.2.0');
 

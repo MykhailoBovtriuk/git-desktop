@@ -7,7 +7,6 @@ import fs from 'fs/promises';
  * NSIS cannot replace open files.
  */
 const QUIT_DELAY_MS = 1_000;
-/** macOS gets a moment longer: the dmg is still mounting behind the dialog. */
 const MAC_QUIT_DELAY_MS = 2_000;
 
 /**
@@ -18,7 +17,6 @@ export async function launchInstaller(
   filePath: string,
   platform: string = process.platform,
 ): Promise<void> {
-  // The download happened minutes ago and lives in a folder the user can empty.
   await fs.stat(filePath);
 
   if (platform === 'win32') {
@@ -38,8 +36,6 @@ export async function launchInstaller(
     return;
   }
 
-  // An AppImage arrives without the executable bit; setting it here saves the
-  // user the one step they would otherwise have to discover.
   if (filePath.toLowerCase().endsWith('.appimage')) {
     await fs.chmod(filePath, 0o755);
   }

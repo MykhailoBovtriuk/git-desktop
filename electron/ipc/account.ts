@@ -1,26 +1,32 @@
 import { BrowserWindow, ipcMain, shell } from 'electron';
-import type { AuthSource, ProviderAccount, ProviderId } from '../../src/types';
+import path from 'path';
+import type { AuthSource, ProviderAccount, ProviderId, ServerProbe } from '../../src/types';
 import { assertString } from '../ipc-validators';
 import { wrap } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn } from '../auth/oauth-flow';
 import { providerById, providerForHost, providerOptions } from '../auth/providers/registry';
 import {
-  accountForHost,
+  accountForRepo,
   clearCredential,
+  credentialsOnHost,
   isPersistent,
   listAccounts,
   saveCredential,
+  type StoredCredential,
 } from '../auth/token-store';
-import { accountIdFor } from '../auth/account-id';
 import { hostFromRemoteUrl, originUrlFor } from '../auth/remote-host';
 import { verifyAgainstRemote } from '../auth/verify-credential';
 import {
   approveCredentials,
+  bindRepoUsername,
   forgetStoredCredential,
   gitUsernameFor,
-  hasStoredCredential,
+  listCredentialHelpers,
   rejectCredentials,
+  storedUsername,
+  unbindRepoUsername,
 } from '../auth/git-credentials';
+import type { ProviderDefinition } from '../auth/providers/types';
 import { ensureGlobalIdentity } from '../auth/identity-bootstrap';
 
 export interface AccountHandlerOptions {
@@ -38,6 +44,13 @@ function assertHost(value: unknown): asserts value is string {
   }
 }
 
+function assertRepoPath(value: unknown): asserts value is string {
+  assertString(value, 'repoPath');
+  if (!path.isAbsolute(value as string) || /[\r\n\0]/.test(value as string)) {
+    throw new Error('Invalid argument: repoPath is not an absolute path');
+  }
+}
+
 /**
  * A value for `git credential`, which is one `key=value` per line: a newline
  * would inject a second field.
@@ -49,20 +62,15 @@ function assertCredentialField(value: unknown, name: string): asserts value is s
   }
 }
 
-/**
- * Who a pasted token belongs to, and whether it works at all. Nothing is stored
- * before this resolves.
- */
 async function accountFromToken(
+  providerId: ProviderId,
   host: string,
   login: string,
   token: string,
-  repoPath: string | null,
+  repoPath: string,
 ): Promise<ProviderAccount> {
-  const provider = providerForHost(host);
+  const provider = providerId === 'token' ? providerForHost(host) : providerById(providerId);
   if (provider) {
-    // A host we recognise has an API that both proves the token works and
-    // knows the user's real name and avatar — better data than a form carries.
     const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(
@@ -71,12 +79,10 @@ async function accountFromToken(
           : `Could not check this token with ${provider.displayName}`,
       );
     });
-    return { ...fetched, id: accountIdFor(host) };
+    return { ...fetched, id: repoPath, repoPath };
   }
 
-  // Nobody's API to ask: check the credential by using it against the very
-  // remote it is meant for. Whatever `ls-remote` accepts, `git push` accepts.
-  const remoteUrl = repoPath ? await originUrlFor(repoPath) : null;
+  const remoteUrl = await originUrlFor(repoPath);
   if (!remoteUrl || !/^https:\/\//i.test(remoteUrl) || hostFromRemoteUrl(remoteUrl) !== host) {
     throw new Error(
       `Sign in from a repository whose remote is an https address on ${host} — ` +
@@ -85,7 +91,8 @@ async function accountFromToken(
   }
   await verifyAgainstRemote(remoteUrl, login, token);
   return {
-    id: accountIdFor(host),
+    id: repoPath,
+    repoPath,
     providerId: 'token',
     host,
     displayName: host,
@@ -96,10 +103,6 @@ async function accountFromToken(
   };
 }
 
-/**
- * Everything that happens once a token is in hand, shared by the browser and
- * pasted-token flows.
- */
 async function adoptAccount(
   account: ProviderAccount,
   token: string,
@@ -108,8 +111,9 @@ async function adoptAccount(
   clientId: string,
   clientSecret: string | null,
 ): Promise<ProviderAccount> {
+  await releaseRepo(account.repoPath, { revokeToken: true, notify: false });
   await saveCredential({
-    id: account.id,
+    repoPath: account.repoPath,
     host: account.host,
     account,
     accessToken: token,
@@ -120,19 +124,52 @@ async function adoptAccount(
   });
   // Order matters: git has to be able to authenticate before anything tells the
   // user they are signed in.
-  await approveCredentials(account.host, gitUsernameFor(account), token);
+  const username = gitUsernameFor(account);
+  await approveCredentials(account.host, username, token);
+  await bindRepoUsername(account.repoPath, account.host, username);
   await ensureGlobalIdentity(account);
   notify();
   return account;
 }
 
 /**
- * The browser came back. Called from the deep-link handler in main.ts rather
- * than over IPC — the renderer is not part of this round trip.
+ * Sign a repository out: its account, the username in its `.git/config`, and
+ * the system credential store's copy unless another repository still signs in
+ * as the same user there — then that one's token is put back in its place.
  */
+async function releaseRepo(
+  repoPath: string,
+  opts: { revokeToken: boolean; notify: boolean },
+): Promise<StoredCredential | null> {
+  const stored = await clearCredential(repoPath);
+  if (!stored) return null;
+  const username = gitUsernameFor(stored.account);
+  await unbindRepoUsername(repoPath, stored.host);
+  const sharing = (await credentialsOnHost(stored.host)).find(
+    c => gitUsernameFor(c.account) === username,
+  );
+  if (sharing) await approveCredentials(stored.host, username, sharing.accessToken);
+  else await rejectCredentials(stored.host, username);
+  if (opts.revokeToken && stored.accessToken !== sharing?.accessToken) {
+    void revoke(providerById(stored.account.providerId), {
+      host: stored.host,
+      token: stored.accessToken,
+      clientId: stored.clientId,
+      clientSecret: stored.clientSecret,
+    });
+  }
+  if (opts.notify) notify();
+  return stored;
+}
+
+export async function forgetRepoAccount(repoPath: string): Promise<void> {
+  await releaseRepo(repoPath, { revokeToken: true, notify: true });
+}
+
 export async function handleAuthCallback(url: string): Promise<void> {
+  let result: Awaited<ReturnType<typeof completeSignIn>> | null = null;
   try {
-    const result = await completeSignIn(url);
+    result = await completeSignIn(url);
     await adoptAccount(
       result.account,
       result.token.accessToken,
@@ -142,9 +179,24 @@ export async function handleAuthCallback(url: string): Promise<void> {
       result.clientSecret,
     );
   } catch (err: unknown) {
+    if (result) {
+      void revoke(providerById(result.account.providerId), {
+        host: result.account.host,
+        token: result.token.accessToken,
+        clientId: result.clientId,
+        clientSecret: result.clientSecret,
+      });
+    }
     lastError = err instanceof Error ? err.message : String(err);
     notify();
   }
+}
+
+async function revoke(
+  provider: ProviderDefinition | null,
+  opts: Parameters<NonNullable<ProviderDefinition['revokeToken']>>[0],
+): Promise<void> {
+  await provider?.revokeToken?.(opts).catch(() => {});
 }
 
 /**
@@ -155,9 +207,7 @@ let lastError: string | null = null;
 
 export interface AccountsSnapshot {
   accounts: ProviderAccount[];
-  /** False on a machine with no OS keychain: sign-in lasts this session only. */
   persistent: boolean;
-  /** Set once by a failed browser round trip, then cleared. */
   error: string | null;
 }
 
@@ -183,32 +233,47 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     }),
   );
 
-  /**
-   * What authenticates this remote: ssh, an app account, the system keychain,
-   * or nothing. Ssh is settled first so it never triggers a keychain lookup.
-   */
-  ipcMain.handle('account:auth-source', (_e, host: unknown, protocol: unknown) =>
+  ipcMain.handle('account:auth-source', (_e, host: unknown, protocol: unknown, repoPath: unknown) =>
     wrap(async (): Promise<AuthSource> => {
       if (typeof host !== 'string' || !host) return 'none';
       assertHost(host);
-      if (await accountForHost(host)) return 'account';
+      if (typeof repoPath === 'string' && repoPath) {
+        assertRepoPath(repoPath);
+        if ((await accountForRepo(repoPath))?.host === host) return 'account';
+      }
       if (protocol !== 'https') return 'ssh';
-      return (await hasStoredCredential(host)) ? 'system' : 'none';
+      const username = await storedUsername(host);
+      if (username === null) return 'none';
+      // The app's own entry for another repository is not this one's login:
+      // each repository signs in for itself.
+      const ours = (await credentialsOnHost(host)).some(
+        c => gitUsernameFor(c.account) === username,
+      );
+      return ours ? 'none' : 'system';
     }),
   );
 
   ipcMain.handle(
     'account:sign-in',
-    (_e, providerId: unknown, host: unknown, clientId: unknown, clientSecret: unknown) =>
+    (
+      _e,
+      providerId: unknown,
+      host: unknown,
+      repoPath: unknown,
+      clientId: unknown,
+      clientSecret: unknown,
+    ) =>
       wrap(async () => {
         assertString(providerId, 'providerId');
         assertHost(host);
+        assertRepoPath(repoPath);
         const provider = providerById(providerId as ProviderId);
         if (!provider) throw new Error(`Unknown provider: ${providerId}`);
 
         const url = beginSignIn({
           provider,
           host,
+          repoPath,
           clientId: typeof clientId === 'string' ? clientId : undefined,
           clientSecret: typeof clientSecret === 'string' ? clientSecret : undefined,
         });
@@ -217,22 +282,40 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
       }),
   );
 
-  // The path for every server nobody registered an OAuth app for. The account
-  // is built from whatever proved the token works, never from the form alone.
   ipcMain.handle(
     'account:sign-in-token',
-    (_e, host: unknown, login: unknown, token: unknown, repoPath: unknown) =>
+    (_e, providerId: unknown, host: unknown, login: unknown, token: unknown, repoPath: unknown) =>
       wrap(async () => {
+        assertString(providerId, 'providerId');
+        if (!providerById(providerId as ProviderId)) {
+          throw new Error(`Unknown provider: ${providerId}`);
+        }
         assertHost(host);
-        assertCredentialField(login, 'login');
+        if (providerId === 'token' || login !== '') assertCredentialField(login, 'login');
         assertCredentialField(token, 'token');
-        const repo = typeof repoPath === 'string' && repoPath ? repoPath : null;
-        const account = await accountFromToken(host, login, token, repo);
-        // A hand-made token has no known expiry and nothing to refresh it with,
-        // so it is stored as non-expiring.
+        assertRepoPath(repoPath);
+        const account = await accountFromToken(
+          providerId as ProviderId,
+          host,
+          login as string,
+          token,
+          repoPath,
+        );
         return adoptAccount(account, token, null, null, '', null);
       }),
   );
+
+  ipcMain.handle('account:probe-server', (_e, providerId: unknown, host: unknown) =>
+    wrap(async (): Promise<ServerProbe> => {
+      assertString(providerId, 'providerId');
+      assertHost(host);
+      const provider = providerById(providerId as ProviderId);
+      if (!provider) throw new Error(`Unknown provider: ${providerId}`);
+      return provider.probe ? provider.probe(host) : 'ok';
+    }),
+  );
+
+  ipcMain.handle('account:credential-helpers', () => wrap(() => listCredentialHelpers()));
 
   ipcMain.handle('account:open-token-help', (_e, providerId: unknown, host: unknown) =>
     wrap(async () => {
@@ -255,8 +338,6 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     }),
   );
 
-  // For a credential stored outside the app: signing out of one of ours already
-  // erases it.
   ipcMain.handle('account:forget-system-credential', (_e, host: unknown) =>
     wrap(async () => {
       assertHost(host);
@@ -266,12 +347,10 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     }),
   );
 
-  ipcMain.handle('account:sign-out', (_e, accountId: unknown) =>
+  ipcMain.handle('account:sign-out', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(accountId, 'accountId');
-      const account = await clearCredential(accountId);
-      if (account) await rejectCredentials(account.host, gitUsernameFor(account));
-      notify();
+      assertRepoPath(repoPath);
+      await releaseRepo(repoPath, { revokeToken: true, notify: true });
       return null;
     }),
   );

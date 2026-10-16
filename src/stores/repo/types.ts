@@ -19,7 +19,6 @@ export interface RepoState {
   repoPath: string | null;
   recentRepos: string[];
   commits: Commit[];
-  /** Abbreviated hash of HEAD — the user's own position, unlike commits[0]. */
   headCommit: string | null;
   branches: Branch[];
   currentBranch: string;
@@ -42,13 +41,9 @@ export interface RepoState {
   stashPop: (index: number) => Promise<void>;
   stashDrop: (index: number) => Promise<void>;
   openRepo: (path: string) => Promise<void>;
-  /** The open repository's remote address, as git has it. */
   remoteUrl: string | null;
-  /** Host of the open repository's remote, or null for a local-only repo. */
   remoteHost: string | null;
-  /** How that remote authenticates — only an https one a token can help with. */
   remoteProtocol: RemoteProtocol | null;
-  /** Move the remote to the other protocol; signing in is left to the user. */
   switchRemoteProtocol: (to: 'ssh' | 'https') => Promise<void>;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
@@ -80,10 +75,6 @@ export interface RepoState {
   cancelCheckout: () => void;
   merge: (branch: string) => Promise<void>;
   rebase: (branch: string) => Promise<void>;
-  /**
-   * Create a branch here and switch to it; `changes` is 'bring' (keep the work)
-   * or 'leave' (stash it first).
-   */
   createBranch: (name: string, changes: 'bring' | 'leave') => Promise<void>;
   deleteBranch: (branch: string, force?: boolean) => Promise<void>;
   deleteRemoteBranch: (remote: string, branch: string) => Promise<void>;

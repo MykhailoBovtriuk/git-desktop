@@ -14,7 +14,6 @@ describe('classifyGitError', () => {
     );
   });
 
-  // An ssh key problem: signing in cannot help, so no sign-in action.
   it('classifies an SSH permission denial as a key problem, with no sign-in offered', () => {
     const r = classifyGitError('git@github.com: Permission denied (publickey).');
     expect(r.kind).toBe('sshKey');
@@ -84,7 +83,6 @@ describe('classifyGitError', () => {
     expect(r.action).toBeUndefined();
   });
 
-  // Verbatim git output for a passphrase-protected key the agent does not hold.
   it('treats a locked signing key as a key problem', () => {
     const r = classifyGitError(
       'error: Enter passphrase for "/home/j/.ssh/id_ed25519": Load key: incorrect passphrase supplied to decrypt private key?\nfatal: failed to write commit object',
@@ -100,8 +98,6 @@ describe('classifyGitError', () => {
     );
   });
 
-  // Deleting the key file while the profile is still applied: git keeps the
-  // config, so commits fail outright until the config is cleared.
   it('treats a missing signing key as a key problem', () => {
     const r = classifyGitError(
       "error: Couldn't load public key /home/j/.ssh/id_ed25519.pub: No such file or directory?\nfatal: failed to write commit object",
@@ -117,8 +113,6 @@ describe('classifyGitError', () => {
     expect(r.kind).toBe('sshKey');
   });
 
-  // The https side of the same question keeps its offer: here a credential is
-  // exactly what is missing.
   it('still offers sign-in for an https credential failure', () => {
     const r = classifyGitError(
       "fatal: Authentication failed for 'https://github.com/owner/repo.git/'",

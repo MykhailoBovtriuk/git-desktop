@@ -16,6 +16,7 @@ release/
 .continue/
 docs/
 tasks/
+CLAUDE.md
 
 # IDE — VSCode / Cursor
 .vscode/

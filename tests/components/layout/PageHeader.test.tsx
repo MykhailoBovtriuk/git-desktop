@@ -18,7 +18,6 @@ describe('PageHeader', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  // The back link is the only exit now; the close icon is gone.
   it('offers no second way out of the screen', () => {
     render(<PageHeader crumbs={crumbs} onBack={vi.fn()} />);
 
@@ -34,5 +33,10 @@ describe('PageHeader', () => {
     );
 
     expect(screen.getByText('check for updates')).toBeTruthy();
+  });
+
+  it('shows no back link when the page is closed some other way', () => {
+    render(<PageHeader crumbs={crumbs} />);
+    expect(screen.queryByText('← back')).toBeNull();
   });
 });

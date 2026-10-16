@@ -23,18 +23,15 @@ let baked: Record<string, string> | null = null;
 
 function bakedKeys(): Record<string, string> {
   if (baked) return baked;
-  // dist-electron/electron/auth/oauth-config.js → dist-electron/oauth-keys.json
   const file = path.join(__dirname, '..', '..', 'oauth-keys.json');
   try {
     baked = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, string>;
   } catch {
-    // Absent in a source checkout that has never been built, and in every test.
     baked = {};
   }
   return baked;
 }
 
-/** Exported for tests: lets a suite start from a known state. */
 export function resetKeyCache(): void {
   baked = null;
 }
@@ -43,22 +40,15 @@ function readVar(name: string): string {
   return process.env[name] || bakedKeys()[name] || '';
 }
 
-/**
- * Keys for a provider, or null when this build has none. Self-hosted providers
- * always get null: their client id comes from the user.
- */
 export function keysFor(id: ProviderId): ProviderKeys | null {
   const names = ENV_NAMES[id];
   if (!names) return null;
   const clientId = readVar(names.id);
   if (!clientId) return null;
   const clientSecret = names.secret ? readVar(names.secret) : '';
-  // A provider that needs a secret and has none cannot complete the exchange —
-  // offering it in the picker would be a dead end.
   if (names.secret && !clientSecret) return null;
   return { clientId, clientSecret: clientSecret || null };
 }
 
-/** The redirect target registered with every provider. */
 export const REDIRECT_URI = 'git-desktop-auth://oauth';
 export const PROTOCOL_SCHEME = 'git-desktop-auth';

@@ -12,14 +12,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUNDLE_ID = 'com.gitdesktop.app.dev';
 const SCHEME = 'git-desktop-auth';
 const BUNDLE = path.join(root, '.dev-bundle', 'Git Desktop Dev.app');
-/** The wrapper, not Electron itself: a cold start has to know what to run. */
 const LAUNCHER = 'git-desktop-dev';
 
 function electronAppPath() {
   return path.join(root, 'node_modules', 'electron', 'dist', 'Electron.app');
 }
 
-/** The clone's Info.plist, written whole rather than edited. */
 function infoPlist() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -48,10 +46,6 @@ function infoPlist() {
 `;
 }
 
-/**
- * The bundle's executable: a wrapper that starts Electron on this project,
- * since a cold launch passes no arguments.
- */
 function launcherScript() {
   return `#!/bin/sh
 exec "$(dirname "$0")/Electron" ${JSON.stringify(root)} "$@"
@@ -66,8 +60,6 @@ function buildBundle() {
 
   fs.rmSync(BUNDLE, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(BUNDLE), { recursive: true });
-  // -c asks APFS to clone: instant, and it costs no additional disk space.
-  // Older filesystems fall back to a real copy.
   try {
     execFileSync('cp', ['-Rc', source, BUNDLE], { stdio: 'pipe' });
   } catch {
@@ -89,16 +81,13 @@ function buildBundle() {
     'LaunchServices.framework/Versions/A/Support/lsregister';
   try {
     execFileSync(lsregister, ['-f', BUNDLE], { stdio: 'pipe' });
-  } catch {
-    // Not fatal: the app claims the scheme itself once it is running.
-  }
+  } catch {}
 
   return launcher;
 }
 
 function main() {
   const args = process.argv.slice(2).filter(a => a !== '--build-only');
-  // Building without launching: what CI and a quick sanity check want.
   if (process.argv.includes('--build-only')) {
     if (process.platform !== 'darwin') return;
     console.log(buildBundle());

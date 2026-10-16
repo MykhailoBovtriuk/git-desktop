@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
 export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
+export const SETTINGS_CATEGORIES = [
+  'general',
+  'accounts',
+  'git',
+  'diff',
+  'terminal',
+  'logs',
+  'updates',
+] as const;
+export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
+
+export type RightPanelTab = 'logs' | 'terminal';
 
 const OVERLAY_VIEWS = new Set<ActiveView>(['settings', 'about']);
 export const isOverlayView = (view: ActiveView): boolean => OVERLAY_VIEWS.has(view);
@@ -16,8 +28,6 @@ export interface ConfirmOptions {
 interface UiState {
   activeView: ActiveView;
   previousView: ActiveView;
-  /** Overlay screens sitting below the current one, oldest first. */
-  overlayStack: OverlayView[];
   selectedCommit: string | null;
   selectedFile: string | null;
   selectedFileArea: SelectedFileArea | null;
@@ -29,11 +39,24 @@ interface UiState {
    * the dropdown closes the moment it is opened.
    */
   newBranchOpen: boolean;
-  /** The open repository's connection dialog: protocol and what authenticates it. */
   connectionOpen: boolean;
+  rightPanel: RightPanelTab | null;
+  /**
+   * Set the first time the terminal tab opens and never cleared: from then on
+   * its view stays mounted (hidden) so switching tabs never rebuilds xterm.
+   */
+  terminalMounted: boolean;
+  settingsCategory: SettingsCategory;
+  setSettingsCategory: (category: SettingsCategory) => void;
+  openSettings: (category?: SettingsCategory) => void;
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+  toggleRightPanel: (tab: RightPanelTab) => void;
+  openRightPanel: (tab: RightPanelTab) => void;
+  closeRightPanel: () => void;
   setActiveView: (view: ActiveView) => void;
   openOverlayView: (view: OverlayView) => void;
-  overlayBack: () => void;
+  closeOverlays: () => void;
   openNewBranch: () => void;
   closeNewBranch: () => void;
   openConnection: () => void;
@@ -46,6 +69,7 @@ interface UiState {
     title: string;
     message: string;
     action?: Toast['action'];
+    details?: Toast['details'];
   }) => void;
   removeToast: (id: string) => void;
   setSelectedStash: (index: number | null) => void;
@@ -57,7 +81,6 @@ interface UiState {
 export const useUiStore = create<UiState>()((set, get) => ({
   activeView: 'changes',
   previousView: 'changes',
-  overlayStack: [],
   selectedCommit: null,
   selectedFile: null,
   selectedFileArea: null,
@@ -66,40 +89,43 @@ export const useUiStore = create<UiState>()((set, get) => ({
   selectedStash: null,
   newBranchOpen: false,
   connectionOpen: false,
+  rightPanel: null,
+  terminalMounted: false,
+  settingsCategory: 'general',
+  sidebarOpen: true,
 
   setActiveView: view => set({ activeView: view }),
-  // Settings/About cover the whole content area, so leaving them has to restore
-  // whatever the user was looking at rather than dumping them on 'changes'.
   openOverlayView: view =>
-    set(s => {
-      if (!isOverlayView(s.activeView)) {
-        return { activeView: view, previousView: s.activeView, overlayStack: [] };
-      }
-      const current = s.activeView as OverlayView;
-      // Navigating to a screen already below us (a breadcrumb, a link back up)
-      // has to unwind the stack to it — pushing would make "back" loop between
-      // the two screens forever.
-      const depth = s.overlayStack.indexOf(view);
-      const overlayStack =
-        depth >= 0
-          ? s.overlayStack.slice(0, depth)
-          : view === current
-            ? s.overlayStack
-            : [...s.overlayStack, current];
-      return { activeView: view, overlayStack };
-    }),
-  // One level up: to the overlay screen underneath, or out to the work view
-  // when this is the top-level one.
-  overlayBack: () =>
-    set(s => {
-      const stack = s.overlayStack;
-      if (stack.length === 0) return { activeView: s.previousView, overlayStack: [] };
-      return { activeView: stack[stack.length - 1], overlayStack: stack.slice(0, -1) };
-    }),
+    set(s =>
+      isOverlayView(s.activeView)
+        ? { activeView: view }
+        : { activeView: view, previousView: s.activeView },
+    ),
+  setSettingsCategory: settingsCategory => set({ settingsCategory }),
+  openSettings: category => {
+    if (category) set({ settingsCategory: category });
+    get().openOverlayView('settings');
+  },
+  closeOverlays: () =>
+    set(s => (isOverlayView(s.activeView) ? { activeView: s.previousView } : {})),
   openNewBranch: () => set({ newBranchOpen: true }),
   closeNewBranch: () => set({ newBranchOpen: false }),
   openConnection: () => set({ connectionOpen: true }),
   closeConnection: () => set({ connectionOpen: false }),
+  toggleSidebar: () =>
+    set(s =>
+      isOverlayView(s.activeView)
+        ? { activeView: s.previousView, sidebarOpen: true }
+        : { sidebarOpen: !s.sidebarOpen },
+    ),
+  toggleRightPanel: tab =>
+    set(s => ({
+      rightPanel: s.rightPanel === tab ? null : tab,
+      terminalMounted: s.terminalMounted || tab === 'terminal',
+    })),
+  openRightPanel: tab =>
+    set(s => ({ rightPanel: tab, terminalMounted: s.terminalMounted || tab === 'terminal' })),
+  closeRightPanel: () => set({ rightPanel: null }),
   setSelectedCommit: hash => set({ selectedCommit: hash }),
   setSelectedFile: (path, area) =>
     set({ selectedFile: path, selectedFileArea: path ? (area ?? null) : null }),

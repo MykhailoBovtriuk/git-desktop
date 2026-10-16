@@ -3,5 +3,6 @@
   "noDiffToDisplay": "No diff to display",
   "loadFailed": "Failed to load diff",
   "stageHunk": "Stage hunk",
-  "unstageHunk": "Unstage hunk"
+  "unstageHunk": "Unstage hunk",
+  "whitespaceHidden": "Whitespace hidden: line staging is off"
 }

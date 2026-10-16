@@ -6,10 +6,6 @@ import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { Button, Modal, TextInput } from '../../shared/ui';
 
-/**
- * Naming a new branch and, only with uncommitted work, choosing what happens to
- * it. Two steps in one dialog.
- */
 export function NewBranchModal() {
   const { t } = useTranslation('branches');
   const { newBranchOpen, closeNewBranch, addToast } = useUiStore(
@@ -47,9 +43,9 @@ export function NewBranchModal() {
     if (busy) return;
     setBusy(true);
     try {
-      const ok = await runAction(() => createBranch(trimmed, changes), { title: t('createFailed') });
-      // A name already taken, or a ref git refuses: the dialog stays open with
-      // the name still in it, so the fix is one edit away rather than a retype.
+      const ok = await runAction(() => createBranch(trimmed, changes), {
+        title: t('createFailed'),
+      });
       if (!ok) return;
       addToast({
         variant: 'success',
@@ -65,7 +61,6 @@ export function NewBranchModal() {
     }
   };
 
-  // Nothing uncommitted means nothing to ask about.
   const submitName = () => {
     if (!trimmed) return;
     if (hasChanges) setAsking(true);

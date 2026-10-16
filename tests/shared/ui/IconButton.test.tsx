@@ -41,7 +41,6 @@ describe('IconButton', () => {
     render(<IconButton icon={StageIcon} aria-label="stage" />);
     const svg = screen.getByRole('button').querySelector('svg');
     expect(svg).not.toBeNull();
-    // The button carries the accessible name; the glyph must not repeat it.
     expect(svg).toHaveAttribute('aria-hidden', 'true');
   });
 

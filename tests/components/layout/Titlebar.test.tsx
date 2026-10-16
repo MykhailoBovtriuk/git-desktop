@@ -67,8 +67,6 @@ describe('Titlebar', () => {
     expect(screen.queryByLabelText('refreshError')).not.toBeInTheDocument();
   });
 
-  // The wrapper's translate traps the dropdown's z-50; jsdom cannot paint, so
-  // the class is the guard.
   it('keeps the centred group above the content area', () => {
     render(<Titlebar />);
     const centred = screen.getByText('main').closest('.absolute');

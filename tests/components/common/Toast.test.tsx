@@ -70,8 +70,6 @@ describe('Toast', () => {
     vi.useRealTimers();
   });
 
-  // "Fix authentication" / "Publish branch" arrive as toast actions; a timer
-  // that dismisses them takes the only way forward with it.
   it('a toast carrying an action never auto-dismisses', () => {
     vi.useFakeTimers();
     const { mockRemoveToast } = setupMocks({
