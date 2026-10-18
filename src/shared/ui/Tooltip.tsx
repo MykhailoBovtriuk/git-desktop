@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { cn } from './cn';
 
 const GAP = 4;
 const EDGE = 8;
@@ -35,8 +36,11 @@ export function Tooltip({ open, anchorRef, id, children }: TooltipProps) {
       ref={ref}
       id={id}
       role="tooltip"
-      className="fixed z-[70] pointer-events-none bg-white text-black text-xs rounded px-2 py-1 shadow-xl max-w-sm break-words"
-      style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, visibility: 'hidden' }}
+      className={cn(
+        'fixed z-70 pointer-events-none bg-text text-mantle text-xs rounded px-2 py-1 shadow-xl max-w-sm break-words',
+        !pos && 'invisible',
+      )}
+      style={pos ?? { top: 0, left: 0 }}
     >
       {children}
     </div>,

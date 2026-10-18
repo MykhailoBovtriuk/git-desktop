@@ -38,11 +38,11 @@ export async function createBranch(ctx: GitContext, name: string): Promise<void>
 }
 
 export async function checkout(ctx: GitContext, branch: string): Promise<void> {
-  await ctx.ensureRepo().checkout(branch);
+  await ctx.ensureRepo().raw(['checkout', branch, '--']);
 }
 
 export async function checkoutForce(ctx: GitContext, branch: string): Promise<void> {
-  await ctx.ensureRepo().checkout(['-f', branch]);
+  await ctx.ensureRepo().raw(['checkout', '-f', branch, '--']);
 }
 
 export async function deleteBranch(ctx: GitContext, branch: string, force = false): Promise<void> {

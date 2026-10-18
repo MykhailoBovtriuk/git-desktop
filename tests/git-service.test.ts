@@ -207,6 +207,42 @@ describe('GitService', () => {
     expect(files.some(f => f.path === 'file.txt')).toBe(true);
   });
 
+  it('getCommitDiff reports added, modified and deleted files', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'added.txt'), 'new\n');
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'changed\n');
+    execSync('git add . && git commit -m "add and modify"', { cwd: tmpDir });
+    execSync('git rm -q added.txt && git commit -m "delete"', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const [deleted, changed] = await git.getLog(2, 0);
+
+    expect(await git.getCommitDiff(changed.hash)).toEqual(
+      expect.arrayContaining([
+        { path: 'added.txt', status: 'A' },
+        { path: 'file.txt', status: 'M' },
+      ]),
+    );
+    expect(await git.getCommitDiff(deleted.hash)).toEqual([{ path: 'added.txt', status: 'D' }]);
+  });
+
+  it('checkout of a missing branch never restores a file of that name', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'notes'), 'tracked\n');
+    execSync('git add . && git commit -m "notes file"', { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, 'notes'), 'unsaved work\n');
+    await git.openRepo(tmpDir);
+
+    await expect(git.checkout('notes')).rejects.toThrow();
+    expect(fs.readFileSync(path.join(tmpDir, 'notes'), 'utf8')).toBe('unsaved work\n');
+  });
+
+  it('lists a stash whose message contains the old field separator', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'dirty\n');
+    execSync('git stash push -m "a|||b"', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const [entry] = await git.getStashList();
+    expect(entry.message).toContain('a|||b');
+    expect(entry.date).not.toBe('');
+  });
+
   it('getFileDiff works on the initial commit (no parent)', async () => {
     await git.openRepo(tmpDir);
     const log = await git.getLog(10, 0);

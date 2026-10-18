@@ -2,13 +2,13 @@ import type { StashEntry } from '../../src/types';
 import { GitContext } from './context';
 
 export async function getStashList(ctx: GitContext): Promise<StashEntry[]> {
-  const result = await ctx.ensureRepo().raw(['stash', 'list', '--format=%gd|||%s|||%ai']);
+  const result = await ctx.ensureRepo().raw(['stash', 'list', '--format=%gd%x00%s%x00%ai']);
   if (!result.trim()) return [];
   return result
     .trim()
     .split('\n')
     .map(line => {
-      const [ref, message, date] = line.split('|||');
+      const [ref, message, date] = line.split('\0');
       const index = parseInt(ref.match(/\{(\d+)\}/)?.[1] ?? '0', 10);
       const wipMatch = message.match(/^WIP on ([^:]+):/);
       const branch = wipMatch ? wipMatch[1] : null;

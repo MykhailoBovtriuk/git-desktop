@@ -60,11 +60,19 @@ export async function getCommitDiff(
   ctx: GitContext,
   hash: string,
 ): Promise<{ path: string; status: string }[]> {
-  const diff = await ctx.ensureRepo().diffSummary(await commitRange(ctx, hash));
-  return diff.files.map(f => ({
-    path: f.file,
-    status: (f as { status?: string }).status || 'M',
-  }));
+  const raw = await ctx
+    .ensureRepo()
+    .raw(['diff', '--name-status', '-z', ...(await commitRange(ctx, hash))]);
+  const fields = raw.split('\0').filter(Boolean);
+  const files: { path: string; status: string }[] = [];
+  for (let i = 0; i < fields.length;) {
+    const code = fields[i++];
+    const status = code[0];
+    // Renames and copies carry the old path first, then the new one.
+    if (status === 'R' || status === 'C') i++;
+    files.push({ path: fields[i++], status });
+  }
+  return files;
 }
 
 export async function getFileDiff(
