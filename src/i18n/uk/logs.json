@@ -1,6 +1,5 @@
 {
   "title": "Логи",
-  "terminal": "Термінал",
   "toggle": "Логи ({{shortcut}})",
   "unread_one": "{{count}} нова помилка",
   "unread_few": "{{count}} нові помилки",

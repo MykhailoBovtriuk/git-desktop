@@ -23,7 +23,7 @@ vi.mock('../../src/api/git-api', () => ({
     }),
     checkout: vi.fn().mockResolvedValue(null),
     checkoutForce: vi.fn().mockResolvedValue(null),
-    merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
+    merge: vi.fn().mockResolvedValue({ conflicts: [] }),
     isMerging: vi.fn().mockResolvedValue(false),
     getMergeConflicts: vi.fn().mockResolvedValue([]),
     getMergeMessage: vi.fn().mockResolvedValue(''),
@@ -128,7 +128,7 @@ describe('repo-store', () => {
   it('merge with conflicts sets mergeState and throws MergeConflictError', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     const { MergeConflictError } = await import('../../src/stores/repo-store');
-    vi.mocked(gitApi.merge).mockResolvedValueOnce({ success: false, conflicts: ['src/foo.ts'] });
+    vi.mocked(gitApi.merge).mockResolvedValueOnce({ conflicts: ['src/foo.ts'] });
     useRepoStore.setState({ currentBranch: 'main' });
     await expect(useRepoStore.getState().merge('feature')).rejects.toBeInstanceOf(
       MergeConflictError,

@@ -119,15 +119,6 @@ describe('StashSection', () => {
     expect(setSelectedStash).toHaveBeenCalledWith(null);
   });
 
-  it('toggle from list mode calls setActiveView(stash-create)', () => {
-    const setActiveView = vi.fn();
-    mockState(useRepoStore)(baseRepo as any);
-    mockState(useUiStore)({ ...baseUi, activeView: 'stash', setActiveView } as any);
-    render(<StashSection />);
-    fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
-    expect(setActiveView).toHaveBeenCalledWith('stash-create');
-  });
-
   it('calls stashSave and addToast on successful stash', async () => {
     const addToast = vi.fn();
     mockState(useRepoStore)({

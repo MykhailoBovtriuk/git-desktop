@@ -31,11 +31,4 @@ export function registerMergeHandlers(git: GitService) {
       return git.markResolved(filePath).then(() => null);
     }),
   );
-
-  ipcMain.handle('git:get-conflict-sides', (_e, p: string) =>
-    wrap(() => {
-      assertString(p, 'path');
-      return git.getConflictSides(p);
-    }),
-  );
 }

@@ -38,7 +38,6 @@ const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): Provid
   needsHost: true,
   needsClientId: true,
   needsClientSecret: false,
-  tokenHelpUrl: null,
   ...o,
 });
 

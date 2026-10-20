@@ -88,7 +88,7 @@ export async function postToken(
   };
 }
 
-export interface ProbeResponse {
+interface ProbeResponse {
   status: number;
   headers: Headers;
   body: unknown;

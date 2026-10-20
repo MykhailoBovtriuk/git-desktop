@@ -1,13 +1,13 @@
 import type { Commit } from '../../types';
 
-export interface Edge {
+interface Edge {
   fromLane: number;
   toLane: number;
   toRow: number;
   color: string;
 }
 
-export interface LayoutCommit {
+interface LayoutCommit {
   commit: Commit;
   lane: number;
   row: number;

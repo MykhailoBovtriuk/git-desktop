@@ -24,15 +24,11 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 
 let pending: PendingFlow | null = null;
 
-export function resetPendingFlow(): void {
-  pending = null;
-}
-
 export function cancelSignIn(): void {
   pending = null;
 }
 
-export interface BeginOptions {
+interface BeginOptions {
   provider: ProviderDefinition;
   host: string;
   repoPath: string;
@@ -82,7 +78,7 @@ export function beginSignIn(opts: BeginOptions): string {
   return url.toString();
 }
 
-export interface SignInResult {
+interface SignInResult {
   account: ProviderAccount;
   token: TokenResponse;
   clientId: string;

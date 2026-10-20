@@ -1,5 +1,5 @@
 import type { AheadBehind, Commit, Branch, GitStatus, StashEntry } from '../src/types';
-import { GitContext, credentialSafeEnv } from './git/context';
+import { GitContext } from './git/context';
 import * as history from './git/history';
 import * as status from './git/status';
 import * as branches from './git/branches';
@@ -8,8 +8,6 @@ import * as merge from './git/merge';
 import * as rebase from './git/rebase';
 import * as stash from './git/stash';
 import * as files from './git/files';
-
-export { credentialSafeEnv };
 
 export class GitService {
   private ctx = new GitContext();
@@ -98,7 +96,7 @@ export class GitService {
     return remote.pushSetUpstream(this.ctx, remoteName, branch);
   }
 
-  merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
+  merge(branch: string): Promise<{ conflicts: string[] }> {
     return merge.merge(this.ctx, branch);
   }
   isMerging(): Promise<boolean> {
@@ -118,9 +116,6 @@ export class GitService {
   }
   markResolved(filePath: string): Promise<void> {
     return merge.markResolved(this.ctx, filePath);
-  }
-  getConflictSides(filePath: string): Promise<{ ours: string; theirs: string; base: string }> {
-    return merge.getConflictSides(this.ctx, filePath);
   }
 
   rebase(branch: string): Promise<void> {

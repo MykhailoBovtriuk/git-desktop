@@ -51,8 +51,6 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
 
   ipcMain.handle('git:get-head-commit', () => wrap(() => git.getHeadCommit()));
 
-  ipcMain.handle('git:get-repo-path', () => ({ data: git.getRepoPath() }));
-
   ipcMain.handle('git:get-identity', () => wrap(() => getIdentity(git.getRepoPath())));
 
   ipcMain.handle('git:set-identity', (_e, scope: unknown, identity: unknown) =>

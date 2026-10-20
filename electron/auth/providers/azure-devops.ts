@@ -30,7 +30,6 @@ export const azureDevOps: ProviderDefinition = {
     // is what a desktop client shipped to unknown users needs.
     authorizeUrl: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
     tokenUrl: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
-    apiBase: 'https://app.vssps.visualstudio.com/_apis',
   }),
   tokenHelpUrl: () => 'https://dev.azure.com',
   fetchAccount: async (host, token) => {
@@ -84,7 +83,7 @@ export const azureDevOpsServer: ProviderDefinition = {
   oauth: false,
   usesPkce: false,
   scopes: [],
-  endpoints: host => ({ authorizeUrl: '', tokenUrl: '', apiBase: `https://${host}` }),
+  endpoints: () => ({ authorizeUrl: '', tokenUrl: '' }),
   tokenHelpUrl: host => `https://${host}/_usersSettings/tokens`,
   probe: async host => {
     let reached = false;

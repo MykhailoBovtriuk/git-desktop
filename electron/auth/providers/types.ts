@@ -2,10 +2,9 @@ import type { AccountGroup, ProviderAccount, ProviderId, ServerProbe } from '../
 
 export type FetchedAccount = Omit<ProviderAccount, 'id' | 'repoPath'>;
 
-export interface OAuthEndpoints {
+interface OAuthEndpoints {
   authorizeUrl: string;
   tokenUrl: string;
-  apiBase: string;
 }
 
 export interface ProviderDefinition {
@@ -24,7 +23,7 @@ export interface ProviderDefinition {
   revokeToken?: (opts: RevokeOptions) => Promise<void>;
 }
 
-export interface RevokeOptions {
+interface RevokeOptions {
   host: string;
   token: string;
   clientId: string;

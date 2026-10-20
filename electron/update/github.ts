@@ -17,7 +17,7 @@ const MIN_INTERVAL_MS = 30_000;
 const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
 const NOTES_LIMIT = 4_000;
 
-export type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
+type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
 
 export class UpdateError extends Error {
   constructor(
@@ -102,7 +102,7 @@ async function fetchReleases(force: boolean): Promise<GithubRelease[]> {
   return inFlight;
 }
 
-export interface LookupOptions {
+interface LookupOptions {
   currentVersion: string;
   includePrerelease: boolean;
   force: boolean;
@@ -111,7 +111,7 @@ export interface LookupOptions {
   linuxPackage: LinuxPackage;
 }
 
-export interface ReleaseLookup {
+interface ReleaseLookup {
   latest: UpdateInfo | null;
   current: UpdateInfo | null;
   checkedAt: number;

@@ -23,7 +23,6 @@ const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): Provid
   needsHost: true,
   needsClientId: true,
   needsClientSecret: false,
-  tokenHelpUrl: null,
   ...o,
 });
 
@@ -40,7 +39,6 @@ const OPTIONS: ProviderOption[] = [
     id: 'token',
     displayName: 'Personal access token',
     needsClientId: false,
-    tokenHelpUrl: 'https://git.acme.internal',
   }),
   option({
     id: 'github',

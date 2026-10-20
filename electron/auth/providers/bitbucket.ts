@@ -28,7 +28,6 @@ export const bitbucket: ProviderDefinition = {
   endpoints: () => ({
     authorizeUrl: 'https://bitbucket.org/site/oauth2/authorize',
     tokenUrl: 'https://bitbucket.org/site/oauth2/access_token',
-    apiBase: 'https://api.bitbucket.org/2.0',
   }),
   // App passwords stop working for git on 9 June 2026; API tokens replace them.
   tokenHelpUrl: () => 'https://id.atlassian.com/manage-profile/security/api-tokens',
@@ -75,7 +74,6 @@ export const bitbucketServer: ProviderDefinition = {
   endpoints: host => ({
     authorizeUrl: `https://${host}/rest/oauth2/latest/authorize`,
     tokenUrl: `https://${host}/rest/oauth2/latest/token`,
-    apiBase: `https://${host}/rest/api/1.0`,
   }),
   tokenHelpUrl: host => `https://${host}/plugins/servlet/access-tokens/manage`,
   probe: async host => {

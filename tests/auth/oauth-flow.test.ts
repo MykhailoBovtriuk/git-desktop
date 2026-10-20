@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import crypto from 'crypto';
-import { beginSignIn, completeSignIn, resetPendingFlow } from '../../electron/auth/oauth-flow';
+import { beginSignIn, cancelSignIn, completeSignIn } from '../../electron/auth/oauth-flow';
 import { providerById } from '../../electron/auth/providers/registry';
 import { resetKeyCache } from '../../electron/auth/oauth-config';
 
@@ -11,7 +11,7 @@ const stateOf = (url: string) => new URL(url).searchParams.get('state')!;
 
 describe('oauth flow', () => {
   beforeEach(() => {
-    resetPendingFlow();
+    cancelSignIn();
     resetKeyCache();
     process.env.OAUTH_GITHUB_ID = 'gh-id';
     process.env.OAUTH_GITHUB_SECRET = 'gh-secret';
@@ -23,7 +23,7 @@ describe('oauth flow', () => {
     delete process.env.OAUTH_GITHUB_SECRET;
     delete process.env.OAUTH_GITLAB_ID;
     resetKeyCache();
-    resetPendingFlow();
+    cancelSignIn();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });

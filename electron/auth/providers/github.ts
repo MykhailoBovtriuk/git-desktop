@@ -18,7 +18,7 @@ interface GitHubEmail {
 
 const ACCEPT = 'application/vnd.github+json';
 
-export function makeGitHubProvider(opts: {
+function makeGitHubProvider(opts: {
   id: ProviderId;
   displayName: string;
   group: AccountGroup;
@@ -37,7 +37,6 @@ export function makeGitHubProvider(opts: {
     endpoints: host => ({
       authorizeUrl: `${opts.webBase(host)}/login/oauth/authorize`,
       tokenUrl: `${opts.webBase(host)}/login/oauth/access_token`,
-      apiBase: opts.apiBase(host),
     }),
     tokenHelpUrl: host => `${opts.webBase(host)}/settings/tokens`,
     revokeToken: async ({ host, token, clientId, clientSecret }) => {

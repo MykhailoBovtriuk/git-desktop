@@ -19,7 +19,6 @@ interface UpdateState {
   startDownload: (version: string) => Promise<void>;
   cancelDownload: () => Promise<void>;
   install: () => Promise<void>;
-  openModal: () => void;
   later: () => void;
   skip: () => void;
 }
@@ -100,8 +99,6 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
       set({ phase: 'error', error: errorMessage(err) });
     }
   },
-
-  openModal: () => set({ modalOpen: true }),
 
   later: () => set({ modalOpen: false }),
 

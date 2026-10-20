@@ -6,7 +6,6 @@
   "unstageAll": "Alles unstagen",
   "commitMessage": "Commitbericht",
   "commitButton": "Committen",
-  "discardChanges": "Wijzigingen verwerpen",
   "noChanges": "Geen wijzigingen",
   "discardConfirm": "Wijzigingen aan \"{{name}}\" verwerpen? Dit kan niet ongedaan worden gemaakt.",
   "discardUntrackedConfirm": "Het niet-getrackte \"{{name}}\" verwijderen? Het bestand wordt definitief verwijderd.",

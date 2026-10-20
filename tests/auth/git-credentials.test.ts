@@ -127,32 +127,32 @@ describe('gitUsernameFor', () => {
   });
 });
 
-describe('hasStoredCredential', () => {
+describe('storedUsername', () => {
   beforeEach(() => {
     calls.length = 0;
     fillOutput = '';
     failNext = false;
   });
 
-  it('is true when a helper answers with a password', async () => {
+  it('names the user when a helper answers with a password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=ghp_x\n';
-    await expect(credentials.hasStoredCredential('github.com')).resolves.toBe(true);
+    await expect(credentials.storedUsername('github.com')).resolves.toBe('alice');
     expect(find('credential fill')?.stdin).toBe('protocol=https\nhost=github.com\n\n');
   });
 
-  it('is false when the answer carries no password', async () => {
+  it('is null when the answer carries no password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=\n';
-    await expect(credentials.hasStoredCredential('github.com')).resolves.toBe(false);
+    await expect(credentials.storedUsername('github.com')).resolves.toBeNull();
   });
 
-  it('is false when git fails rather than asking a terminal', async () => {
+  it('is null when git fails rather than asking a terminal', async () => {
     failNext = true;
-    await expect(credentials.hasStoredCredential('github.com')).resolves.toBe(false);
+    await expect(credentials.storedUsername('github.com')).resolves.toBeNull();
   });
 
   it('never lets an askpass answer the question for it', async () => {
     fillOutput = 'password=x\n';
-    await credentials.hasStoredCredential('github.com');
+    await credentials.storedUsername('github.com');
     const env = find('credential fill')?.env ?? {};
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
     expect(env.GIT_ASKPASS).toBeUndefined();
@@ -245,7 +245,7 @@ describe('the silent credential lookup', () => {
   });
 
   it('keeps Git Credential Manager from asking', async () => {
-    await credentials.hasStoredCredential('github.com');
+    await credentials.storedUsername('github.com');
     expect(find('credential fill')?.env.GCM_INTERACTIVE).toBe('never');
   });
 });

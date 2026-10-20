@@ -43,10 +43,6 @@ export function assertBoundedLogLimit(limit: unknown): asserts limit is number {
   }
 }
 
-export function assertStashIndex(index: unknown): asserts index is number {
-  assertNonNegativeInteger(index, 'index');
-}
-
 // A value starting with '-' reaches git as a flag: `--output=/path` would write
 // a diff to any file. Hex only, so no flag can get through.
 export function assertCommitHash(value: unknown, name: string): asserts value is string {

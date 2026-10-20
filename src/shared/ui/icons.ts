@@ -20,7 +20,6 @@ export {
   FiGitBranch as GitBranchIcon,
   FiColumns as DiffIcon,
   FiChevronDown as ChevronDownIcon,
-  FiFolder as FolderIcon,
   FiChevronRight as ChevronRightIcon,
   FiLoader as SpinnerIcon,
   FiAlertCircle as ErrorIcon,

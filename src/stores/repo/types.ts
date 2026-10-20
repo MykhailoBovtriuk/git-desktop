@@ -85,6 +85,6 @@ export interface RepoState {
   continueRebase: () => Promise<void>;
 }
 
-export type RepoSet = StoreApi<RepoState>['setState'];
-export type RepoGet = StoreApi<RepoState>['getState'];
+type RepoSet = StoreApi<RepoState>['setState'];
+type RepoGet = StoreApi<RepoState>['getState'];
 export type RepoSlice<T> = (set: RepoSet, get: RepoGet) => T;

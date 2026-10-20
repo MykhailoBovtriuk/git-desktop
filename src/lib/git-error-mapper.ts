@@ -1,4 +1,4 @@
-export type GitErrorKind =
+type GitErrorKind =
   | 'auth'
   | 'sshKey'
   | 'noUpstream'
@@ -9,9 +9,9 @@ export type GitErrorKind =
   | 'hook'
   | 'unknown';
 
-export type GitErrorAction = 'publishBranch' | 'signIn';
+type GitErrorAction = 'publishBranch' | 'signIn';
 
-export interface ClassifiedGitError {
+interface ClassifiedGitError {
   kind: GitErrorKind;
   action?: GitErrorAction;
 }

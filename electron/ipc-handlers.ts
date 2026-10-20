@@ -17,7 +17,6 @@ import { registerTerminalHandlers, type TerminalControl } from './ipc/terminal';
 import { ipcMain } from 'electron';
 import { assertString } from './ipc-validators';
 
-export { wrap };
 export type IpcHandlerOptions = RepoHandlerOptions &
   AppHandlerOptions &
   UpdateHandlerOptions &

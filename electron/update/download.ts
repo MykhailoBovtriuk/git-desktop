@@ -14,7 +14,7 @@ export function versionedFileName(assetName: string, version: string): string {
   return `${base}-${version}${ext}`;
 }
 
-export interface DownloadRequest {
+interface DownloadRequest {
   url: string;
   expectedSize: number;
   targetPath: string;

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 /** Matches w-44, which the menu is styled with below. */
 const MENU_W = 176;
 
-export interface ContextMenuProps {
+interface ContextMenuProps {
   open: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   anchor?: 'button' | 'panel' | 'below';

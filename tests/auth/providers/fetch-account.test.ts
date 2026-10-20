@@ -49,10 +49,13 @@ describe('github', () => {
     expect(account.email).toBe('7+octocat@users.noreply.github.com');
   });
 
-  it('puts the enterprise API under /api/v3 on the instance itself', () => {
-    const endpoints = providerById('github-enterprise')!.endpoints('git.acme.internal');
-    expect(endpoints.apiBase).toBe('https://git.acme.internal/api/v3');
-    expect(endpoints.authorizeUrl).toBe('https://git.acme.internal/login/oauth/authorize');
+  it('puts the enterprise API under /api/v3 on the instance itself', async () => {
+    stubJson({ '/user/emails': [], '/user': { login: 'octocat', id: 7, name: null, email: null } });
+    await providerById('github-enterprise')!.fetchAccount('git.acme.internal', 'tok');
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://git.acme.internal/api/v3/user');
+    expect(providerById('github-enterprise')!.endpoints('git.acme.internal').authorizeUrl).toBe(
+      'https://git.acme.internal/login/oauth/authorize',
+    );
   });
 });
 

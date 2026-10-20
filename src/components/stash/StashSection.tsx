@@ -26,12 +26,8 @@ export function StashSection() {
   const canStash = status.staged.length > 0 && !loading;
 
   const handleToggle = () => {
-    if (listMode) {
-      setActiveView('stash-create');
-    } else {
-      setActiveView('stash');
-      setSelectedStash(null);
-    }
+    setActiveView('stash');
+    setSelectedStash(null);
   };
 
   const handleStash = async (message: string) => {

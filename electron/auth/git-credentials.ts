@@ -100,10 +100,6 @@ export async function storedUsername(host: string): Promise<string | null> {
   return (await lookupStored(host))?.username ?? null;
 }
 
-export async function hasStoredCredential(host: string): Promise<boolean> {
-  return (await lookupStored(host)) !== null;
-}
-
 const usernameKey = (host: string) => `credential.https://${host}.username`;
 
 /**
@@ -136,7 +132,7 @@ export async function rejectCredentials(host: string, username: string): Promise
   await run(['credential', 'reject'], describe(host, username)).catch(() => {});
 }
 
-export function helperCli(helper: string): CredentialHelperEntry['cli'] {
+function helperCli(helper: string): CredentialHelperEntry['cli'] {
   if (/\bgh(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'gh';
   if (/\bglab(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'glab';
   if (/(^|[\\/\s])(git-credential-)?manager(-core)?(\.exe)?$/.test(helper.trim())) return 'gcm';

@@ -6,7 +6,6 @@ import {
   assertNonNegativeInteger,
   assertPositiveInteger,
   assertBoundedLogLimit,
-  assertStashIndex,
   assertBranchName,
   assertCommitHash,
   assertIdentity,
@@ -89,13 +88,13 @@ describe('assertBoundedLogLimit', () => {
   });
 });
 
-describe('assertStashIndex', () => {
+describe('assertNonNegativeInteger', () => {
   it('accepts 0 and positive integers', () => {
-    expect(() => assertStashIndex(0)).not.toThrow();
-    expect(() => assertStashIndex(3)).not.toThrow();
+    expect(() => assertNonNegativeInteger(0, 'index')).not.toThrow();
+    expect(() => assertNonNegativeInteger(3, 'index')).not.toThrow();
   });
   it('rejects negatives', () => {
-    expect(() => assertStashIndex(-1)).toThrow();
+    expect(() => assertNonNegativeInteger(-1, 'index')).toThrow();
   });
 });
 

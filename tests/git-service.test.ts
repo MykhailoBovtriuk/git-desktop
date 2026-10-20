@@ -3,7 +3,8 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { GitService, credentialSafeEnv } from '../electron/git-service';
+import { GitService } from '../electron/git-service';
+import { credentialSafeEnv } from '../electron/git/context';
 import { buildHunkPatch } from '../src/lib/build-patch';
 
 let tmpDir: string;

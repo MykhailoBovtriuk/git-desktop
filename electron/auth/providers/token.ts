@@ -7,11 +7,7 @@ export const tokenProvider: ProviderDefinition = {
   knownHosts: [],
   usesPkce: false,
   scopes: [],
-  endpoints: host => ({
-    authorizeUrl: '',
-    tokenUrl: '',
-    apiBase: `https://${host}`,
-  }),
+  endpoints: () => ({ authorizeUrl: '', tokenUrl: '' }),
   tokenHelpUrl: host => `https://${host}`,
   fetchAccount: () =>
     Promise.reject(new Error('Token sign-in builds its account from the form, not from an API')),

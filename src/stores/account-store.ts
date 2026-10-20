@@ -19,7 +19,7 @@ interface SignInTarget {
   existing: ProviderAccount | null;
 }
 
-export type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
+type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
 
 interface AccountState {
   accounts: ProviderAccount[];

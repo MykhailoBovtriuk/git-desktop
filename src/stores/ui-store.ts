@@ -1,24 +1,16 @@
 import { create } from 'zustand';
 import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
-export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
-export const SETTINGS_CATEGORIES = [
-  'general',
-  'accounts',
-  'git',
-  'diff',
-  'terminal',
-  'logs',
-  'updates',
-] as const;
-export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
+type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
+export type SettingsCategory =
+  'general' | 'accounts' | 'git' | 'diff' | 'terminal' | 'logs' | 'updates';
 
 export type RightPanelTab = 'logs' | 'terminal';
 
 const OVERLAY_VIEWS = new Set<ActiveView>(['settings', 'about']);
 export const isOverlayView = (view: ActiveView): boolean => OVERLAY_VIEWS.has(view);
 
-export interface ConfirmOptions {
+interface ConfirmOptions {
   title: string;
   message: string;
   confirmLabel: string;
