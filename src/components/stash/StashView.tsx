@@ -48,9 +48,6 @@ export function StashView() {
   const prevStashesRef = useRef(stashes);
 
   useEffect(() => {
-    // Distinguish "the user picked another stash" (list reference unchanged →
-    // record the new identity) from "the list moved under the selection"
-    // (reference changed → remap the index by identity).
     const listChanged = prevStashesRef.current !== stashes;
     prevStashesRef.current = stashes;
 

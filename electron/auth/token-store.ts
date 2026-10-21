@@ -130,10 +130,8 @@ export async function accountForRepo(repoPath: string): Promise<ProviderAccount 
   return memory.get(repoPath)?.account ?? null;
 }
 
-/**
- * The other repositories signed in to a host: the system credential store
- * holds one token per host and username, which they may share.
- */
+// The system credential store holds one token per host and username, which
+// repositories on the same host may share.
 export async function credentialsOnHost(host: string): Promise<StoredCredential[]> {
   await load();
   return [...memory.values()].filter(c => c.host === host);

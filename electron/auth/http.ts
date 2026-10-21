@@ -39,10 +39,6 @@ export async function authedGet(
   return res;
 }
 
-/**
- * The token endpoint, for code exchange and refreshes. GitHub answers 200 with
- * an error body, so the body decides success, not the status.
- */
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string | null;
@@ -120,9 +116,6 @@ export async function sendRevoke(url: string, init: RequestInit): Promise<void> 
   } catch {}
 }
 
-/**
- * An avatar as a data: URI, since the renderer's CSP allows no remote images.
- */
 const MAX_AVATAR_BYTES = 256 * 1024;
 
 export async function fetchAvatar(url: string | null | undefined): Promise<string | null> {

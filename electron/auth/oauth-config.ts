@@ -2,10 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import type { ProviderId } from '../../src/types';
 
-/**
- * OAuth client ids and secrets from `scripts/gen-oauth-config.mjs` output; env
- * overrides. GitHub and Bitbucket need a secret: no PKCE for desktop clients.
- */
 interface ProviderKeys {
   clientId: string;
   clientSecret: string | null;

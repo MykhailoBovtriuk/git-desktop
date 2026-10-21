@@ -35,7 +35,7 @@ function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<s
  * credential approve` silently stores nothing. Any scope counts, the system
  * one included, and so does a helper scoped to the host's URL: the global
  * config is written only when git would otherwise have nowhere to keep a
- * token. Returns the helper, or null if none is trusted.
+ * token.
  */
 export async function ensureCredentialHelper(host?: string): Promise<string | null> {
   const lookup = host

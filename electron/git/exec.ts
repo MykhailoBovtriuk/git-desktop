@@ -3,10 +3,6 @@ import { promisify } from 'util';
 
 const run = promisify(execFile);
 
-/**
- * A one-off git command outside simple-git (config reads and writes, mostly),
- * resolving to its stdout. execFile, never a shell: arguments stay arguments.
- */
 export async function runGit(args: string[], opts: { timeout?: number } = {}): Promise<string> {
   const { stdout } = await run('git', args, opts);
   return stdout;

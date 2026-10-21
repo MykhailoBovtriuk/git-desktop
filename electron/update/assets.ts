@@ -1,7 +1,3 @@
-/**
- * Which release asset fits this machine. Names mirror the `artifactName`
- * templates in electron-builder.yml; unknown combos yield null.
- */
 export type LinuxPackage = 'AppImage' | 'deb';
 
 const ASSETS: Record<string, string> = {

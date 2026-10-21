@@ -86,8 +86,8 @@ interface SignInResult {
 }
 
 /**
- * Finishes the flow from the deep-link URL. `state` is single-use, time-limited
- * and cleared before any network call, so a foreign code is never accepted.
+ * `state` is single-use, time-limited and cleared before any network call, so a
+ * foreign code is never accepted.
  */
 export async function completeSignIn(callbackUrl: string): Promise<SignInResult> {
   const flow = pending;

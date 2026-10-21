@@ -3,10 +3,7 @@ import { compareSemver, parseSemver, type SemVer } from './semver';
 import { assetNameFor, isAllowedDownloadUrl, type LinuxPackage } from './assets';
 import type { UpdateInfo } from '../../src/types';
 
-/**
- * The releases of this project. The list endpoint, not /releases/latest: needed
- * for pre-releases and for reinstalling.
- */
+// The list endpoint, not /releases/latest: needed for pre-releases and for reinstalling.
 const RELEASES_URL =
   'https://api.github.com/repos/MykhailoBovtriuk/git-desktop/releases?per_page=20';
 const ACCEPT = 'application/vnd.github+json';
@@ -142,10 +139,7 @@ function toUpdateInfo(release: GithubRelease, opts: LookupOptions): UpdateInfo |
   };
 }
 
-/**
- * The newest release worth offering, plus the one installed. Ranked by version:
- * GitHub sorts by creation date.
- */
+// Ranked by version: GitHub sorts by creation date.
 export async function lookupReleases(opts: LookupOptions): Promise<ReleaseLookup> {
   const releases = await fetchReleases(opts.force);
   const running = normalizeVersion(opts.currentVersion);

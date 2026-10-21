@@ -27,8 +27,6 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
     if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
   };
 
-  // Loading node-pty waits for the first terminal, so a broken binary never
-  // touches startup.
   const getManager = (): TerminalManager => {
     if (manager) return manager;
     const { pty, reason } = loadPty();

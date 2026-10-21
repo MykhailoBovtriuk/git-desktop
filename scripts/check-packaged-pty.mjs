@@ -2,8 +2,7 @@
 /**
  * After electron-builder: every unpacked app in release/ must carry node-pty
  * outside the asar, and the one built for this machine's arch must load it the
- * way the app does and start a shell. Windows ia32 is exempt: no prebuild exists, the app shows a
- * placeholder there by design.
+ * way the app does and start a shell.
  */
 import fs from 'fs';
 import path from 'path';

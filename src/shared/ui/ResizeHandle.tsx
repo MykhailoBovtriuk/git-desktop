@@ -3,8 +3,7 @@ export interface ResizeHandleProps {
   onMouseDown: (e: React.MouseEvent) => void;
 }
 
-/** Vertical drag handle between two columns. Its own column, not an overlay:
-    at right-0 it covered the neighbouring list's scrollbar. */
+// Its own column, not an overlay: at right-0 it covered the neighbouring list's scrollbar.
 export function ResizeHandle({ label, onMouseDown }: ResizeHandleProps) {
   return (
     <div

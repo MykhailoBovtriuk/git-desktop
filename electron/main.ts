@@ -25,8 +25,7 @@ const MIME_TYPES: Record<string, string> = {
   '.otf': 'font/otf',
 };
 
-// Register the custom protocol before app.ready. `app://` instead of `file://`:
-// Chromium gives each file:// URL its own origin, which breaks ES modules.
+// `app://` instead of `file://`: Chromium gives each file:// URL its own origin, which breaks ES modules.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',

@@ -35,7 +35,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Coverage (with thresholds) on Linux; plain test run elsewhere.
       - if: matrix.os == 'ubuntu-latest'
         run: npm run test:coverage
       - if: matrix.os != 'ubuntu-latest'

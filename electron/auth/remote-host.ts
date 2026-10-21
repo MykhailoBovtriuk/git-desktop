@@ -129,10 +129,7 @@ export async function resolveRemote(remoteUrl: string | null | undefined): Promi
   };
 }
 
-/**
- * The remote URL of a repository, preferring `origin`. Read here, not taken
- * from the renderer, since it is passed to `git ls-remote`.
- */
+// Read here, not taken from the renderer, since it is passed to `git ls-remote`.
 export async function originUrlFor(repoRoot: string): Promise<string | null> {
   try {
     const names = (await runGit(['-C', repoRoot, 'remote']))

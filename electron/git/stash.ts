@@ -16,10 +16,7 @@ export async function getStashList(ctx: GitContext): Promise<StashEntry[]> {
     });
 }
 
-/**
- * `includeUntracked` also stashes untracked files, which `getStatus` counts as
- * changes. Exclusive with `staged`: git rejects `--staged -u`.
- */
+// Exclusive with `staged`: git rejects `--staged -u`.
 export async function stashSave(
   ctx: GitContext,
   message?: string,

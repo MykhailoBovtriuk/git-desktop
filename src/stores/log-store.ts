@@ -60,7 +60,6 @@ export const useLogStore = create<LogState>()((set, get) => ({
     set({ repoPath, entries: [], hasMore: false, unreadErrors: 0, focusId: null });
     if (!repoPath) return;
     const page = await logApi.list(repoPath, undefined, PAGE);
-    // Another repository may have been opened while this page was on its way.
     if (get().repoPath !== repoPath) return;
     set(s => ({ entries: merge(s.entries, page), hasMore: page.length === PAGE }));
   },
