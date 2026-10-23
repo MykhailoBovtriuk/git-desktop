@@ -5,6 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
 import { AppMenuButtons } from './AppMenuButtons';
+import { useBusy } from '../../hooks/use-busy';
 import { useDismiss } from '../../hooks/use-dismiss';
 import { DragRegion, IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
 import { TitlebarBrand, WindowControlsSpacer } from './TitlebarBrand';
@@ -23,19 +24,11 @@ export function Titlebar() {
   );
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, track] = useBusy();
   const branchRef = useRef<HTMLDivElement>(null);
   const repoRef = useRef<HTMLDivElement>(null);
 
-  const handleRefresh = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  const handleRefresh = () => track(refresh);
 
   useDismiss(branchRef, branchOpen, () => setBranchOpen(false));
   useDismiss(repoRef, repoOpen, () => setRepoOpen(false));

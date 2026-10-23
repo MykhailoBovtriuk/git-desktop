@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
-import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
+import { useBusy } from '../../hooks/use-busy';
 import { Button, Modal } from '../../shared/ui';
 
 export function CheckoutConflictModal() {
@@ -18,23 +17,20 @@ export function CheckoutConflictModal() {
         cancelCheckout: s.cancelCheckout,
       })),
     );
-  const { addToast } = useUiStore(useShallow(s => ({ addToast: s.addToast })));
   const runAction = useGitAction();
-  const [busy, setBusy] = useState(false);
+  const [busy, track] = useBusy();
 
   if (!checkoutConflict) return null;
   const { branch } = checkoutConflict;
 
-  const run = (action: () => Promise<void>, successMsg: string) => async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const ok = await runAction(action, { title: t('checkoutFailed') });
-      if (ok) addToast({ variant: 'success', title: t('common:done'), message: successMsg });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const run = (action: () => Promise<void>, successMsg: string) => () =>
+    track(() =>
+      runAction(action, {
+        title: t('checkoutFailed'),
+        successTitle: t('common:done'),
+        success: successMsg,
+      }),
+    );
 
   return (
     <Modal

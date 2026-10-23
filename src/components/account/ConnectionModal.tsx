@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { errorMessage } from '../../lib/error-message';
+import { useBusy } from '../../hooks/use-busy';
 import { Button, Modal, SegmentedControl, UserIcon } from '../../shared/ui';
 
 type Protocol = 'ssh' | 'https';
@@ -40,27 +40,17 @@ export function ConnectionModal() {
       refreshCurrent: s.refreshCurrent,
     })),
   );
-  const [busy, setBusy] = useState(false);
+  const [busy, track] = useBusy();
 
   if (!open || !remoteHost || !repoPath) return null;
 
   const protocol: Protocol | null =
     remoteProtocol === 'ssh' || remoteProtocol === 'https' ? remoteProtocol : null;
 
-  const act = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await fn();
-    } catch (err: unknown) {
-      addToast({
-        variant: 'error',
-        title: t('connection.failed'),
-        message: errorMessage(err),
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const act = (fn: () => Promise<void>) =>
+    track(fn).catch((err: unknown) =>
+      addToast({ variant: 'error', title: t('connection.failed'), message: errorMessage(err) }),
+    );
 
   const refresh = async () => {
     account.refreshCurrent(repoPath);

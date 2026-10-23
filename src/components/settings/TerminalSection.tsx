@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAsync } from '../../hooks/use-async';
 import { useShallow } from 'zustand/react/shallow';
 import { terminalApi } from '../../api/terminal-api';
 import {
@@ -8,7 +8,6 @@ import {
   type TerminalFontSize,
 } from '../../stores/settings-store';
 import { SegmentedControl } from '../../shared/ui';
-import type { TerminalShell } from '../../types';
 import { SettingsSection } from './SettingsSection';
 
 const AUTO = '';
@@ -24,14 +23,7 @@ export function TerminalSection() {
         setTerminalFontSize: s.setTerminalFontSize,
       })),
     );
-  const [shells, setShells] = useState<TerminalShell[]>([]);
-
-  useEffect(() => {
-    void terminalApi
-      .shells()
-      .then(setShells)
-      .catch(() => {});
-  }, []);
+  const shells = useAsync(terminalApi.shells, []) ?? [];
 
   const value = shells.some(s => s.id === terminalShell) ? (terminalShell as string) : AUTO;
 

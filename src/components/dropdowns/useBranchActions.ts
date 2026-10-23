@@ -16,24 +16,22 @@ export function useBranchActions(onClose: () => void) {
       deleteRemoteBranch: s.deleteRemoteBranch,
     })),
   );
-  const { addToast, requestConfirm } = useUiStore(
-    useShallow(s => ({ addToast: s.addToast, requestConfirm: s.requestConfirm })),
+  const { addToast, confirmDanger } = useUiStore(
+    useShallow(s => ({ addToast: s.addToast, confirmDanger: s.confirmDanger })),
   );
   const runAction = useGitAction();
 
   const handle = async (action: () => Promise<void>, successMsg: string) => {
     onClose();
-    const ok = await runAction(action, { title: t('common:error') });
-    if (ok) addToast({ variant: 'success', title: t('common:done'), message: successMsg });
+    await runAction(action, {
+      title: t('common:error'),
+      successTitle: t('common:done'),
+      success: successMsg,
+    });
   };
 
   const confirmDeleteLocal = async (name: string) => {
-    const confirmed = await requestConfirm({
-      title: t('deleteBranch'),
-      message: t('deleteConfirm', { name }),
-      confirmLabel: t('deleteBranch'),
-      danger: true,
-    });
+    const confirmed = await confirmDanger(t('deleteBranch'), t('deleteConfirm', { name }));
     if (!confirmed) return;
     onClose();
     try {
@@ -42,20 +40,13 @@ export function useBranchActions(onClose: () => void) {
     } catch (err: unknown) {
       const msg = errorMessage(err);
       if (/not fully merged/i.test(msg)) {
-        const force = await requestConfirm({
-          title: t('deleteBranch'),
-          message: t('forceDeleteConfirm', { name }),
-          confirmLabel: t('deleteBranch'),
-          danger: true,
-        });
+        const force = await confirmDanger(t('deleteBranch'), t('forceDeleteConfirm', { name }));
         if (force) {
-          const ok = await runAction(() => deleteBranch(name, true), { title: t('common:error') });
-          if (ok)
-            addToast({
-              variant: 'success',
-              title: t('common:done'),
-              message: t('forceDeleted', { name }),
-            });
+          await runAction(() => deleteBranch(name, true), {
+            title: t('common:error'),
+            successTitle: t('common:done'),
+            success: t('forceDeleted', { name }),
+          });
         }
         return;
       }
@@ -68,12 +59,10 @@ export function useBranchActions(onClose: () => void) {
     if (slash === -1) return;
     const remote = name.slice(0, slash);
     const branch = name.slice(slash + 1);
-    const confirmed = await requestConfirm({
-      title: t('deleteRemoteBranch'),
-      message: t('deleteRemoteConfirm', { branch, remote }),
-      confirmLabel: t('deleteRemoteBranch'),
-      danger: true,
-    });
+    const confirmed = await confirmDanger(
+      t('deleteRemoteBranch'),
+      t('deleteRemoteConfirm', { branch, remote }),
+    );
     if (confirmed) {
       void handle(() => deleteRemoteBranch(remote, branch), t('deleted', { name }));
     }

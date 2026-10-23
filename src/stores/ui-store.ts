@@ -67,6 +67,7 @@ interface UiState {
   setSelectedStash: (index: number | null) => void;
   confirmRequest: (ConfirmOptions & { resolve: (ok: boolean) => void }) | null;
   requestConfirm: (opts: ConfirmOptions) => Promise<boolean>;
+  confirmDanger: (label: string, message: string) => Promise<boolean>;
   resolveConfirm: (ok: boolean) => void;
 }
 
@@ -135,6 +136,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
       get().confirmRequest?.resolve(false);
       set({ confirmRequest: { ...opts, resolve } });
     }),
+  confirmDanger: (label, message) =>
+    get().requestConfirm({ title: label, message, confirmLabel: label, danger: true }),
   resolveConfirm: ok => {
     const request = get().confirmRequest;
     if (!request) return;

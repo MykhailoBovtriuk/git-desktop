@@ -4,15 +4,15 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
+import { useBusy } from '../../hooks/use-busy';
 import { Button, Modal, TextInput } from '../../shared/ui';
 
 export function NewBranchModal() {
   const { t } = useTranslation('branches');
-  const { newBranchOpen, closeNewBranch, addToast } = useUiStore(
+  const { newBranchOpen, closeNewBranch } = useUiStore(
     useShallow(s => ({
       newBranchOpen: s.newBranchOpen,
       closeNewBranch: s.closeNewBranch,
-      addToast: s.addToast,
     })),
   );
   const { createBranch, currentBranch, status } = useRepoStore(
@@ -26,7 +26,7 @@ export function NewBranchModal() {
 
   const [name, setName] = useState('');
   const [asking, setAsking] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, track] = useBusy();
 
   if (!newBranchOpen) return null;
 
@@ -40,25 +40,17 @@ export function NewBranchModal() {
   };
 
   const create = (changes: 'bring' | 'leave') => async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const ok = await runAction(() => createBranch(trimmed, changes), {
+    const ok = await track(() =>
+      runAction(() => createBranch(trimmed, changes), {
         title: t('createFailed'),
-      });
-      if (!ok) return;
-      addToast({
-        variant: 'success',
-        title: t('common:done'),
-        message: t(changes === 'leave' ? 'createdLeft' : 'created', {
+        successTitle: t('common:done'),
+        success: t(changes === 'leave' ? 'createdLeft' : 'created', {
           name: trimmed,
           branch: currentBranch,
         }),
-      });
-      close();
-    } finally {
-      setBusy(false);
-    }
+      }),
+    );
+    if (ok) close();
   };
 
   const submitName = () => {

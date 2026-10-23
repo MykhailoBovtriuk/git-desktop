@@ -27,11 +27,10 @@ export function StashView() {
       stashDrop: s.stashDrop,
     })),
   );
-  const { selectedStash, setSelectedStash, addToast } = useUiStore(
+  const { selectedStash, setSelectedStash } = useUiStore(
     useShallow(s => ({
       selectedStash: s.selectedStash,
       setSelectedStash: s.setSelectedStash,
-      addToast: s.addToast,
     })),
   );
   const [rawDiff, setRawDiff] = useState('');
@@ -100,29 +99,40 @@ export function StashView() {
   }, [selectedStash, stashes.length]);
 
   const runAction = useGitAction();
-  const successToast = (titleKey: string, msgKey: string, idx: number) =>
-    addToast({ variant: 'success', title: t(titleKey), message: t(msgKey, { index: idx }) });
-
-  const handleApply = async (i: number) => {
-    const ok = await runAction(() => stashApply(i), { title: t('applyFailed') });
-    if (ok) successToast('applied', 'appliedMessage', i);
+  const stashAction = async (
+    action: (i: number) => Promise<void>,
+    i: number,
+    keys: { failed: string; done: string; message: string },
+    deselect = false,
+  ) => {
+    const ok = await runAction(() => action(i), {
+      title: t(keys.failed),
+      successTitle: t(keys.done),
+      success: t(keys.message, { index: i }),
+    });
+    if (ok && deselect && selectedStash === i) setSelectedStash(null);
   };
 
-  const handlePop = async (i: number) => {
-    const ok = await runAction(() => stashPop(i), { title: t('popFailed') });
-    if (ok) {
-      if (selectedStash === i) setSelectedStash(null);
-      successToast('popped', 'poppedMessage', i);
-    }
-  };
-
-  const handleDrop = async (i: number) => {
-    const ok = await runAction(() => stashDrop(i), { title: t('dropFailed') });
-    if (ok) {
-      if (selectedStash === i) setSelectedStash(null);
-      successToast('dropped', 'droppedMessage', i);
-    }
-  };
+  const handleApply = (i: number) =>
+    stashAction(stashApply, i, {
+      failed: 'applyFailed',
+      done: 'applied',
+      message: 'appliedMessage',
+    });
+  const handlePop = (i: number) =>
+    stashAction(
+      stashPop,
+      i,
+      { failed: 'popFailed', done: 'popped', message: 'poppedMessage' },
+      true,
+    );
+  const handleDrop = (i: number) =>
+    stashAction(
+      stashDrop,
+      i,
+      { failed: 'dropFailed', done: 'dropped', message: 'droppedMessage' },
+      true,
+    );
 
   return (
     <div className="flex h-full overflow-hidden">

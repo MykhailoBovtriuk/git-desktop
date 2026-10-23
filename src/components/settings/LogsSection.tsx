@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { logApi } from '../../api/log-api';
+import { useConfirmClearLogs } from '../../hooks/use-confirm-clear-logs';
 import { useLogStore } from '../../stores/log-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
@@ -12,7 +13,7 @@ import { formatBytes } from '../../lib/format-bytes';
 export function LogsSection() {
   const { t } = useTranslation('logs');
   const requestConfirm = useUiStore(s => s.requestConfirm);
-  const clearLog = useLogStore(s => s.clear);
+  const confirmClear = useConfirmClearLogs();
   const entryCount = useLogStore(s => s.entries.length);
   const repoPath = useRepoStore(s => s.repoPath);
   const [retention, setRetention] = useState<LogRetention | null>(null);
@@ -52,15 +53,7 @@ export function LogsSection() {
   };
 
   const clear = async () => {
-    const ok = await requestConfirm({
-      title: t('settings.clearTitle'),
-      message: t('settings.clearMessage'),
-      confirmLabel: t('settings.clearConfirm'),
-      danger: true,
-    });
-    if (!ok) return;
-    await clearLog().catch(() => {});
-    refreshStats();
+    if (await confirmClear()) refreshStats();
   };
 
   return (

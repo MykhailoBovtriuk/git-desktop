@@ -18,12 +18,12 @@ export function WorkingTreeFiles() {
       discardChanges: s.discardChanges,
     })),
   );
-  const { selectedFile, selectedFileArea, setSelectedFile, requestConfirm, addToast } = useUiStore(
+  const { selectedFile, selectedFileArea, setSelectedFile, confirmDanger, addToast } = useUiStore(
     useShallow(s => ({
       selectedFile: s.selectedFile,
       selectedFileArea: s.selectedFileArea,
       setSelectedFile: s.setSelectedFile,
-      requestConfirm: s.requestConfirm,
+      confirmDanger: s.confirmDanger,
       addToast: s.addToast,
     })),
   );
@@ -47,12 +47,7 @@ export function WorkingTreeFiles() {
     const message = isUntracked
       ? t('discardUntrackedConfirm', { name: path })
       : t('discardConfirm', { name: path });
-    const ok = await requestConfirm({
-      title: t('discard'),
-      message,
-      confirmLabel: t('discard'),
-      danger: true,
-    });
+    const ok = await confirmDanger(t('discard'), message);
     if (ok) {
       void runAction(() => discardChanges([path]), { title: t('discard') });
     }

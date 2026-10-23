@@ -4,13 +4,14 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
+import { useBusy } from '../../hooks/use-busy';
 import { gitApi } from '../../api/git-api';
 import { Button, Textarea } from '../../shared/ui';
 
 export function CommitForm() {
   const { t } = useTranslation('staging');
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, track] = useBusy();
   const {
     commit,
     status,
@@ -24,9 +25,7 @@ export function CommitForm() {
       hasIdentity: s.hasIdentity,
     })),
   );
-  const { addToast, openSettings } = useUiStore(
-    useShallow(s => ({ addToast: s.addToast, openSettings: s.openSettings })),
-  );
+  const openSettings = useUiStore(s => s.openSettings);
   const runAction = useGitAction();
 
   useEffect(() => {
@@ -47,21 +46,15 @@ export function CommitForm() {
 
   const handleCommit = async () => {
     if (!canCommit) return;
-    setLoading(true);
-    try {
-      const summary = message.trim().slice(0, 50);
-      const ok = await runAction(() => commit(message.trim()), { title: t('commitFailed') });
-      if (ok) {
-        setMessage('');
-        addToast({
-          variant: 'success',
-          title: t('committed'),
-          message: t('commitCreated', { summary }),
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
+    const summary = message.trim().slice(0, 50);
+    const ok = await track(() =>
+      runAction(() => commit(message.trim()), {
+        title: t('commitFailed'),
+        successTitle: t('committed'),
+        success: t('commitCreated', { summary }),
+      }),
+    );
+    if (ok) setMessage('');
   };
 
   return (
