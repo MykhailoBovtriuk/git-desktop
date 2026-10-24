@@ -70,17 +70,17 @@ export function BranchItem({
         <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
         {onPull && (
           <MenuItem onClick={onPull}>
-            <span>{t('pull')}</span>
+            <span>{t('sync:pull')}</span>
             {behind > 0 && <span className="text-subtext">↓{behind}</span>}
           </MenuItem>
         )}
         {onPush && (
           <MenuItem onClick={onPush}>
-            <span>{t('push')}</span>
+            <span>{t('sync:push')}</span>
             {ahead > 0 && <span className="text-blue">↑{ahead}</span>}
           </MenuItem>
         )}
-        {onPublish && <MenuItem onClick={onPublish}>{t('publishBranch')}</MenuItem>}
+        {onPublish && <MenuItem onClick={onPublish}>{t('sync:publishBranch')}</MenuItem>}
         <MenuItem onClick={onMerge}>{t('mergeIntoCurrent')}</MenuItem>
         <MenuItem onClick={onRebase}>{t('rebaseOntoCurrent')}</MenuItem>
         {!current && (

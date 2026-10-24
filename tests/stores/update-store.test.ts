@@ -14,7 +14,7 @@ vi.mock('../../src/api/update-api', () => ({
   },
 }));
 
-const busy = { busyOperation: null as string | null };
+const busy = { busyCount: 0 };
 vi.mock('../../src/stores/repo-store', () => ({
   useRepoStore: { getState: () => busy },
 }));
@@ -44,7 +44,7 @@ const INITIAL = useUpdateStore.getState();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  busy.busyOperation = null;
+  busy.busyCount = 0;
   useUpdateStore.setState({
     ...INITIAL,
     phase: 'idle',
@@ -180,7 +180,7 @@ describe('download', () => {
 
 describe('install', () => {
   it('refuses to quit in the middle of a git operation', async () => {
-    busy.busyOperation = 'push';
+    busy.busyCount = 1;
 
     await useUpdateStore.getState().install();
 

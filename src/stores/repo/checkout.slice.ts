@@ -1,6 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import type { RepoState, RepoSlice } from './types';
-import { errorMessage } from '../../lib/error-message';
+import { classifyGitError } from '../../lib/git-error-mapper';
 
 export class CheckoutConflictError extends Error {
   constructor() {
@@ -19,66 +19,70 @@ type CheckoutSlice = Pick<
   | 'cancelCheckout'
 >;
 
-export const createCheckoutSlice: RepoSlice<CheckoutSlice> = (set, get) => ({
-  checkoutConflict: null,
+export const createCheckoutSlice: RepoSlice<CheckoutSlice> = (set, get) => {
+  const takeConflict = (): string | null => {
+    const conflict = get().checkoutConflict;
+    if (conflict) set({ checkoutConflict: null });
+    return conflict?.branch ?? null;
+  };
 
-  checkout: async branch =>
-    get().runOperation('checkout', async () => {
-      const known = get().branches.find(b => b.name === branch);
-      const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
-      try {
-        await gitApi.checkout(target);
-        await get().refresh();
-      } catch (err) {
-        const msg = errorMessage(err);
-        if (/overwritten by checkout|commit your changes or stash/i.test(msg)) {
-          set({ checkoutConflict: { branch: target } });
-          throw new CheckoutConflictError();
+  return {
+    checkoutConflict: null,
+
+    checkout: async branch =>
+      get().runOperation(async () => {
+        const known = get().branches.find(b => b.name === branch);
+        const target = known?.remote ? branch.replace(/^[^/]+\//, '') : branch;
+        try {
+          await gitApi.checkout(target);
+          await get().refresh();
+        } catch (err) {
+          if (classifyGitError(err).kind === 'uncommitted') {
+            set({ checkoutConflict: { branch: target } });
+            throw new CheckoutConflictError();
+          }
+          throw err;
         }
-        throw err;
-      }
-    }),
+      }),
 
-  stashAndCheckout: async () =>
-    get().runOperation('checkout', async () => {
-      const conflict = get().checkoutConflict;
-      if (!conflict) return;
-      set({ checkoutConflict: null });
-      try {
-        await gitApi.stashSave(`WIP before switching to ${conflict.branch}`);
-        await gitApi.checkout(conflict.branch);
-      } finally {
-        await get().refresh();
-      }
-    }),
-
-  migrateCheckout: async () =>
-    get().runOperation('checkout', async () => {
-      const conflict = get().checkoutConflict;
-      if (!conflict) return;
-      set({ checkoutConflict: null });
-      try {
-        const before = await gitApi.getStashTop();
-        await gitApi.stashSave(`Migrating changes to ${conflict.branch}`);
-        const after = await gitApi.getStashTop();
-        if (!after || after === before) {
-          throw new Error('No changes to migrate');
+    stashAndCheckout: async () =>
+      get().runOperation(async () => {
+        const branch = takeConflict();
+        if (!branch) return;
+        try {
+          await gitApi.stashSave(`WIP before switching to ${branch}`);
+          await gitApi.checkout(branch);
+        } finally {
+          await get().refresh();
         }
-        await gitApi.checkout(conflict.branch);
-        await gitApi.stashPop(0);
-      } finally {
+      }),
+
+    migrateCheckout: async () =>
+      get().runOperation(async () => {
+        const branch = takeConflict();
+        if (!branch) return;
+        try {
+          const before = await gitApi.getStashTop();
+          await gitApi.stashSave(`Migrating changes to ${branch}`);
+          const after = await gitApi.getStashTop();
+          if (!after || after === before) {
+            throw new Error('No changes to migrate');
+          }
+          await gitApi.checkout(branch);
+          await gitApi.stashPop(0);
+        } finally {
+          await get().refresh();
+        }
+      }),
+
+    forceCheckout: async () =>
+      get().runOperation(async () => {
+        const branch = takeConflict();
+        if (!branch) return;
+        await gitApi.checkoutForce(branch);
         await get().refresh();
-      }
-    }),
+      }),
 
-  forceCheckout: async () =>
-    get().runOperation('checkout', async () => {
-      const conflict = get().checkoutConflict;
-      if (!conflict) return;
-      set({ checkoutConflict: null });
-      await gitApi.checkoutForce(conflict.branch);
-      await get().refresh();
-    }),
-
-  cancelCheckout: () => set({ checkoutConflict: null }),
-});
+    cancelCheckout: () => set({ checkoutConflict: null }),
+  };
+};

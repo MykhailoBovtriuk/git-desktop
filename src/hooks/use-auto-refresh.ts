@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRepoStore } from '../stores/repo-store';
 import { useSettingsStore } from '../stores/settings-store';
+import { gitApi } from '../api/git-api';
 
 const DEBOUNCE_MS = 300;
 
@@ -12,7 +13,7 @@ export function useAutoRefresh() {
 
     const refreshIfIdle = () => {
       const state = useRepoStore.getState();
-      if (state.busyOperation) return;
+      if (state.busyCount > 0) return;
       state.refresh();
     };
 
@@ -22,7 +23,7 @@ export function useAutoRefresh() {
       debounce = setTimeout(refreshIfIdle, DEBOUNCE_MS);
     };
 
-    const unsubscribe = window.electronAPI?.onGitChanged?.(scheduleRefresh);
+    const unsubscribe = gitApi.onGitChanged(scheduleRefresh);
     const pollId = pollMs > 0 ? setInterval(refreshIfIdle, pollMs) : null;
 
     return () => {

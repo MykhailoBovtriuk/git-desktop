@@ -103,7 +103,7 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
                   disabled={!!loading}
                   className="text-blue text-xs hover:underline disabled:opacity-60 disabled:no-underline px-2 py-1"
                 >
-                  {loading === 'fetch' ? t('fetching') : t('fetch')}
+                  {loading === 'fetch' ? t('fetching') : t('sync:fetch')}
                 </button>
               )}
             </div>

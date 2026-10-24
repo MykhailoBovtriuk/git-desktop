@@ -65,10 +65,7 @@ export function Shell() {
         ) : (
           <WelcomeScreen />
         )}
-        <Toast />
-        <ConfirmDialog />
-        <SignInModal />
-        <UpdateModal />
+        <GlobalOverlays />
       </>
     );
   }
@@ -102,14 +99,22 @@ export function Shell() {
         </div>
       </div>
       <Footer />
-      <Toast />
       <MergeConflictModal />
       <CheckoutConflictModal />
       <NewBranchModal />
       <ConnectionModal />
+      <GlobalOverlays />
+    </div>
+  );
+}
+
+function GlobalOverlays() {
+  return (
+    <>
+      <Toast />
       <ConfirmDialog />
       <SignInModal />
       <UpdateModal />
-    </div>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { errorMessage } from '../../lib/error-message';
 import { useBusy } from '../../hooks/use-busy';
+import { useCurrentAccount } from '../../hooks/use-current-account';
 import { Button, Modal, SegmentedControl, UserIcon } from '../../shared/ui';
 
 type Protocol = 'ssh' | 'https';
@@ -28,16 +29,15 @@ export function ConnectionModal() {
       switchRemoteProtocol: s.switchRemoteProtocol,
     })),
   );
+  const current = useCurrentAccount();
   const account = useAccountStore(
     useShallow(s => ({
-      current: s.current,
       authSource: s.authSource,
       persistent: s.persistent,
       openSignIn: s.openSignIn,
       signOut: s.signOut,
       forgetSystemCredential: s.forgetSystemCredential,
       refreshAuthSource: s.refreshAuthSource,
-      refreshCurrent: s.refreshCurrent,
     })),
   );
   const [busy, track] = useBusy();
@@ -52,10 +52,7 @@ export function ConnectionModal() {
       addToast({ variant: 'error', title: t('connection.failed'), message: errorMessage(err) }),
     );
 
-  const refresh = async () => {
-    account.refreshCurrent(repoPath);
-    await account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
-  };
+  const refresh = () => account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
 
   const switchTo = (to: Protocol) => {
     if (busy || to === protocol) return;
@@ -121,24 +118,24 @@ export function ConnectionModal() {
         <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
           <AuthCard protocol={protocol} host={remoteHost} />
           <div className="flex items-center gap-2 shrink-0">
-            {protocol === 'https' && account.current && (
+            {protocol === 'https' && current && (
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={busy}
                 title={t('connection.signOutHint', { host: remoteHost })}
-                onClick={() => signOut(account.current!.repoPath)}
+                onClick={() => signOut(current!.repoPath)}
               >
                 {t('section.signOut')}
               </Button>
             )}
-            {protocol === 'https' && !account.current && account.authSource === 'system' && (
+            {protocol === 'https' && !current && account.authSource === 'system' && (
               <Button variant="secondary" size="sm" disabled={busy} onClick={forget}>
                 {t('connection.forget')}
               </Button>
             )}
             {protocol === 'https' &&
-              !account.current &&
+              !current &&
               (account.authSource === 'system' || account.authSource === 'none') && (
                 <Button
                   variant={account.authSource === 'none' ? 'primary' : 'secondary'}
@@ -162,9 +159,8 @@ export function ConnectionModal() {
 
 function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string }) {
   const { t } = useTranslation('account');
-  const { current, authSource } = useAccountStore(
-    useShallow(s => ({ current: s.current, authSource: s.authSource })),
-  );
+  const current = useCurrentAccount();
+  const authSource = useAccountStore(s => s.authSource);
 
   let title: string;
   let detail: string | null = null;

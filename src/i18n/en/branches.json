@@ -16,9 +16,6 @@
   "leaveAction": "Leave Them Behind",
   "created": "Created {{name}}",
   "createdLeft": "Created {{name}}, stashed your changes on {{branch}}",
-  "pull": "Pull",
-  "push": "Push",
-  "publishBranch": "Publish branch",
   "checkout": "Checkout",
   "mergeIntoCurrent": "Merge into current",
   "rebaseOntoCurrent": "Rebase onto current",
@@ -33,6 +30,5 @@
   "switchedTo": "Switched to {{name}}",
   "merged": "Merged {{name}}",
   "rebasedOnto": "Rebased onto {{name}}",
-  "fetch": "Fetch",
   "fetching": "Fetching…"
 }

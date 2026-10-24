@@ -32,9 +32,8 @@ export interface RepoState {
   hasMoreCommits: boolean;
   loadingMoreCommits: boolean;
   loadMoreCommits: () => Promise<void>;
-  busyOperation: string | null;
   lastRefreshError: string | null;
-  runOperation: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
+  runOperation: <T>(fn: () => Promise<T>) => Promise<T>;
   loadStashes: () => Promise<void>;
   stashSave: (message?: string, staged?: boolean) => Promise<void>;
   stashApply: (index: number) => Promise<void>;

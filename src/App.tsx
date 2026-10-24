@@ -19,7 +19,6 @@ export default function App() {
     const load = async () => {
       await useAccountStore.getState().loadAccounts();
       const { repoPath, remoteHost, remoteProtocol } = useRepoStore.getState();
-      useAccountStore.getState().refreshCurrent(repoPath);
       await useAccountStore.getState().refreshAuthSource(remoteHost, remoteProtocol, repoPath);
     };
     const run = () => void load().catch(() => {});

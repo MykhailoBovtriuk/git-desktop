@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { basenameFromPath } from '../../lib/basename';
 
 interface MergeFileTabsProps {
   files: string[];
@@ -19,7 +20,7 @@ export function MergeFileTabs({ files, activeMergeFile, resolved, onSelect }: Me
             activeMergeFile === f ? 'bg-surface0 text-text' : 'text-subtext hover:bg-surface0'
           } ${resolved.has(f) ? 'text-green' : ''}`}
         >
-          {f.split('/').pop()}
+          {basenameFromPath(f)}
           {resolved.has(f) && ' ✓'}
         </button>
       ))}

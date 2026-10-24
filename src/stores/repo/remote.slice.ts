@@ -5,26 +5,26 @@ type RemoteSlice = Pick<RepoState, 'fetch' | 'pull' | 'push' | 'publishBranch'>;
 
 export const createRemoteSlice: RepoSlice<RemoteSlice> = (_set, get) => ({
   fetch: async () =>
-    get().runOperation('fetch', async () => {
+    get().runOperation(async () => {
       await gitApi.fetch();
       await get().refresh();
     }),
 
   pull: async () =>
-    get().runOperation('pull', async () => {
+    get().runOperation(async () => {
       const result = await gitApi.pull();
       await get().refresh();
       return result;
     }),
 
   push: async () =>
-    get().runOperation('push', async () => {
+    get().runOperation(async () => {
       await gitApi.push();
       await get().refresh();
     }),
 
   publishBranch: async () =>
-    get().runOperation('push', async () => {
+    get().runOperation(async () => {
       const branch = get().currentBranch;
       if (!branch) throw new Error('No current branch to publish');
       await gitApi.pushSetUpstream('origin', branch);

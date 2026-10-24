@@ -89,7 +89,7 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
   },
 
   install: async () => {
-    if (useRepoStore.getState().busyOperation) {
+    if (useRepoStore.getState().busyCount > 0) {
       set({ error: 'repo-busy' });
       return;
     }

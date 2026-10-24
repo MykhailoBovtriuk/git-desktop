@@ -6,6 +6,7 @@ import { useAccountStore } from '../../stores/account-store';
 import { UserIcon, cn } from '../../shared/ui';
 import { PanelButtons } from './PanelButtons';
 import { SidebarToggle } from './SidebarToggle';
+import { useCurrentAccount } from '../../hooks/use-current-account';
 import { useRemoteSync } from '../../hooks/use-remote-sync';
 
 export function Footer() {
@@ -16,9 +17,8 @@ export function Footer() {
   const remoteHost = useRepoStore(s => s.remoteHost);
   const openConnection = useUiStore(s => s.openConnection);
   const { run, loading: syncing } = useRemoteSync();
-  const { account, authSource } = useAccountStore(
-    useShallow(s => ({ account: s.current, authSource: s.authSource })),
-  );
+  const account = useCurrentAccount();
+  const authSource = useAccountStore(s => s.authSource);
 
   const hash = headCommit ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
