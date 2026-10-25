@@ -7,17 +7,17 @@ export function registerRebaseHandlers(git: GitService) {
   ipcMain.handle('git:rebase', (_e, branch: string) =>
     wrapLogged('rebase', git, branch, () => {
       assertBranchName(branch, 'branch');
-      return git.rebase(branch).then(() => null);
+      return git.rebase(branch);
     }),
   );
 
   ipcMain.handle('git:is-rebasing', () => wrap(() => git.isRebasing()));
 
   ipcMain.handle('git:abort-rebase', () =>
-    wrapLogged('rebase-abort', git, undefined, () => git.abortRebase().then(() => null)),
+    wrapLogged('rebase-abort', git, undefined, () => git.abortRebase()),
   );
 
   ipcMain.handle('git:continue-rebase', () =>
-    wrapLogged('rebase-continue', git, undefined, () => git.continueRebase().then(() => null)),
+    wrapLogged('rebase-continue', git, undefined, () => git.continueRebase()),
   );
 }

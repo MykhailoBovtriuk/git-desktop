@@ -14,13 +14,13 @@ export function registerMergeHandlers(git: GitService) {
   ipcMain.handle('git:get-merge-conflicts', () => wrap(() => git.getMergeConflicts()));
 
   ipcMain.handle('git:abort-merge', () =>
-    wrapLogged('merge-abort', git, undefined, () => git.abortMerge().then(() => null)),
+    wrapLogged('merge-abort', git, undefined, () => git.abortMerge()),
   );
 
   ipcMain.handle('git:is-merging', () => wrap(() => git.isMerging()));
 
   ipcMain.handle('git:conclude-merge', () =>
-    wrapLogged('merge-conclude', git, undefined, () => git.concludeMerge().then(() => null)),
+    wrapLogged('merge-conclude', git, undefined, () => git.concludeMerge()),
   );
 
   ipcMain.handle('git:get-merge-message', () => wrap(() => git.getMergeMessage()));
@@ -28,7 +28,7 @@ export function registerMergeHandlers(git: GitService) {
   ipcMain.handle('git:mark-resolved', (_e, filePath: string) =>
     wrapLogged('resolve', git, filePath, () => {
       assertString(filePath, 'filePath');
-      return git.markResolved(filePath).then(() => null);
+      return git.markResolved(filePath);
     }),
   );
 }

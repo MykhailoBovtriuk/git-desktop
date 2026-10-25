@@ -10,17 +10,14 @@ import { registerStashHandlers } from './ipc/stash';
 import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
 import { forgetRepoAccount, registerAccountHandlers } from './ipc/account';
-import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
-import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
+import { registerAppHandlers } from './ipc/app';
+import { registerUpdateHandlers } from './ipc/update';
 import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
 import { registerTerminalHandlers, type TerminalControl } from './ipc/terminal';
 import { ipcMain } from 'electron';
-import { assertString } from './ipc-validators';
+import { assertRepoPath } from './ipc-validators';
 
-export type IpcHandlerOptions = RepoHandlerOptions &
-  AppHandlerOptions &
-  UpdateHandlerOptions &
-  LogHandlerOptions;
+export type IpcHandlerOptions = RepoHandlerOptions & LogHandlerOptions;
 
 const gitService = new GitService();
 
@@ -41,11 +38,10 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
 
   ipcMain.handle('repo:forget', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       terminalControl.killRepo(repoPath);
       await logStore.forgetRepo(repoPath);
       await forgetRepoAccount(repoPath);
-      return null;
     }),
   );
   registerRepoHandlers(gitService, {

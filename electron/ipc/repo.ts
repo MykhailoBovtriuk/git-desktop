@@ -58,7 +58,6 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
       if (scope !== 'global' && scope !== 'local') throw new Error('Invalid argument: scope');
       assertIdentity(identity);
       await setIdentity(scope, git.getRepoPath(), identity);
-      return null;
     }),
   );
 

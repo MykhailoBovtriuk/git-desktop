@@ -15,13 +15,11 @@ export function registerStashHandlers(git: GitService) {
     (_e, message?: string, staged?: boolean, includeUntracked?: boolean) =>
       wrapLogged('stash-save', git, message, () => {
         assertOptionalString(message, 'message');
-        return git
-          .stashSave(
-            message,
-            optionalBoolean(staged, 'staged'),
-            optionalBoolean(includeUntracked, 'includeUntracked'),
-          )
-          .then(() => null);
+        return git.stashSave(
+          message,
+          optionalBoolean(staged, 'staged'),
+          optionalBoolean(includeUntracked, 'includeUntracked'),
+        );
       }),
   );
 
@@ -30,21 +28,21 @@ export function registerStashHandlers(git: GitService) {
   ipcMain.handle('git:stash-apply', (_e, index: number) =>
     wrapLogged('stash-apply', git, stashDetail(index), () => {
       assertNonNegativeInteger(index, 'index');
-      return git.stashApply(index).then(() => null);
+      return git.stashApply(index);
     }),
   );
 
   ipcMain.handle('git:stash-pop', (_e, index: number) =>
     wrapLogged('stash-pop', git, stashDetail(index), () => {
       assertNonNegativeInteger(index, 'index');
-      return git.stashPop(index).then(() => null);
+      return git.stashPop(index);
     }),
   );
 
   ipcMain.handle('git:stash-drop', (_e, index: number) =>
     wrapLogged('stash-drop', git, stashDetail(index), () => {
       assertNonNegativeInteger(index, 'index');
-      return git.stashDrop(index).then(() => null);
+      return git.stashDrop(index);
     }),
   );
 

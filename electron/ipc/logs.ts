@@ -1,12 +1,11 @@
-import { BrowserWindow, ipcMain, shell } from 'electron';
+import { ipcMain, shell } from 'electron';
 import fs from 'fs/promises';
-import { wrap } from './wrap';
-import { assertString } from '../ipc-validators';
+import { wrap, sendToRenderer, type WindowOptions } from './wrap';
+import { assertRepoPath } from '../ipc-validators';
 import { setLogSink } from '../log/git-logger';
 import { LogStore, isLogRetention } from '../log/log-store';
 
-export interface LogHandlerOptions {
-  getWindow?: () => BrowserWindow | null;
+export interface LogHandlerOptions extends WindowOptions {
   logDir?: string;
 }
 
@@ -18,8 +17,7 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
   const ready = store.init();
 
   setLogSink(entry => {
-    const win = options.getWindow?.() ?? null;
-    if (win && !win.isDestroyed()) win.webContents.send('log:entry', entry);
+    sendToRenderer(options, 'log:entry', entry);
     void ready.then(() => store.append(entry));
   });
 
@@ -27,7 +25,7 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
 
   ipcMain.handle('log:list', (_e, repoPath: unknown, before: unknown, limit: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       await ready;
       const from = typeof before === 'number' && Number.isFinite(before) ? before : Infinity;
       const size =
@@ -40,7 +38,7 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
 
   ipcMain.handle('log:stats', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       await ready;
       return store.stats(repoPath);
     }),
@@ -48,10 +46,9 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
 
   ipcMain.handle('log:clear', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       await ready;
       await store.clear(repoPath);
-      return null;
     }),
   );
 
@@ -62,19 +59,17 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
       if (!isLogRetention(retention)) throw new Error('Invalid argument: retention');
       await ready;
       await store.setRetention(retention);
-      return null;
     }),
   );
 
   ipcMain.handle('log:open-folder', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       const dir = store.repoDir(repoPath);
       if (!dir) throw new Error('Logs are not stored on disk');
       await fs.mkdir(dir, { recursive: true });
       const failure = await shell.openPath(dir);
       if (failure) throw new Error(failure);
-      return null;
     }),
   );
 

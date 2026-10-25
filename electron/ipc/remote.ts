@@ -4,15 +4,11 @@ import { assertBranchName } from '../ipc-validators';
 import { wrapLogged } from './wrap';
 
 export function registerRemoteHandlers(git: GitService) {
-  ipcMain.handle('git:fetch', () =>
-    wrapLogged('fetch', git, undefined, () => git.fetch().then(() => null)),
-  );
+  ipcMain.handle('git:fetch', () => wrapLogged('fetch', git, undefined, () => git.fetch()));
 
   ipcMain.handle('git:pull', () => wrapLogged('pull', git, undefined, () => git.pull()));
 
-  ipcMain.handle('git:push', () =>
-    wrapLogged('push', git, undefined, () => git.push().then(() => null)),
-  );
+  ipcMain.handle('git:push', () => wrapLogged('push', git, undefined, () => git.push()));
 
   ipcMain.handle('git:switch-remote-protocol', (_e, to: unknown) =>
     wrapLogged('remote-protocol', git, to, () => {
@@ -25,7 +21,7 @@ export function registerRemoteHandlers(git: GitService) {
     wrapLogged('publish', git, branch, () => {
       assertBranchName(remote, 'remote');
       assertBranchName(branch, 'branch');
-      return git.pushSetUpstream(remote, branch).then(() => null);
+      return git.pushSetUpstream(remote, branch);
     }),
   );
 }

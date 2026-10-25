@@ -12,21 +12,21 @@ export function registerStagingHandlers(git: GitService) {
   ipcMain.handle('git:stage-files', (_e, paths: string[]) =>
     wrapLogged('stage', git, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.stageFiles(paths).then(() => null);
+      return git.stageFiles(paths);
     }),
   );
 
   ipcMain.handle('git:unstage-files', (_e, paths: string[]) =>
     wrapLogged('unstage', git, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.unstageFiles(paths).then(() => null);
+      return git.unstageFiles(paths);
     }),
   );
 
   ipcMain.handle('git:discard-changes', (_e, paths: string[]) =>
     wrapLogged('discard', git, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.discardChanges(paths).then(() => null);
+      return git.discardChanges(paths);
     }),
   );
 
@@ -44,7 +44,7 @@ export function registerStagingHandlers(git: GitService) {
         assertString(patch, 'patch');
         const cached = optionalBoolean(opts?.cached, 'cached');
         const reverse = optionalBoolean(opts?.reverse, 'reverse');
-        return git.applyPatch(patch, { cached, reverse }).then(() => null);
+        return git.applyPatch(patch, { cached, reverse });
       }),
   );
 }

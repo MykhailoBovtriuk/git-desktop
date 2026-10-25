@@ -15,7 +15,7 @@ export function registerFileHandlers(git: GitService) {
     wrap(() => {
       assertString(p, 'path');
       if (typeof c !== 'string') throw new Error('Invalid argument: content must be a string');
-      return git.writeFile(p, c).then(() => null);
+      return git.writeFile(p, c);
     }),
   );
 }

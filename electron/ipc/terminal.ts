@@ -1,14 +1,10 @@
-import { BrowserWindow, ipcMain, shell } from 'electron';
-import { wrap } from './wrap';
-import { assertDimension, assertString } from '../ipc-validators';
+import { ipcMain, shell } from 'electron';
+import { wrap, sendToRenderer, type WindowOptions } from './wrap';
+import { assertDimension, assertRepoPath, assertString } from '../ipc-validators';
 import { loadPty } from '../terminal/pty-loader';
 import { detectShells, type ShellSpec } from '../terminal/shell';
 import { TerminalManager } from '../terminal/terminal-manager';
 import type { TerminalAvailability, TerminalShell } from '../../src/types';
-
-export interface TerminalHandlerOptions {
-  getWindow?: () => BrowserWindow | null;
-}
 
 const MAX_WRITE = 1024 * 1024;
 
@@ -17,15 +13,12 @@ export interface TerminalControl {
   killAll: () => void;
 }
 
-export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): TerminalControl {
+export function registerTerminalHandlers(options: WindowOptions = {}): TerminalControl {
   let shells: ShellSpec[] | null = null;
   const getShells = () => (shells ??= detectShells());
   let manager: TerminalManager | null = null;
 
-  const send = (channel: string, ...args: unknown[]) => {
-    const win = options.getWindow?.() ?? null;
-    if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
-  };
+  const send = (channel: string, ...args: unknown[]) => sendToRenderer(options, channel, ...args);
 
   const getManager = (): TerminalManager => {
     if (manager) return manager;
@@ -54,7 +47,7 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
     'term:create',
     (_e, repoPath: unknown, shellId: unknown, cols: unknown, rows: unknown) =>
       wrap(async () => {
-        assertString(repoPath, 'repoPath');
+        assertRepoPath(repoPath);
         if (shellId !== null && shellId !== undefined) assertString(shellId, 'shellId');
         assertDimension(cols, 'cols');
         assertDimension(rows, 'rows');
@@ -69,7 +62,6 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
         throw new Error('Invalid argument: data');
       }
       getManager().write(id, data);
-      return null;
     }),
   );
 
@@ -79,7 +71,6 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
       assertDimension(cols, 'cols');
       assertDimension(rows, 'rows');
       getManager().resize(id, cols, rows);
-      return null;
     }),
   );
 
@@ -87,13 +78,12 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
     wrap(async () => {
       assertString(id, 'id');
       manager?.kill(id);
-      return null;
     }),
   );
 
   ipcMain.handle('term:list', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       return manager?.list(repoPath) ?? [];
     }),
   );
@@ -120,7 +110,6 @@ export function registerTerminalHandlers(options: TerminalHandlerOptions = {}): 
         throw new Error('Only web links can be opened');
       }
       await shell.openExternal(parsed.href);
-      return null;
     }),
   );
 

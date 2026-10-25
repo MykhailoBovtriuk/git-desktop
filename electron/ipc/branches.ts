@@ -9,28 +9,28 @@ export function registerBranchHandlers(git: GitService) {
   ipcMain.handle('git:create-branch', (_e, name: string) =>
     wrapLogged('branch-create', git, name, () => {
       assertBranchName(name, 'name');
-      return git.createBranch(name).then(() => null);
+      return git.createBranch(name);
     }),
   );
 
   ipcMain.handle('git:checkout', (_e, branch: string) =>
     wrapLogged('checkout', git, branch, () => {
       assertBranchName(branch, 'branch');
-      return git.checkout(branch).then(() => null);
+      return git.checkout(branch);
     }),
   );
 
   ipcMain.handle('git:checkout-force', (_e, branch: string) =>
     wrapLogged('checkout', git, branch, () => {
       assertBranchName(branch, 'branch');
-      return git.checkoutForce(branch).then(() => null);
+      return git.checkoutForce(branch);
     }),
   );
 
   ipcMain.handle('git:delete-branch', (_e, branch: string, force?: boolean) =>
     wrapLogged('branch-delete', git, branch, () => {
       assertBranchName(branch, 'branch');
-      return git.deleteBranch(branch, optionalBoolean(force, 'force')).then(() => null);
+      return git.deleteBranch(branch, optionalBoolean(force, 'force'));
     }),
   );
 
@@ -38,7 +38,7 @@ export function registerBranchHandlers(git: GitService) {
     wrapLogged('remote-branch-delete', git, branch, () => {
       assertBranchName(remote, 'remote');
       assertBranchName(branch, 'branch');
-      return git.deleteRemoteBranch(remote, branch).then(() => null);
+      return git.deleteRemoteBranch(remote, branch);
     }),
   );
 }
