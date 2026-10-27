@@ -33,14 +33,8 @@ export async function stashSave(
   await ctx.ensureRepo().raw(args);
 }
 
-export async function getStashTop(ctx: GitContext): Promise<string | null> {
-  try {
-    const out = await ctx.ensureRepo().raw(['rev-parse', '-q', '--verify', 'refs/stash']);
-    const sha = out.trim();
-    return sha.length > 0 ? sha : null;
-  } catch {
-    return null;
-  }
+export function getStashTop(ctx: GitContext): Promise<string | null> {
+  return ctx.resolveRef('refs/stash');
 }
 
 export async function stashApply(ctx: GitContext, index: number): Promise<void> {

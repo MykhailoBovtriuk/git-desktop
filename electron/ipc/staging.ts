@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { GitService } from '../git-service';
 import { assertString, assertStringArray, optionalBoolean } from '../ipc-validators';
-import { wrap, wrapLogged } from './wrap';
+import { wrapLogged } from './wrap';
 
 function pathsDetail(paths: unknown): string | undefined {
   if (!Array.isArray(paths) || paths.length === 0) return undefined;
@@ -40,11 +40,16 @@ export function registerStagingHandlers(git: GitService) {
   ipcMain.handle(
     'git:apply-patch',
     (_e, patch: string, opts?: { cached?: boolean; reverse?: boolean }) =>
-      wrap(() => {
-        assertString(patch, 'patch');
-        const cached = optionalBoolean(opts?.cached, 'cached');
-        const reverse = optionalBoolean(opts?.reverse, 'reverse');
-        return git.applyPatch(patch, { cached, reverse });
-      }),
+      wrapLogged(
+        opts?.cached !== true ? 'discard' : opts.reverse === true ? 'unstage' : 'stage',
+        git,
+        undefined,
+        async () => {
+          assertString(patch, 'patch');
+          const cached = optionalBoolean(opts?.cached, 'cached');
+          const reverse = optionalBoolean(opts?.reverse, 'reverse');
+          return git.applyPatch(patch, { cached, reverse });
+        },
+      ),
   );
 }

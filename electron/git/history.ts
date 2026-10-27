@@ -47,9 +47,7 @@ export async function getLog(ctx: GitContext, limit: number, offset: number): Pr
 
 /** The commit HEAD points at. Not getLog()[0]: the log spans every branch. */
 export async function getHeadCommit(ctx: GitContext): Promise<string | null> {
-  if (!(await ctx.hasHead())) return null;
-  const out = await ctx.ensureRepo().raw(['rev-parse', '--short', 'HEAD']);
-  return out.trim() || null;
+  return ctx.resolveRef('HEAD', '--short');
 }
 
 async function commitRange(ctx: GitContext, hash: string): Promise<[string, string]> {

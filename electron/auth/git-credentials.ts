@@ -19,7 +19,8 @@ export function allowedHelpers(platform: string = process.platform): string[] {
 
 function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    const options = { env: env ?? process.env, cwd: os.homedir() };
+    // A credential manager can block on a UI prompt; never let it stall IPC.
+    const options = { env: env ?? process.env, cwd: os.homedir(), timeout: 10_000 };
     const child = execFile('git', args, options, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout);

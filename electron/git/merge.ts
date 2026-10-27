@@ -1,5 +1,4 @@
 import fs from 'fs/promises';
-import path from 'path';
 import { GitContext } from './context';
 
 export async function merge(ctx: GitContext, branch: string): Promise<{ conflicts: string[] }> {
@@ -9,7 +8,7 @@ export async function merge(ctx: GitContext, branch: string): Promise<{ conflict
   } catch (err) {
     // Conflicting files come from status: simple-git's error shape is
     // unreliable, especially on a retry mid-conflict.
-    const conflicts = (await ctx.ensureRepo().status()).conflicted;
+    const conflicts = await getMergeConflicts(ctx);
     if (conflicts.length) {
       return { conflicts };
     }
@@ -18,12 +17,7 @@ export async function merge(ctx: GitContext, branch: string): Promise<{ conflict
 }
 
 export async function isMerging(ctx: GitContext): Promise<boolean> {
-  try {
-    const out = await ctx.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD']);
-    return out.trim().length > 0;
-  } catch {
-    return false;
-  }
+  return (await ctx.resolveRef('MERGE_HEAD')) !== null;
 }
 
 export async function concludeMerge(ctx: GitContext): Promise<void> {
@@ -33,7 +27,7 @@ export async function concludeMerge(ctx: GitContext): Promise<void> {
 export async function getMergeMessage(ctx: GitContext): Promise<string> {
   if (!ctx.repoPath) return '';
   try {
-    const msg = await fs.readFile(path.join(ctx.repoPath, '.git', 'MERGE_MSG'), 'utf-8');
+    const msg = await fs.readFile(await ctx.gitPath('MERGE_MSG'), 'utf-8');
     return msg.split('\n').find(l => l.trim() && !l.startsWith('#')) ?? '';
   } catch {
     return '';

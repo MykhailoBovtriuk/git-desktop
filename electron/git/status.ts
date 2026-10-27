@@ -97,8 +97,10 @@ export async function applyPatch(
   opts: { cached?: boolean; reverse?: boolean } = {},
 ): Promise<void> {
   const git = ctx.ensureRepo();
-  const tmpFile = path.join(os.tmpdir(), `git-desktop-${process.pid}-${Date.now()}.patch`);
-  await fs.writeFile(tmpFile, patch, 'utf8');
+  // A private directory: a predictable name in a shared tmp invites symlink races.
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'git-desktop-'));
+  const tmpFile = path.join(dir, 'hunk.patch');
+  await fs.writeFile(tmpFile, patch, { encoding: 'utf8', flag: 'wx' });
   try {
     const args = ['apply'];
     if (opts.cached !== false) args.push('--cached');
@@ -106,7 +108,7 @@ export async function applyPatch(
     args.push('--whitespace=nowarn', tmpFile);
     await git.raw(args);
   } finally {
-    await fs.unlink(tmpFile).catch(() => {});
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
