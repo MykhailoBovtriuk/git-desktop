@@ -1,4 +1,4 @@
-import { authedGet, getJson, fetchAvatar, probe } from '../http';
+import { authedGet, getJson, fetchAvatar, HttpError, probe } from '../http';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface BitbucketUser {
@@ -91,7 +91,7 @@ export const bitbucketServer: ProviderDefinition = {
       `Bearer ${token}`,
     );
     const name = res.headers.get('x-ausername')?.trim();
-    if (!name) throw new Error(`https://${host} returned 401 for this token`);
+    if (!name) throw new HttpError(`https://${host} returned 401 for this token`, 401);
     const user = await getJson<BitbucketServerUser>(
       `https://${host}/rest/api/1.0/users/${encodeURIComponent(name)}`,
       token,

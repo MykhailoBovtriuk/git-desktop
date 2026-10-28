@@ -138,6 +138,19 @@ export interface CredentialHelperEntry {
 }
 
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
+export type SwitchableProtocol = Exclude<RemoteProtocol, 'other'>;
+
+export interface AccountsSnapshot {
+  accounts: ProviderAccount[];
+  persistent: boolean;
+  error: string | null;
+}
+
+export interface ProvidersForHost {
+  host: string | null;
+  providerId: ProviderId | null;
+  options: ProviderOption[];
+}
 
 export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
 

@@ -1,4 +1,4 @@
-import { getJson, OAuthError } from '../auth/http';
+import { getJson, HttpError } from '../auth/http';
 import { compareSemver, parseSemver, type SemVer } from './semver';
 import { assetNameFor, isAllowedDownloadUrl, type LinuxPackage } from './assets';
 import type { UpdateInfo } from '../../src/types';
@@ -54,7 +54,7 @@ export function resetReleaseCache(): void {
 function toUpdateError(err: unknown): UpdateError {
   if (err instanceof UpdateError) return err;
 
-  if (err instanceof OAuthError) {
+  if (err instanceof HttpError) {
     const exhausted = err.headers?.get('x-ratelimit-remaining') === '0';
     if (err.status === 429 || (err.status === 403 && exhausted)) {
       const reset = Number(err.headers?.get('x-ratelimit-reset'));

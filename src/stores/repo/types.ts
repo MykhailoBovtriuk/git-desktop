@@ -7,6 +7,7 @@ import type {
   MergeState,
   RemoteProtocol,
   StashEntry,
+  SwitchableProtocol,
 } from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
@@ -43,7 +44,7 @@ export interface RepoState {
   remoteUrl: string | null;
   remoteHost: string | null;
   remoteProtocol: RemoteProtocol | null;
-  switchRemoteProtocol: (to: 'ssh' | 'https') => Promise<void>;
+  switchRemoteProtocol: (to: SwitchableProtocol) => Promise<void>;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
    * answer must never block a commit, only a definite "no" does.

@@ -1,9 +1,9 @@
+import { appFetch, basicAuth } from './http';
+
 /**
  * Prove a credential via the Smart HTTP advertisement, sending Authorization
  * unasked: a public repo never challenges, so `ls-remote` accepts anything.
  */
-
-const USER_AGENT = 'git-desktop';
 
 export function probeUrlFor(remoteUrl: string): string {
   const url = new URL(remoteUrl);
@@ -20,13 +20,11 @@ export async function verifyAgainstRemote(
   username: string,
   token: string,
 ): Promise<void> {
-  const basic = Buffer.from(`${username}:${token}`).toString('base64');
   let res: Response;
   try {
-    res = await fetch(probeUrlFor(remoteUrl), {
+    res = await appFetch(probeUrlFor(remoteUrl), {
       headers: {
-        Authorization: `Basic ${basic}`,
-        'User-Agent': USER_AGENT,
+        Authorization: basicAuth(username, token),
         Accept: 'application/x-git-upload-pack-advertisement',
       },
     });

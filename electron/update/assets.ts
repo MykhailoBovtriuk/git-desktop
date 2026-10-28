@@ -1,5 +1,6 @@
 export type LinuxPackage = 'AppImage' | 'deb';
 
+// Names mirror the `artifactName` templates in electron-builder.yml.
 const ASSETS: Record<string, string> = {
   'darwin|x64': 'Git-Desktop-x64.dmg',
   'darwin|arm64': 'Git-Desktop-arm64.dmg',

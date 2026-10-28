@@ -1,6 +1,14 @@
 import { ipcMain, shell } from 'electron';
-import type { AuthSource, ProviderAccount, ProviderId, ServerProbe } from '../../src/types';
+import type {
+  AccountsSnapshot,
+  AuthSource,
+  ProviderAccount,
+  ProviderId,
+  ProvidersForHost,
+  ServerProbe,
+} from '../../src/types';
 import { assertCredentialField, assertHost, assertRepoPath, assertString } from '../ipc-validators';
+import { isRejected } from '../auth/http';
 import { wrap, sendToRenderer, type WindowOptions } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn } from '../auth/oauth-flow';
 import { providerById, providerForHost, providerOptions } from '../auth/providers/registry';
@@ -47,9 +55,8 @@ async function accountFromToken(
   const provider = providerId === 'token' ? providerForHost(host) : providerById(providerId);
   if (provider) {
     const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
       throw new Error(
-        /returned 40[13]/.test(message)
+        isRejected(err)
           ? `${provider.displayName} rejected this token`
           : `Could not check this token with ${provider.displayName}`,
       );
@@ -160,17 +167,11 @@ async function revoke(providerId: ProviderId, host: string, grant: Grant): Promi
  */
 let lastError: string | null = null;
 
-export interface AccountsSnapshot {
-  accounts: ProviderAccount[];
-  persistent: boolean;
-  error: string | null;
-}
-
 export function registerAccountHandlers(options: WindowOptions = {}) {
   notify = () => sendToRenderer(options, 'account:changed');
 
   ipcMain.handle('account:list', () =>
-    wrap(async () => {
+    wrap(async (): Promise<AccountsSnapshot> => {
       const error = lastError;
       lastError = null;
       return { accounts: await listAccounts(), persistent: isPersistent(), error };
@@ -178,7 +179,7 @@ export function registerAccountHandlers(options: WindowOptions = {}) {
   );
 
   ipcMain.handle('account:providers', (_e, host: unknown) =>
-    wrap(async () => {
+    wrap(async (): Promise<ProvidersForHost> => {
       const known = typeof host === 'string' && host ? host : null;
       return {
         host: known,

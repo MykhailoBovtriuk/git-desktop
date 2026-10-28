@@ -1,5 +1,5 @@
 import type { AccountGroup, ProviderId, ServerProbe } from '../../../src/types';
-import { getJson, fetchAvatar, probe, sendRevoke } from '../http';
+import { basicAuth, getJson, fetchAvatar, probe, sendRevoke } from '../http';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface GitHubUser {
@@ -41,11 +41,10 @@ function makeGitHubProvider(opts: {
     tokenHelpUrl: host => `${opts.webBase(host)}/settings/tokens`,
     revokeToken: async ({ host, token, clientId, clientSecret }) => {
       if (!clientId || !clientSecret) return;
-      const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
       await sendRevoke(`${opts.apiBase(host)}/applications/${clientId}/token`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Basic ${basic}`,
+          Authorization: basicAuth(clientId, clientSecret),
           Accept: ACCEPT,
           'Content-Type': 'application/json',
         },

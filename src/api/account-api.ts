@@ -3,23 +3,12 @@ import type {
   CredentialHelperEntry,
   ProviderAccount,
   ProviderId,
-  ProviderOption,
   RemoteProtocol,
   ServerProbe,
+  AccountsSnapshot,
+  ProvidersForHost,
 } from '../types';
 import { invoke } from './invoke';
-
-export interface AccountsSnapshot {
-  accounts: ProviderAccount[];
-  persistent: boolean;
-  error: string | null;
-}
-
-export interface ProvidersForHost {
-  host: string | null;
-  providerId: ProviderId | null;
-  options: ProviderOption[];
-}
 
 export const accountApi = {
   list: () => invoke<AccountsSnapshot>('account:list'),

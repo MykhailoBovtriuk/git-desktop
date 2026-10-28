@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { gitConfigGet, runGit } from '../git/exec';
+import type { RemoteProtocol } from '../../src/types';
 
 const run = promisify(execFile);
 
@@ -32,8 +33,6 @@ function normalize(host: string): string {
   const lower = host.toLowerCase();
   return lower.endsWith('.') ? lower.slice(0, -1) : lower;
 }
-
-export type RemoteProtocol = 'ssh' | 'https' | 'other';
 
 export function protocolFromRemoteUrl(remoteUrl: string | null | undefined): RemoteProtocol | null {
   if (!remoteUrl) return null;
