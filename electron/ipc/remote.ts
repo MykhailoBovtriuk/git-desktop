@@ -1,27 +1,30 @@
 import { ipcMain } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as remoteGit from '../git/remote';
 import { assertBranchName } from '../ipc-validators';
 import { wrapLogged } from './wrap';
 
-export function registerRemoteHandlers(git: GitService) {
-  ipcMain.handle('git:fetch', () => wrapLogged('fetch', git, undefined, () => git.fetch()));
+export function registerRemoteHandlers(ctx: GitContext) {
+  ipcMain.handle('git:fetch', () =>
+    wrapLogged('fetch', ctx, undefined, () => remoteGit.fetch(ctx)),
+  );
 
-  ipcMain.handle('git:pull', () => wrapLogged('pull', git, undefined, () => git.pull()));
+  ipcMain.handle('git:pull', () => wrapLogged('pull', ctx, undefined, () => remoteGit.pull(ctx)));
 
-  ipcMain.handle('git:push', () => wrapLogged('push', git, undefined, () => git.push()));
+  ipcMain.handle('git:push', () => wrapLogged('push', ctx, undefined, () => remoteGit.push(ctx)));
 
   ipcMain.handle('git:switch-remote-protocol', (_e, to: unknown) =>
-    wrapLogged('remote-protocol', git, to, () => {
+    wrapLogged('remote-protocol', ctx, to, () => {
       if (to !== 'ssh' && to !== 'https') throw new Error('Invalid protocol');
-      return git.switchRemoteProtocol(to);
+      return remoteGit.switchRemoteProtocol(ctx, to);
     }),
   );
 
   ipcMain.handle('git:push-set-upstream', (_e, remote: string, branch: string) =>
-    wrapLogged('publish', git, branch, () => {
+    wrapLogged('publish', ctx, branch, () => {
       assertBranchName(remote, 'remote');
       assertBranchName(branch, 'branch');
-      return git.pushSetUpstream(remote, branch);
+      return remoteGit.pushSetUpstream(ctx, remote, branch);
     }),
   );
 }

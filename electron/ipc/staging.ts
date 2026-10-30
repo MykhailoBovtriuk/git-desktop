@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as status from '../git/status';
 import { assertString, assertStringArray, optionalBoolean } from '../ipc-validators';
 import { wrapLogged } from './wrap';
 
@@ -8,32 +9,32 @@ function pathsDetail(paths: unknown): string | undefined {
   return paths.length === 1 ? String(paths[0]) : `${paths.length} files`;
 }
 
-export function registerStagingHandlers(git: GitService) {
+export function registerStagingHandlers(ctx: GitContext) {
   ipcMain.handle('git:stage-files', (_e, paths: string[]) =>
-    wrapLogged('stage', git, pathsDetail(paths), () => {
+    wrapLogged('stage', ctx, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.stageFiles(paths);
+      return status.stageFiles(ctx, paths);
     }),
   );
 
   ipcMain.handle('git:unstage-files', (_e, paths: string[]) =>
-    wrapLogged('unstage', git, pathsDetail(paths), () => {
+    wrapLogged('unstage', ctx, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.unstageFiles(paths);
+      return status.unstageFiles(ctx, paths);
     }),
   );
 
   ipcMain.handle('git:discard-changes', (_e, paths: string[]) =>
-    wrapLogged('discard', git, pathsDetail(paths), () => {
+    wrapLogged('discard', ctx, pathsDetail(paths), () => {
       assertStringArray(paths, 'paths');
-      return git.discardChanges(paths);
+      return status.discardChanges(ctx, paths);
     }),
   );
 
   ipcMain.handle('git:commit', (_e, message: string) =>
-    wrapLogged('commit', git, message, () => {
+    wrapLogged('commit', ctx, message, () => {
       assertString(message, 'message');
-      return git.commit(message);
+      return status.commit(ctx, message);
     }),
   );
 
@@ -42,13 +43,13 @@ export function registerStagingHandlers(git: GitService) {
     (_e, patch: string, opts?: { cached?: boolean; reverse?: boolean }) =>
       wrapLogged(
         opts?.cached !== true ? 'discard' : opts.reverse === true ? 'unstage' : 'stage',
-        git,
+        ctx,
         undefined,
         async () => {
           assertString(patch, 'patch');
           const cached = optionalBoolean(opts?.cached, 'cached');
           const reverse = optionalBoolean(opts?.reverse, 'reverse');
-          return git.applyPatch(patch, { cached, reverse });
+          return status.applyPatch(ctx, patch, { cached, reverse });
         },
       ),
   );

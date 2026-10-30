@@ -3,12 +3,14 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { GitService } from '../../electron/git-service';
+import { GitContext } from '../../electron/git/context';
+import * as branchesGit from '../../electron/git/branches';
+import * as statusGit from '../../electron/git/status';
 import { logged, setLogSink } from '../../electron/log/git-logger';
 import type { LogEntry } from '../../src/types';
 
 let tmpDir: string;
-let git: GitService;
+let git: GitContext;
 let seen: LogEntry[];
 
 beforeEach(async () => {
@@ -18,7 +20,7 @@ beforeEach(async () => {
   execSync('git config user.name "Test"', { cwd: tmpDir });
   fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'hello');
   execSync('git add . && git commit -m "initial"', { cwd: tmpDir });
-  git = new GitService();
+  git = new GitContext();
   await git.openRepo(tmpDir);
   seen = [];
   setLogSink(e => seen.push(e));
@@ -33,8 +35,8 @@ describe('logged', () => {
   it('announces a running entry, then settles it with the git output', async () => {
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'changed');
     await logged('commit', tmpDir, 'second', async () => {
-      await git.stageFiles(['file.txt']);
-      return git.commit('second');
+      await statusGit.stageFiles(git, ['file.txt']);
+      return statusGit.commit(git, 'second');
     });
 
     expect(seen.map(e => e.status)).toEqual(['running', 'success']);
@@ -55,14 +57,16 @@ describe('logged', () => {
       await gate;
       return null;
     });
-    await git.getStatus();
+    await statusGit.getStatus(git);
     release();
     await op;
     expect(seen[1].commands).toEqual([]);
   });
 
   it('records the failure and rethrows it', async () => {
-    await expect(logged('checkout', tmpDir, 'nope', () => git.checkout('nope'))).rejects.toThrow();
+    await expect(
+      logged('checkout', tmpDir, 'nope', () => branchesGit.checkout(git, 'nope')),
+    ).rejects.toThrow();
     const done = seen[seen.length - 1];
     expect(done.status).toBe('error');
     expect(done.error).toBeTruthy();

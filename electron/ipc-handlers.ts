@@ -1,4 +1,4 @@
-import { GitService } from './git-service';
+import { GitContext } from './git/context';
 import { wrap } from './ipc/wrap';
 import { registerRepoHandlers, type RepoHandlerOptions } from './ipc/repo';
 import { registerStagingHandlers } from './ipc/staging';
@@ -19,7 +19,7 @@ import { assertRepoPath } from './ipc-validators';
 
 export type IpcHandlerOptions = RepoHandlerOptions & LogHandlerOptions;
 
-const gitService = new GitService();
+const gitContext = new GitContext();
 
 let registered = false;
 let terminals: TerminalControl | null = null;
@@ -44,21 +44,21 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
       await forgetRepoAccount(repoPath);
     }),
   );
-  registerRepoHandlers(gitService, {
+  registerRepoHandlers(gitContext, {
     ...options,
     onRepoOpened: root => {
       options.onRepoOpened?.(root);
       void logStore.ensureRepo(root).catch(() => {});
     },
   });
-  registerStagingHandlers(gitService);
-  registerRemoteHandlers(gitService);
-  registerBranchHandlers(gitService);
-  registerMergeHandlers(gitService);
-  registerRebaseHandlers(gitService);
-  registerStashHandlers(gitService);
-  registerDiffHandlers(gitService);
-  registerFileHandlers(gitService);
+  registerStagingHandlers(gitContext);
+  registerRemoteHandlers(gitContext);
+  registerBranchHandlers(gitContext);
+  registerMergeHandlers(gitContext);
+  registerRebaseHandlers(gitContext);
+  registerStashHandlers(gitContext);
+  registerDiffHandlers(gitContext);
+  registerFileHandlers(gitContext);
   registerAccountHandlers(options);
   registerAppHandlers(options);
   registerUpdateHandlers(options);

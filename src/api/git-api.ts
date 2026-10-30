@@ -7,6 +7,7 @@ import type {
   GitStatus,
   RemoteProtocol,
   StashEntry,
+  SwitchableProtocol,
 } from '../types';
 import { invoke } from './invoke';
 
@@ -33,7 +34,7 @@ export const gitApi = {
   fetch: () => invoke<null>('git:fetch'),
   pull: () => invoke<string>('git:pull'),
   push: () => invoke<null>('git:push'),
-  switchRemoteProtocol: (to: 'ssh' | 'https') =>
+  switchRemoteProtocol: (to: SwitchableProtocol) =>
     invoke<{ url: string | null; host: string | null; protocol: RemoteProtocol | null }>(
       'git:switch-remote-protocol',
       to,

@@ -1,5 +1,8 @@
 import { ipcMain, dialog } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as history from '../git/history';
+import * as remote from '../git/remote';
+import * as status from '../git/status';
 import { resolveRemote } from '../auth/remote-host';
 import { stripLegacyProfileKeys } from '../auth/legacy-cleanup';
 import { getIdentity, hasIdentity, setIdentity } from '../auth/identity-bootstrap';
@@ -15,14 +18,14 @@ export interface RepoHandlerOptions {
   onRepoOpened?: (root: string) => void;
 }
 
-export function registerRepoHandlers(git: GitService, options: RepoHandlerOptions = {}) {
+export function registerRepoHandlers(ctx: GitContext, options: RepoHandlerOptions = {}) {
   ipcMain.handle('git:open-repo', (_e, dirPath: string) =>
     wrap(async () => {
       assertString(dirPath, 'dirPath');
-      const root = await git.openRepo(dirPath);
+      const root = await ctx.openRepo(dirPath);
       options.onRepoOpened?.(root);
       await stripLegacyProfileKeys(root);
-      const remoteUrl = await git.getRemoteUrl().catch(() => null);
+      const remoteUrl = await remote.getRemoteUrl(ctx).catch(() => null);
       const { url, host, protocol } = await resolveRemote(remoteUrl);
       return { root, remoteUrl: url, remoteHost: host, remoteProtocol: protocol };
     }),
@@ -43,27 +46,27 @@ export function registerRepoHandlers(git: GitService, options: RepoHandlerOption
     wrap(() => {
       assertBoundedLogLimit(limit);
       assertNonNegativeInteger(offset, 'offset');
-      return git.getLog(limit, offset);
+      return history.getLog(ctx, limit, offset);
     }),
   );
 
-  ipcMain.handle('git:get-status', () => wrap(() => git.getStatus()));
+  ipcMain.handle('git:get-status', () => wrap(() => status.getStatus(ctx)));
 
-  ipcMain.handle('git:get-head-commit', () => wrap(() => git.getHeadCommit()));
+  ipcMain.handle('git:get-head-commit', () => wrap(() => history.getHeadCommit(ctx)));
 
-  ipcMain.handle('git:get-identity', () => wrap(() => getIdentity(git.getRepoPath())));
+  ipcMain.handle('git:get-identity', () => wrap(() => getIdentity(ctx.getRepoPath())));
 
   ipcMain.handle('git:set-identity', (_e, scope: unknown, identity: unknown) =>
     wrap(async () => {
       if (scope !== 'global' && scope !== 'local') throw new Error('Invalid argument: scope');
       assertIdentity(identity);
-      await setIdentity(scope, git.getRepoPath(), identity);
+      await setIdentity(scope, ctx.getRepoPath(), identity);
     }),
   );
 
   ipcMain.handle('git:has-identity', () =>
     wrap(async () => {
-      const root = git.getRepoPath();
+      const root = ctx.getRepoPath();
       return root ? hasIdentity(root) : true;
     }),
   );

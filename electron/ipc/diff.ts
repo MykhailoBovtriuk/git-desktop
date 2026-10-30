@@ -1,15 +1,17 @@
 import { ipcMain } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as history from '../git/history';
+import * as status from '../git/status';
 import { assertString, assertCommitHash, optionalBoolean } from '../ipc-validators';
 
 const ignoreWhitespace = (value: unknown) => optionalBoolean(value, 'ignoreWhitespace');
 import { wrap } from './wrap';
 
-export function registerDiffHandlers(git: GitService) {
+export function registerDiffHandlers(ctx: GitContext) {
   ipcMain.handle('git:get-commit-diff', (_e, hash: string) =>
     wrap(() => {
       assertCommitHash(hash, 'hash');
-      return git.getCommitDiff(hash);
+      return history.getCommitDiff(ctx, hash);
     }),
   );
 
@@ -17,21 +19,21 @@ export function registerDiffHandlers(git: GitService) {
     wrap(() => {
       assertCommitHash(hash, 'hash');
       assertString(filePath, 'filePath');
-      return git.getFileDiff(hash, filePath, ignoreWhitespace(ws));
+      return history.getFileDiff(ctx, hash, filePath, ignoreWhitespace(ws));
     }),
   );
 
   ipcMain.handle('git:get-working-diff', (_e, filePath: string, ws?: unknown) =>
     wrap(() => {
       assertString(filePath, 'filePath');
-      return git.getWorkingDiff(filePath, ignoreWhitespace(ws));
+      return status.getWorkingDiff(ctx, filePath, ignoreWhitespace(ws));
     }),
   );
 
   ipcMain.handle('git:get-staged-diff', (_e, filePath: string, ws?: unknown) =>
     wrap(() => {
       assertString(filePath, 'filePath');
-      return git.getStagedDiff(filePath, ignoreWhitespace(ws));
+      return status.getStagedDiff(ctx, filePath, ignoreWhitespace(ws));
     }),
   );
 }

@@ -47,7 +47,7 @@ The app remembers the last-opened repository and recent repos list across restar
 | Styling              | **Tailwind v4** + custom `@theme` tokens                           | Utility-first keeps style colocated with markup. v4 generates colors from `@theme` directives in CSS — no JS config needed. Custom palette via `--color-*` tokens (see §6).                                                                                     |
 | Internationalization | **i18next** + `react-i18next` + `i18next-browser-languagedetector` | Active for EN, UK and NL with namespaced JSON resources. All user-facing components call `useTranslation`; the language is chosen in Settings and cached in localStorage, defaulting to English.                                                                |
 | Diff parsing         | Custom parser in `src/components/diff/parse-diff.ts`               | The output of `git diff` is well-specified (unified diff format) but standalone NPM parsers add weight. The custom parser handles `--- /dev/null` (new file), `+++ /dev/null` (deletion), `Binary files differ`, and multi-file diffs.                          |
-| Testing              | **Vitest 4** + `@testing-library/react` + `jsdom`                  | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for `GitService` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior.                                       |
+| Testing              | **Vitest 4** + `@testing-library/react` + `jsdom`                  | Same config and transformer as Vite, so tests run in the same module graph as production. Real Git is used for the `electron/git/*` tests (creates a temp repo via `execSync`) rather than mocks — catches real Git CLI behavior.                               |
 | Packaging            | **electron-builder**                                               | Standard for shipping cross-platform Electron apps. Configured via `electron-builder.yml`.                                                                                                                                                                      |
 
 ### Why this stack instead of alternatives
@@ -69,11 +69,11 @@ Electron has **two distinct Node-VM-like processes** that communicate over IPC. 
 │                         MAIN PROCESS (Node.js)                       │
 │  electron/main.ts            ← entry; creates the BrowserWindow      │
 │  electron/ipc-handlers.ts    ← registers ipcMain.handle('git:*', …)  │
-│  electron/git-service.ts     ← simpleGit wrapper, owns repo state    │
+│  electron/git/*              ← git operations on a shared GitContext │
 │  electron/preload.ts         ← bridges to renderer (contextBridge)   │
 │                                                                       │
 │  Has: full Node.js APIs (fs, child_process, dialog, etc.)            │
-│  Owns: the GitService singleton, the filesystem dialog, app lifecycle│
+│  Owns: the GitContext, the filesystem dialog, app lifecycle          │
 └─────────────────────────────────────────────────────────────────────┘
                                   ▲
                                   │  IPC (contextBridge)
@@ -96,7 +96,7 @@ Electron has **two distinct Node-VM-like processes** that communicate over IPC. 
 
 - The renderer **cannot** call `fs.readFile`, `child_process.exec`, or `git` directly. It can only ask the main process to do so via IPC.
 - This is a hard security boundary set by `contextIsolation: true` and `nodeIntegration: false` in `electron/main.ts`. The renderer gets exactly one preload-injected object on `window.electronAPI` and nothing else.
-- All Git operations (and untracked-file reads, conflict-side reads) live in `GitService` (main) and are exposed via IPC handlers. The renderer treats `gitApi` as if it were a remote HTTP API.
+- All Git operations (and untracked-file reads, conflict-side reads) live in the `electron/git/*` modules (main) and are exposed via IPC handlers. The renderer treats `gitApi` as if it were a remote HTTP API.
 
 ### The IPC handshake — anatomy of one call
 
@@ -106,8 +106,8 @@ User clicks "Stage All". The chain:
 2. **`repo-store.ts`** → `gitApi.stageFiles(paths)`
 3. **`api/git-api.ts`** → `invoke<null>('git:stage-files', paths)` which calls `window.electronAPI.invoke('git:stage-files', paths)`
 4. **`preload.ts`** → `ipcRenderer.invoke('git:stage-files', paths)` — crosses the process boundary
-5. **`ipc-handlers.ts`** → matches the channel name, calls `gitService.stageFiles(paths)`, wraps result as `{ data }` or `{ error, code }`
-6. **`git-service.ts`** → `simpleGit().add(paths)` → shells out to `git add ...`
+5. **`ipc/staging.ts`** → matches the channel name, calls `status.stageFiles(ctx, paths)`, wraps result as `{ data }` or `{ error }`
+6. **`git/status.ts`** → `git add -- <paths>` through simple-git
 7. Result bubbles back. `git-api.ts` checks for `'error' in result`, throws if present, else returns `result.data`.
 8. The store then calls `loadStatus()` to refresh; the UI re-renders with the file moved to the staged list.
 
@@ -164,12 +164,12 @@ Only the generic `invoke` is exposed — not the channel list, not `ipcRenderer`
 
 This makes the renderer reasoning local: a component knows it calls a store, the store knows it calls the API. Adding a new Git operation is a 4-step ritual:
 
-1. Add a method to `GitService` (main).
-2. Register the IPC channel in `ipc-handlers.ts`.
+1. Add a function to the right `electron/git/*` module (main).
+2. Register the IPC channel in the matching `electron/ipc/*` file.
 3. Add the typed wrapper in `git-api.ts`.
 4. Add an action in `repo-store.ts` (if it mutates state).
 
-The `MergeEditor` rewrite added three new methods this way (`readFile`, `writeFile`, `getConflictSides`).
+The `MergeEditor` rewrite added its methods this way (`readFile`, `writeFile`).
 
 ---
 
@@ -212,7 +212,7 @@ Only `repoPath` and `recentRepos` survive a restart. `commits`, `branches`, `sta
 
 #### Bootstrap
 
-`src/App.tsx` reads `repoPath` on mount and re-runs `openRepo` to re-initialize the backend `GitService` and pull fresh data:
+`src/App.tsx` reads `repoPath` on mount and re-runs `openRepo` to re-initialize the backend `GitContext` and pull fresh data:
 
 ```ts
 useEffect(() => {
@@ -346,32 +346,32 @@ type ActiveView = 'changes' | 'history' | 'graph' | 'merge-editor';
 
 ## 8. Git operations reference
 
-| User intent         | Component                            | Store action             | `gitApi` call           | IPC channel              | `GitService` method     | `simple-git` op                                                                |
-| ------------------- | ------------------------------------ | ------------------------ | ----------------------- | ------------------------ | ----------------------- | ------------------------------------------------------------------------------ |
-| Open repo dialog    | `WelcomeScreen` / `RepoDropdown`     | `openDialog`             | `openDialog()`          | `git:open-dialog`        | `openRepo(picked)`      | (filesystem dialog + new `simpleGit(path)`)                                    |
-| List branches       | `Titlebar` (on mount)                | `loadBranches`           | `getBranches()`         | `git:get-branches`       | `getBranches()`         | `git.branch(['-a'])`                                                           |
-| Read log            | `Sidebar` / `HistoryView`            | `loadLog`                | `getLog(200, 0)`        | `git:get-log`            | `getLog(limit, offset)` | `git.raw(['log', '--all', '--topo-order', ...])` with `%H%x00%s%x00...` format |
-| Get status          | All                                  | `loadStatus`             | `getStatus()`           | `git:get-status`         | `getStatus()`           | `git.status()` — returns staged, unstaged, **ahead, behind** in one call       |
-| Stage file          | `FileList` `+` button                | `stageFiles([path])`     | `stageFiles(paths)`     | `git:stage-files`        | `stageFiles(paths)`     | `git.add(paths)`                                                               |
-| Unstage file        | `FileList` `−` button                | `unstageFiles([path])`   | `unstageFiles(paths)`   | `git:unstage-files`      | `unstageFiles(paths)`   | `git.reset(['HEAD', '--', ...paths])`                                          |
-| Discard             | `FileList` `×` button                | `discardChanges([path])` | `discardChanges(paths)` | `git:discard-changes`    | `discardChanges(paths)` | `git.checkout(['--', ...paths])`                                               |
-| Commit              | `CommitForm`                         | `commit(msg)`            | `commit(msg)`           | `git:commit`             | `commit(msg)`           | `git.commit(msg)`                                                              |
-| Fetch               | `Footer`                             | `fetch`                  | `fetch()`               | `git:fetch`              | `fetch()`               | `git.fetch()`                                                                  |
-| Pull                | `Footer`                             | `pull`                   | `pull()`                | `git:pull`               | `pull()`                | `git.pull()` (with `'Already up to date'` fallback)                            |
-| Push                | `Footer`                             | `push`                   | `push()`                | `git:push`               | `push()`                | `git.push()`                                                                   |
-| Checkout            | `BranchDropdown`                     | `checkout(name)`         | `checkout(name)`        | `git:checkout`           | `checkout(name)`        | `git.checkout(name)`                                                           |
-| Merge               | `BranchDropdown`                     | `merge(name)`            | `merge(name)`           | `git:merge`              | `merge(name)`           | `git.merge([name])` — returns `{ success, conflicts[] }`                       |
-| Rebase              | `BranchDropdown`                     | `rebase(name)`           | `rebase(name)`          | `git:rebase`             | `rebase(name)`          | `git.rebase([name])`                                                           |
-| Delete branch       | `BranchDropdown`                     | `deleteBranch(name)`     | `deleteBranch(name)`    | `git:delete-branch`      | `deleteBranch(name)`    | `git.deleteLocalBranch(name, true)`                                            |
-| Commit diff         | `HistoryView`                        | (effect)                 | `getCommitDiff(hash)`   | `git:get-commit-diff`    | `getCommitDiff(hash)`   | `git.diffSummary([hash^, hash])` or `[EMPTY_TREE, hash]` for root commit       |
-| File diff in commit | `DiffViewer` (history mode)          | (effect)                 | `getFileDiff(hash, p)`  | `git:get-file-diff`      | `getFileDiff(hash, p)`  | `git.diff([hash^, hash, '--', p])` or empty-tree fallback                      |
-| Working diff        | `DiffViewer` (changes mode)          | (effect)                 | `getWorkingDiff(p)`     | `git:get-working-diff`   | `getWorkingDiff(p)`     | `git.diff(['--', p])` or **synthesized untracked diff** (see §9)               |
-| Staged diff         | `DiffViewer` (changes mode, staged)  | (effect)                 | `getStagedDiff(p)`      | `git:get-staged-diff`    | `getStagedDiff(p)`      | `git.diff(['--cached', '--', p])`                                              |
-| Conflict sides      | `MergeEditor`                        | (effect)                 | `getConflictSides(p)`   | `git:get-conflict-sides` | `getConflictSides(p)`   | `git.show([':2:p'])` (ours), `:3:p` (theirs), `:1:p` (base)                    |
-| Read file           | `MergeEditor`                        | (effect)                 | `readFile(p)`           | `git:read-file`          | `readFile(p)`           | `fs.readFile(path.join(repo, p))`                                              |
-| Write file          | `MergeEditor` (save)                 | (effect)                 | `writeFile(p, c)`       | `git:write-file`         | `writeFile(p, c)`       | `fs.writeFile(path.join(repo, p), c)`                                          |
-| Mark resolved       | `MergeEditor`                        | —                        | `markResolved(p)`       | `git:mark-resolved`      | `markResolved(p)`       | `git.add([p])`                                                                 |
-| Abort merge         | `MergeConflictModal` / `MergeEditor` | `abortMerge`             | `abortMerge()`          | `git:abort-merge`        | `abortMerge()`          | `git.merge(['--abort'])`                                                       |
+| User intent         | Component                            | Store action             | `gitApi` call           | IPC channel              | `electron/git/*` function | `simple-git` op                                                                |
+| ------------------- | ------------------------------------ | ------------------------ | ----------------------- | ------------------------ | ------------------------- | ------------------------------------------------------------------------------ |
+| Open repo dialog    | `WelcomeScreen` / `RepoDropdown`     | `openDialog`             | `openDialog()`          | `git:open-dialog`        | `openRepo(picked)`        | (filesystem dialog + new `simpleGit(path)`)                                    |
+| List branches       | `Titlebar` (on mount)                | `loadBranches`           | `getBranches()`         | `git:get-branches`       | `getBranches()`           | `git.branch(['-a'])`                                                           |
+| Read log            | `Sidebar` / `HistoryView`            | `loadLog`                | `getLog(200, 0)`        | `git:get-log`            | `getLog(limit, offset)`   | `git.raw(['log', '--all', '--topo-order', ...])` with `%H%x00%s%x00...` format |
+| Get status          | All                                  | `loadStatus`             | `getStatus()`           | `git:get-status`         | `getStatus()`             | `git.status()` — returns staged, unstaged, **ahead, behind** in one call       |
+| Stage file          | `FileList` `+` button                | `stageFiles([path])`     | `stageFiles(paths)`     | `git:stage-files`        | `stageFiles(paths)`       | `git.add(paths)`                                                               |
+| Unstage file        | `FileList` `−` button                | `unstageFiles([path])`   | `unstageFiles(paths)`   | `git:unstage-files`      | `unstageFiles(paths)`     | `git.reset(['HEAD', '--', ...paths])`                                          |
+| Discard             | `FileList` `×` button                | `discardChanges([path])` | `discardChanges(paths)` | `git:discard-changes`    | `discardChanges(paths)`   | `git.checkout(['--', ...paths])`                                               |
+| Commit              | `CommitForm`                         | `commit(msg)`            | `commit(msg)`           | `git:commit`             | `commit(msg)`             | `git.commit(msg)`                                                              |
+| Fetch               | `Footer`                             | `fetch`                  | `fetch()`               | `git:fetch`              | `fetch()`                 | `git.fetch()`                                                                  |
+| Pull                | `Footer`                             | `pull`                   | `pull()`                | `git:pull`               | `pull()`                  | `git.pull()` (with `'Already up to date'` fallback)                            |
+| Push                | `Footer`                             | `push`                   | `push()`                | `git:push`               | `push()`                  | `git.push()`                                                                   |
+| Checkout            | `BranchDropdown`                     | `checkout(name)`         | `checkout(name)`        | `git:checkout`           | `checkout(name)`          | `git.checkout(name)`                                                           |
+| Merge               | `BranchDropdown`                     | `merge(name)`            | `merge(name)`           | `git:merge`              | `merge(name)`             | `git.merge([name])` — returns `{ success, conflicts[] }`                       |
+| Rebase              | `BranchDropdown`                     | `rebase(name)`           | `rebase(name)`          | `git:rebase`             | `rebase(name)`            | `git.rebase([name])`                                                           |
+| Delete branch       | `BranchDropdown`                     | `deleteBranch(name)`     | `deleteBranch(name)`    | `git:delete-branch`      | `deleteBranch(name)`      | `git.deleteLocalBranch(name, true)`                                            |
+| Commit diff         | `HistoryView`                        | (effect)                 | `getCommitDiff(hash)`   | `git:get-commit-diff`    | `getCommitDiff(hash)`     | `git.diffSummary([hash^, hash])` or `[EMPTY_TREE, hash]` for root commit       |
+| File diff in commit | `DiffViewer` (history mode)          | (effect)                 | `getFileDiff(hash, p)`  | `git:get-file-diff`      | `getFileDiff(hash, p)`    | `git.diff([hash^, hash, '--', p])` or empty-tree fallback                      |
+| Working diff        | `DiffViewer` (changes mode)          | (effect)                 | `getWorkingDiff(p)`     | `git:get-working-diff`   | `getWorkingDiff(p)`       | `git.diff(['--', p])` or **synthesized untracked diff** (see §9)               |
+| Staged diff         | `DiffViewer` (changes mode, staged)  | (effect)                 | `getStagedDiff(p)`      | `git:get-staged-diff`    | `getStagedDiff(p)`        | `git.diff(['--cached', '--', p])`                                              |
+| Conflict sides      | `MergeEditor`                        | (effect)                 | `getConflictSides(p)`   | `git:get-conflict-sides` | `getConflictSides(p)`     | `git.show([':2:p'])` (ours), `:3:p` (theirs), `:1:p` (base)                    |
+| Read file           | `MergeEditor`                        | (effect)                 | `readFile(p)`           | `git:read-file`          | `readFile(p)`             | `fs.readFile(path.join(repo, p))`                                              |
+| Write file          | `MergeEditor` (save)                 | (effect)                 | `writeFile(p, c)`       | `git:write-file`         | `writeFile(p, c)`         | `fs.writeFile(path.join(repo, p), c)`                                          |
+| Mark resolved       | `MergeEditor`                        | —                        | `markResolved(p)`       | `git:mark-resolved`      | `markResolved(p)`         | `git.add([p])`                                                                 |
+| Abort merge         | `MergeConflictModal` / `MergeEditor` | `abortMerge`             | `abortMerge()`          | `git:abort-merge`        | `abortMerge()`            | `git.merge(['--abort'])`                                                       |
 
 ---
 
@@ -454,7 +454,7 @@ These are non-obvious cases where naive code would fail. The handling is deliber
 
 ### Root commit has no parent
 
-`git diff HASH^ HASH` fails on the first commit (no parent ref). `GitService.hasParent(hash)` does `git rev-parse --verify HASH^` and falls back to git's well-known **empty tree SHA** `4b825dc642cb6eb9a060e54bf8d69288fbee4904` when no parent exists. Diffing against the empty tree produces a diff that shows the full file as additions — which is exactly what you want for the initial commit. Applied in both `getCommitDiff` and `getFileDiff`.
+`git diff HASH^ HASH` fails on the first commit (no parent ref). `GitContext.hasParent(hash)` does `git rev-parse --verify HASH^` and falls back to git's well-known **empty tree SHA** `4b825dc642cb6eb9a060e54bf8d69288fbee4904` when no parent exists. Diffing against the empty tree produces a diff that shows the full file as additions — which is exactly what you want for the initial commit. Applied in both `getCommitDiff` and `getFileDiff`.
 
 ### Conflicted files (`UU` status)
 
@@ -551,9 +551,9 @@ The duplicate compile of `electron/*.ts` (once for type-check, once for emit) is
 
 ## 11. Testing
 
-`vitest run` executes 220+ tests across the suite (GitService integration, store logic, pure-function units, and component tests). Highlights:
+`vitest run` executes 220+ tests across the suite (git integration, store logic, pure-function units, and component tests). Highlights:
 
-- `tests/git-service.test.ts` — **real Git** integration tests. `beforeEach` creates a temp directory via `os.tmpdir()` + `fs.mkdtempSync`, `execSync('git init')`, sets test user, writes a file, commits. Then each test runs against this real repo. Covers: openRepo, log, branches, status, stage/unstage, commit, discard, checkout, working diff, **root commit diff**, **untracked file diff synthesis**.
+- `tests/git-operations.test.ts` — **real Git** integration tests. `beforeEach` creates a temp directory via `os.tmpdir()` + `fs.mkdtempSync`, `execSync('git init')`, sets test user, writes a file, commits. Then each test runs against this real repo. Covers: openRepo, log, branches, status, stage/unstage, commit, discard, checkout, working diff, **root commit diff**, **untracked file diff synthesis**.
 
 - `tests/graph-layout.test.ts` — pure unit tests of the lane-allocation algorithm. Linear chain → lane 0. Merge commit → 2 edges. Empty input → empty output.
 
@@ -565,7 +565,7 @@ The duplicate compile of `electron/*.ts` (once for type-check, once for emit) is
 
 ### Testing philosophy
 
-- **GitService gets real Git, not mocks.** A mocked simple-git would let bugs (e.g. status code mapping) slip past tests but break in production. The tradeoff: tests are slightly slower (~1.5s total) because they shell out.
+- **Git operations get real Git, not mocks.** A mocked simple-git would let bugs (e.g. status code mapping) slip past tests but break in production. The tradeoff: tests are slightly slower (~1.5s total) because they shell out.
 - **Stores get mocked API.** We're testing store logic, not Git logic.
 - **Pure functions get unit tests.** `computeLayout`, `parseDiff`, `relativeTime`.
 
@@ -579,8 +579,8 @@ The test runner defaults to `environment: 'node'` (set in `vitest.config.ts`). C
 
 - **`main.ts`** — App entry. Creates a `BrowserWindow` with `titleBarStyle: 'hiddenInset'`, `contextIsolation: true`. Registers IPC handlers. Loads either the Vite dev URL or the bundled `dist/index.html`. Opens DevTools in dev.
 - **`preload.ts`** — Exposes exactly one thing: `window.electronAPI.invoke(channel, ...args)`.
-- **`ipc-handlers.ts`** — Registers all `git:*` channels. Each handler wraps the `GitService` call in `wrap()`, which converts thrown errors to `{ error, code }` and successes to `{ data }`. This is the renderer ↔ main contract.
-- **`git-service.ts`** — Stateful service. Owns the `simpleGit` instance and the open repo path. All methods assume `openRepo` was called first. Beyond standard ops, also handles: root-commit diff fallback, untracked diff synthesis, conflict sides via `git show :N:path`, raw file read/write.
+- **`ipc-handlers.ts`** — Registers all `git:*` channels. Each `ipc/*` handler wraps the `electron/git/*` call in `wrap()`, which converts thrown errors to `{ error }` and successes to `{ data }`. This is the renderer ↔ main contract.
+- **`git/context.ts`** — `GitContext` owns the `simpleGit` instance and the open repo path; the `git/*` modules take it as their first argument and assume `openRepo` was called first. Beyond standard ops they handle the root-commit diff fallback, untracked diff synthesis and raw file read/write.
 - **`auth/`** — Everything about signing in to a Git host. See §8b.
 
 ### `src/api/`
@@ -693,7 +693,7 @@ git-desktop/
 │   ├── main.ts                      # Entry, BrowserWindow creation
 │   ├── preload.ts                   # window.electronAPI bridge
 │   ├── ipc-handlers.ts              # All git:* IPC channels
-│   └── git-service.ts               # simple-git wrapper + repo state
+│   └── git/                         # git operations on a shared GitContext
 ├── src/                             # Renderer (Chromium)
 │   ├── main.tsx                     # React root
 │   ├── App.tsx                      # Auto-refresh + auto-open last repo
@@ -729,7 +729,7 @@ git-desktop/
 │       ├── dropdowns/{BranchDropdown,RepoDropdown}.tsx
 │       └── common/Toast.tsx
 ├── tests/                           # Vitest
-│   ├── git-service.test.ts          # Real Git integration tests
+│   ├── git-operations.test.ts       # Real Git integration tests
 │   ├── graph-layout.test.ts         # Pure unit tests
 │   ├── parse-diff.test.ts           # Pure unit tests
 │   ├── setup.ts                     # jest-dom + localStorage polyfill
@@ -755,12 +755,12 @@ git-desktop/
 
 Want to add, say, a "create branch" feature?
 
-1. **Backend.** Add `createBranch(name: string)` to `GitService` → `git.checkoutBranch(name, 'HEAD')`.
+1. **Backend.** Add `createBranch(ctx, name)` to `electron/git/branches.ts`.
 2. **IPC.** Register `'git:create-branch'` in `ipc-handlers.ts`.
 3. **API.** Add `createBranch: (name: string) => invoke<null>('git:create-branch', name)` to `git-api.ts`.
 4. **Store.** Add `createBranch: async (name) => { await gitApi.createBranch(name); await get().loadBranches(); }` to `repo-store.ts`.
 5. **UI.** Add an input + button in `BranchDropdown.tsx` (or a new modal) that calls the store action.
-6. **Test.** Add `it('createBranch creates and switches', ...)` to `tests/git-service.test.ts` (real Git) and optionally a store test.
+6. **Test.** Add `it('createBranch creates and switches', ...)` to `tests/git-operations.test.ts` (real Git) and optionally a store test.
 
 That's the four-step ritual referenced in §4 plus UI and tests.
 
