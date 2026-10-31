@@ -6,7 +6,7 @@ import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { basenameFromPath } from '../../lib/basename';
 import { accountApi } from '../../api/account-api';
-import { Badge, Button, TruncatedText, UserIcon, cn } from '../../shared/ui';
+import { Avatar, Badge, Button, Card, TruncatedText, cn } from '../../shared/ui';
 import type { ProviderAccount, ProviderId } from '../../types';
 
 type ServiceId = 'github' | 'gitlab' | 'bitbucket' | 'azure' | 'other';
@@ -197,13 +197,9 @@ function AccountRow({
 }) {
   const { t } = useTranslation('account');
   return (
-    <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
+    <Card>
       <div className="flex items-center gap-3 min-w-0">
-        {account.avatarDataUrl ? (
-          <img src={account.avatarDataUrl} alt="" className="w-8 h-8 rounded-full shrink-0" />
-        ) : (
-          <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
-        )}
+        <Avatar src={account.avatarDataUrl} size="md" />
         <div className="min-w-0">
           <TruncatedText as="p" className="text-text text-sm">
             {account.name || account.login}
@@ -216,7 +212,7 @@ function AccountRow({
       <Button variant="secondary" size="sm" onClick={onSignOut}>
         {t('section.signOut')}
       </Button>
-    </div>
+    </Card>
   );
 }
 

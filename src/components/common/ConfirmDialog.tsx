@@ -15,21 +15,22 @@ export function ConfirmDialog() {
     <Modal
       title={confirmRequest.title}
       titleVariant={confirmRequest.danger ? 'danger' : 'default'}
-      level="high"
       onClose={() => resolveConfirm(false)}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => resolveConfirm(false)}>
+            {t('common:cancel')}
+          </Button>
+          <Button
+            variant={confirmRequest.danger ? 'danger' : 'primary'}
+            onClick={() => resolveConfirm(true)}
+          >
+            {confirmRequest.confirmLabel}
+          </Button>
+        </>
+      }
     >
-      <p className="text-subtext text-sm whitespace-pre-wrap">{confirmRequest.message}</p>
-      <div className="flex justify-end gap-2 mt-4">
-        <Button variant="secondary" onClick={() => resolveConfirm(false)}>
-          {t('common:cancel')}
-        </Button>
-        <Button
-          variant={confirmRequest.danger ? 'danger' : 'primary'}
-          onClick={() => resolveConfirm(true)}
-        >
-          {confirmRequest.confirmLabel}
-        </Button>
-      </div>
+      <p className="text-subtext text-sm whitespace-pre-wrap mb-2">{confirmRequest.message}</p>
     </Modal>
   );
 }

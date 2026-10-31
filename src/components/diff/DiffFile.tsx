@@ -100,13 +100,8 @@ export function DiffFile({
                 key={virtualRow.index}
                 data-index={virtualRow.index}
                 ref={rowVirtualizer.measureElement}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
+                className="absolute top-0 left-0 w-full"
+                style={{ transform: `translateY(${virtualRow.start}px)` }}
               >
                 {row.kind === 'hunk' ? (
                   <div className="flex items-center justify-between bg-surface0 text-subtext px-3 py-0.5 border-y border-surface1">

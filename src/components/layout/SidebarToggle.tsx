@@ -2,9 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUiStore, isOverlayView } from '../../stores/ui-store';
 import { shortcutLabel } from '../../lib/keyboard';
 import { useShortcut } from '../../hooks/use-shortcut';
-import { GitLogoIcon, cn } from '../../shared/ui';
-
-const GIT_ORANGE = '#F05032';
+import { GitLogoIcon, IconButton } from '../../shared/ui';
 
 export function SidebarToggle() {
   const { t } = useTranslation('common');
@@ -18,19 +16,14 @@ export function SidebarToggle() {
   const label = t(open ? 'hideSidebar' : 'showSidebar', { shortcut });
 
   return (
-    <button
+    <IconButton
       type="button"
+      icon={GitLogoIcon}
+      tint={open ? 'git' : 'subtext'}
       onClick={toggleSidebar}
       aria-pressed={open}
       aria-label={label}
       title={label}
-      className={cn(
-        'inline-flex items-center justify-center rounded p-1 transition-colors hover:bg-surface1',
-        !open && 'text-subtext hover:text-text',
-      )}
-      style={open ? { color: GIT_ORANGE } : undefined}
-    >
-      <GitLogoIcon size={16} aria-hidden="true" />
-    </button>
+    />
   );
 }

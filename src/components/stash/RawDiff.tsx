@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../shared/ui';
 
 interface RawDiffProps {
   raw: string;
@@ -16,11 +17,7 @@ function lineClass(line: string): string {
 export function RawDiff({ raw }: RawDiffProps) {
   const { t } = useTranslation('diff');
   if (!raw.trim()) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-subtext text-xs">{t('diff:noDiffToDisplay')}</p>
-      </div>
-    );
+    return <EmptyState>{t('diff:noDiffToDisplay')}</EmptyState>;
   }
   const lines = raw.split('\n');
   return (

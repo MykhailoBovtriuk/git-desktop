@@ -1,6 +1,13 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, DropdownRow, MenuItem, TruncatedText } from '../../shared/ui';
+import {
+  ContextMenu,
+  DropdownRow,
+  IconButton,
+  MenuItem,
+  MoreIcon,
+  TruncatedText,
+} from '../../shared/ui';
 
 interface BranchItemProps {
   name: string;
@@ -49,24 +56,20 @@ export function BranchItem({
           <TruncatedText className="text-text max-w-40">{name}</TruncatedText>
         </button>
         {current && <span className="text-blue text-xs">✓</span>}
-        <button
+        <IconButton
           ref={btnRef}
+          icon={MoreIcon}
+          size="sm"
           onClick={e => {
             e.stopPropagation();
             onToggleContext();
           }}
-          className="ml-2 px-1 text-subtext hover:text-text"
+          className="ml-2"
           aria-label={t('moreActions')}
-        >
-          ⋯
-        </button>
+        />
       </DropdownRow>
 
-      <ContextMenu
-        open={contextOpen}
-        anchorRef={btnRef}
-        height={152 + 28 * [onPull, onPush, onPublish].filter(Boolean).length}
-      >
+      <ContextMenu open={contextOpen} anchorRef={btnRef}>
         <MenuItem onClick={onCheckout}>{t('checkout')}</MenuItem>
         {onPull && (
           <MenuItem onClick={onPull}>

@@ -142,12 +142,7 @@ export function TerminalView({ visible }: { visible: boolean }) {
               />
             </div>
           )}
-          <ContextMenu
-            open={menuOpen}
-            anchorRef={menuButtonRef}
-            anchor="below"
-            height={shells.length * 28 + 8}
-          >
+          <ContextMenu open={menuOpen} anchorRef={menuButtonRef} anchor="below">
             {shells.map(shell => (
               <MenuItem key={shell.id} onClick={() => void open(shell.id)}>
                 {shell.label}

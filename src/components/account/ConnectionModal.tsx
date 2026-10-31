@@ -6,9 +6,10 @@ import { useUiStore } from '../../stores/ui-store';
 import { errorMessage } from '../../lib/error-message';
 import { useBusy } from '../../hooks/use-busy';
 import { useCurrentAccount } from '../../hooks/use-current-account';
-import { Button, Modal, SegmentedControl, UserIcon } from '../../shared/ui';
+import { Avatar, Button, Card, Modal, SegmentedControl } from '../../shared/ui';
+import type { SwitchableProtocol } from '../../types';
 
-type Protocol = 'ssh' | 'https';
+type Protocol = SwitchableProtocol;
 
 export function ConnectionModal() {
   const { t } = useTranslation('account');
@@ -115,7 +116,7 @@ export function ConnectionModal() {
           </div>
         ) : null}
 
-        <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
+        <Card>
           <AuthCard protocol={protocol} host={remoteHost} />
           <div className="flex items-center gap-2 shrink-0">
             {protocol === 'https' && current && (
@@ -147,7 +148,7 @@ export function ConnectionModal() {
                 </Button>
               )}
           </div>
-        </div>
+        </Card>
 
         {protocol === 'https' && !account.persistent && (
           <p className="text-yellow text-xs">{t('section.notPersistent')}</p>
@@ -184,11 +185,7 @@ function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string 
 
   return (
     <div className="flex items-center gap-3 min-w-0">
-      {current?.avatarDataUrl && protocol === 'https' ? (
-        <img src={current.avatarDataUrl} alt="" className="w-8 h-8 rounded-full shrink-0" />
-      ) : (
-        <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
-      )}
+      <Avatar src={protocol === 'https' ? current?.avatarDataUrl : null} size="md" />
       <div className="min-w-0">
         <p className="text-text text-sm">{title}</p>
         {detail && <p className="text-subtext text-xs">{detail}</p>}

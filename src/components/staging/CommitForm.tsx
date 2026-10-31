@@ -74,22 +74,17 @@ export function CommitForm() {
       {!hasIdentity && (
         <div className="flex flex-col gap-1 rounded bg-yellow/10 p-2">
           <p className="text-yellow text-xs">{t('noIdentity')}</p>
-          <button
+          <Button
+            variant="link"
+            size="xs"
             onClick={() => openSettings('git')}
-            className="text-blue text-xs hover:underline self-start"
+            className="self-start"
           >
             {t('noIdentityAction')}
-          </button>
+          </Button>
         </div>
       )}
-      <Button
-        variant="primary"
-        size="sm"
-        fullWidth
-        onClick={handleCommit}
-        disabled={!canCommit}
-        className="py-1.5 font-medium"
-      >
+      <Button variant="primary" size="block" fullWidth onClick={handleCommit} disabled={!canCommit}>
         {loading ? '...' : t('commitButton')}
       </Button>
     </div>

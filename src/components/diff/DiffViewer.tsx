@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useFileDiff } from './useFileDiff';
 import { useDiffHighlighter } from './useDiffHighlighter';
 import { DiffFile } from './DiffFile';
+import { EmptyState } from '../../shared/ui';
 
 export function DiffViewer() {
   const { t } = useTranslation('diff');
@@ -18,8 +19,8 @@ export function DiffViewer() {
   } = useFileDiff();
   const renderContent = useDiffHighlighter(selectedFile);
 
-  if (!hasSelection) return <Centered>{t('noDiff')}</Centered>;
-  if (loading) return <Centered>{t('common:loading')}</Centered>;
+  if (!hasSelection) return <EmptyState>{t('noDiff')}</EmptyState>;
+  if (loading) return <EmptyState>{t('common:loading')}</EmptyState>;
   if (error) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-1 text-red text-sm px-4 text-center">
@@ -28,7 +29,7 @@ export function DiffViewer() {
       </div>
     );
   }
-  if (diffs.length === 0) return <Centered>{t('noDiffToDisplay')}</Centered>;
+  if (diffs.length === 0) return <EmptyState>{t('noDiffToDisplay')}</EmptyState>;
 
   const hunkOffsets = diffs.reduce<number[]>((acc, _d, i) => {
     acc[i] = i === 0 ? 0 : acc[i - 1] + diffs[i - 1].hunks.length;
@@ -50,11 +51,5 @@ export function DiffViewer() {
         />
       ))}
     </div>
-  );
-}
-
-function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="h-full flex items-center justify-center text-subtext text-sm">{children}</div>
   );
 }

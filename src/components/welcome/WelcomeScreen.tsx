@@ -31,27 +31,24 @@ export function WelcomeScreen() {
       </h1>
       <p className="text-subtext text-sm">{t('tagline')}</p>
       <div className="inline-flex flex-col gap-2 mt-2">
-        <Button
-          variant="primary"
-          onClick={handleDialog}
-          className="px-5 py-2 font-medium"
-          fullWidth
-        >
+        <Button size="lg" onClick={handleDialog} fullWidth>
           {t('open')}
         </Button>
         <div className="flex items-center gap-2">
           <Button
             variant="surface"
+            size="lg"
             onClick={() => openOverlayView('settings')}
-            className="px-5 py-2 font-medium flex flex-1 items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2"
           >
             <SettingsIcon size={16} aria-hidden="true" />
             {tc('settings')}
           </Button>
           <Button
             variant="surface"
+            size="lg"
             onClick={() => openOverlayView('about')}
-            className="px-5 py-2 font-medium flex flex-1 items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2"
           >
             <InfoIcon size={16} aria-hidden="true" />
             {tc('info')}

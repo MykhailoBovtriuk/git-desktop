@@ -5,7 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { relativeTime } from '../../lib/relative-time';
-import { ListItem, Badge, TruncatedText } from '../../shared/ui';
+import { ListItem, TruncatedText, RefBadges } from '../../shared/ui';
 
 interface CommitListProps {
   filter: string;
@@ -76,13 +76,8 @@ export function CommitList({ filter }: CommitListProps) {
               key={commit.hash}
               data-index={virtualRow.index}
               ref={rowVirtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+              className="absolute top-0 left-0 w-full"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
               <ListItem
                 selected={isSelected}
@@ -101,13 +96,7 @@ export function CommitList({ filter }: CommitListProps) {
                 </div>
                 {commit.refs.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {commit.refs.slice(0, 3).map(ref => (
-                      <Badge key={ref} variant="ref">
-                        <TruncatedText className="block max-w-[20ch]">
-                          {ref.replace('HEAD -> ', '')}
-                        </TruncatedText>
-                      </Badge>
-                    ))}
+                    <RefBadges refs={commit.refs} maxWidth="max-w-[20ch]" />
                   </div>
                 )}
               </ListItem>

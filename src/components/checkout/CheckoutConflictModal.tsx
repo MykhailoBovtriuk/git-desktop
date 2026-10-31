@@ -36,7 +36,6 @@ export function CheckoutConflictModal() {
     <Modal
       title={t('title')}
       titleVariant="danger"
-      level="high"
       width="w-[75%] max-w-xl"
       subtitle={t('subtitle', { branch })}
       onClose={cancelCheckout}

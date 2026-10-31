@@ -5,7 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
 import { relativeTime } from '../../lib/relative-time';
-import { Badge, TruncatedText } from '../../shared/ui';
+import { TruncatedText, EmptyState, RefBadges } from '../../shared/ui';
 
 const ROW_H = 28;
 const LANE_W = 20;
@@ -31,11 +31,7 @@ export function CommitGraph() {
   const layout = useMemo(() => computeLayout(commits), [commits]);
 
   if (commits.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center text-subtext text-sm">
-        {t('noCommits')}
-      </div>
-    );
+    return <EmptyState>{t('noCommits')}</EmptyState>;
   }
 
   const maxLane = Math.max(...layout.map(l => l.lane), 0);
@@ -97,13 +93,7 @@ export function CommitGraph() {
                 </span>
                 <TruncatedText className="text-text text-xs flex-1">{commit.message}</TruncatedText>
                 <div className="flex items-center gap-1 shrink-0">
-                  {commit.refs.slice(0, 3).map(ref => (
-                    <Badge key={ref} variant="ref">
-                      <TruncatedText className="block max-w-[15ch]">
-                        {ref.replace('HEAD -> ', '')}
-                      </TruncatedText>
-                    </Badge>
-                  ))}
+                  <RefBadges refs={commit.refs} maxWidth="max-w-[15ch]" />
                 </div>
                 <span className="text-subtext text-xs shrink-0">
                   {relativeTime(commit.date, i18n.language)}

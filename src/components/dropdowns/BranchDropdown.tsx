@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { DropdownPanel, SectionLabel, TextInput, cn } from '../../shared/ui';
+import { Button, DropdownPanel, SectionLabel, TextInput, cn } from '../../shared/ui';
 import { BranchItem } from './BranchItem';
 import { useBranchActions } from './useBranchActions';
 import { useRemoteSync, type SyncOp } from '../../hooks/use-remote-sync';
@@ -65,8 +65,6 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
 
   return (
     <DropdownPanel
-      align="center"
-      width="w-64"
       className={cn('p-2', merging || mergeState ? 'opacity-50 pointer-events-none' : '')}
     >
       <TextInput
@@ -81,15 +79,16 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
         <div className="flex items-center justify-between">
           <SectionLabel>{t('local')}</SectionLabel>
-          <button
+          <Button
+            variant="link"
+            size="sm"
             onClick={() => {
               onClose();
               openNewBranch();
             }}
-            className="text-blue text-xs hover:underline px-2 py-1"
           >
             {t('new')}
-          </button>
+          </Button>
         </div>
         {local.map(renderItem)}
 
@@ -98,13 +97,14 @@ export function BranchDropdown({ onClose }: BranchDropdownProps) {
             <div className="flex items-center justify-between mt-1">
               <SectionLabel>{t('remote')}</SectionLabel>
               {remoteHost && (
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => void run('fetch')}
                   disabled={!!loading}
-                  className="text-blue text-xs hover:underline disabled:opacity-60 disabled:no-underline px-2 py-1"
                 >
                   {loading === 'fetch' ? t('fetching') : t('sync:fetch')}
-                </button>
+                </Button>
               )}
             </div>
             {remote.map(renderItem)}
