@@ -1,5 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
-import { wrap } from './wrap';
+import { app, ipcMain, shell } from 'electron';
+import { wrap, type WindowOptions } from './wrap';
 import { assertString } from '../ipc-validators';
 
 /**
@@ -29,11 +29,7 @@ export function isAllowedExternalUrl(raw: string): boolean {
   );
 }
 
-export interface AppHandlerOptions {
-  getWindow?: () => BrowserWindow | null;
-}
-
-export function registerAppHandlers(options: AppHandlerOptions = {}) {
+export function registerAppHandlers(options: WindowOptions = {}) {
   ipcMain.handle('app:get-version', () => ({ data: app.getVersion() }));
 
   ipcMain.handle('shell:open-external', (_e, url: string) =>
@@ -43,7 +39,6 @@ export function registerAppHandlers(options: AppHandlerOptions = {}) {
         throw new Error(`Blocked external URL: ${url}`);
       }
       await shell.openExternal(url);
-      return null;
     }),
   );
 
@@ -60,7 +55,6 @@ export function registerAppHandlers(options: AppHandlerOptions = {}) {
       }
       const win = options.getWindow?.() ?? null;
       win?.setTitleBarOverlay?.({ color, symbolColor, height: 40 });
-      return null;
     }),
   );
 }

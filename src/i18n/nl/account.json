@@ -1,5 +1,4 @@
 {
-  "signIn": "Inloggen",
   "browser": {
     "title": "Inloggen via je browser",
     "body": "Je browser stuurt je terug naar Git Desktop zodra je bent ingelogd. Als je browser toestemming vraagt om Git Desktop te openen, geef die dan.",
@@ -32,7 +31,6 @@
     "useToken": "Gebruik in plaats daarvan een token"
   },
   "section": {
-    "title": "Accounts",
     "signOut": "Uitloggen",
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
     "repoHint": "Het account waarmee de repository {{repo}} zich aanmeldt. Elke repository meldt zich apart aan; terminals in de map gebruiken dezelfde aanmelding.",

@@ -18,7 +18,6 @@ export const gitea: ProviderDefinition = {
   endpoints: host => ({
     authorizeUrl: `https://${host}/login/oauth/authorize`,
     tokenUrl: `https://${host}/login/oauth/access_token`,
-    apiBase: `https://${host}/api/v1`,
   }),
   tokenHelpUrl: host => `https://${host}/user/settings/applications`,
   probe: async host => {

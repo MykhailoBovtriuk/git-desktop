@@ -3,11 +3,20 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { GitService, credentialSafeEnv } from '../electron/git-service';
+import { GitContext } from '../electron/git/context';
+import * as branchesGit from '../electron/git/branches';
+import * as filesGit from '../electron/git/files';
+import * as historyGit from '../electron/git/history';
+import * as mergeGit from '../electron/git/merge';
+import * as rebaseGit from '../electron/git/rebase';
+import * as remoteGit from '../electron/git/remote';
+import * as stashGit from '../electron/git/stash';
+import * as statusGit from '../electron/git/status';
+import { credentialSafeEnv } from '../electron/git/context';
 import { buildHunkPatch } from '../src/lib/build-patch';
 
 let tmpDir: string;
-let git: GitService;
+let git: GitContext;
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-test-'));
@@ -16,17 +25,17 @@ beforeEach(() => {
   execSync('git config user.name "Test"', { cwd: tmpDir });
   fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'hello');
   execSync('git add . && git commit -m "initial"', { cwd: tmpDir });
-  git = new GitService();
+  git = new GitContext();
 });
 
 afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe('GitService', () => {
+describe('git operations', () => {
   it('openRepo sets working directory', async () => {
     await git.openRepo(tmpDir);
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log.length).toBe(1);
     expect(log[0].message).toBe('initial');
   });
@@ -36,7 +45,7 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'updated');
     execSync('git add . && git commit -m "second"', { cwd: tmpDir });
 
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log.length).toBe(2);
     expect(log[0].message).toBe('second');
     expect(log[0].parents.length).toBe(1);
@@ -48,7 +57,7 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'stash me');
     execSync('git stash push -m "drawer"', { cwd: tmpDir });
 
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log.some(c => c.refs.some(r => r.includes('refs/stash')))).toBe(false);
     expect(log.some(c => /^index on /.test(c.message))).toBe(false);
     expect(log.some(c => c.message.includes('drawer'))).toBe(false);
@@ -62,15 +71,15 @@ describe('GitService', () => {
     execSync('git checkout -', { cwd: tmpDir });
 
     const expected = execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim();
-    expect(await git.getHeadCommit()).toBe(expected);
-    const log = await git.getLog(10, 0);
+    expect(await historyGit.getHeadCommit(git)).toBe(expected);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log[0].message).toBe('newer elsewhere');
     expect(log[0].abbreviatedHash).not.toBe(expected);
   });
 
   it('getBranches returns current branch', async () => {
     await git.openRepo(tmpDir);
-    const branches = await git.getBranches();
+    const branches = await branchesGit.getBranches(git);
     const current = branches.find(b => b.current);
     expect(current).toBeDefined();
     expect(current!.name).toMatch(/main|master/);
@@ -81,7 +90,7 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'new.txt'), 'new file');
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'changed');
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.unstaged.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -89,24 +98,24 @@ describe('GitService', () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'new.txt'), 'content');
 
-    await git.stageFiles(['new.txt']);
-    let status = await git.getStatus();
+    await statusGit.stageFiles(git, ['new.txt']);
+    let status = await statusGit.getStatus(git);
     expect(status.staged.some(f => f.path === 'new.txt')).toBe(true);
 
-    await git.unstageFiles(['new.txt']);
-    status = await git.getStatus();
+    await statusGit.unstageFiles(git, ['new.txt']);
+    status = await statusGit.getStatus(git);
     expect(status.staged.some(f => f.path === 'new.txt')).toBe(false);
   });
 
   it('commit creates a new commit', async () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'new.txt'), 'content');
-    await git.stageFiles(['new.txt']);
+    await statusGit.stageFiles(git, ['new.txt']);
 
-    const hash = await git.commit('add new file');
+    const hash = await statusGit.commit(git, 'add new file');
     expect(hash).toBeTruthy();
 
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log[0].message).toBe('add new file');
   });
 
@@ -114,18 +123,18 @@ describe('GitService', () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'changed');
 
-    await git.discardChanges(['file.txt']);
+    await statusGit.discardChanges(git, ['file.txt']);
     const content = fs.readFileSync(path.join(tmpDir, 'file.txt'), 'utf-8');
     expect(content).toBe('hello');
   });
 
   it('createBranch creates a branch at HEAD and switches to it', async () => {
     await git.openRepo(tmpDir);
-    await git.createBranch('feature/login');
+    await branchesGit.createBranch(git, 'feature/login');
 
-    const branches = await git.getBranches();
+    const branches = await branchesGit.getBranches(git);
     expect(branches.find(b => b.current)!.name).toBe('feature/login');
-    expect(await git.getHeadCommit()).toBe(
+    expect(await historyGit.getHeadCommit(git)).toBe(
       execSync('git rev-parse --short HEAD', { cwd: tmpDir }).toString().trim(),
     );
   });
@@ -136,9 +145,9 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
     execSync('git add file.txt', { cwd: tmpDir });
 
-    await git.createBranch('feature/wip');
+    await branchesGit.createBranch(git, 'feature/wip');
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.staged.map(f => f.path)).toEqual(['file.txt']);
     expect(status.unstaged.map(f => f.path)).toEqual(['fresh.txt']);
     expect(fs.readFileSync(path.join(tmpDir, 'fresh.txt'), 'utf8')).toBe('brand new');
@@ -146,10 +155,10 @@ describe('GitService', () => {
 
   it('createBranch refuses a name that is already taken', async () => {
     await git.openRepo(tmpDir);
-    await git.createBranch('feature/login');
+    await branchesGit.createBranch(git, 'feature/login');
     execSync('git checkout -q -', { cwd: tmpDir });
 
-    await expect(git.createBranch('feature/login')).rejects.toThrow();
+    await expect(branchesGit.createBranch(git, 'feature/login')).rejects.toThrow();
   });
 
   it('stashSave takes untracked files too when asked', async () => {
@@ -157,9 +166,9 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
     fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
 
-    await git.stashSave('WIP on main', false, true);
+    await stashGit.stashSave(git, 'WIP on main', false, true);
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.staged).toEqual([]);
     expect(status.unstaged).toEqual([]);
     expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(false);
@@ -170,14 +179,16 @@ describe('GitService', () => {
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'edited');
     fs.writeFileSync(path.join(tmpDir, 'fresh.txt'), 'brand new');
 
-    await git.stashSave('WIP on main');
+    await stashGit.stashSave(git, 'WIP on main');
 
     expect(fs.existsSync(path.join(tmpDir, 'fresh.txt'))).toBe(true);
   });
 
   it('stashSave refuses to combine staged-only with untracked', async () => {
     await git.openRepo(tmpDir);
-    await expect(git.stashSave('nope', true, true)).rejects.toThrow(/mutually exclusive/i);
+    await expect(stashGit.stashSave(git, 'nope', true, true)).rejects.toThrow(
+      /mutually exclusive/i,
+    );
   });
 
   it('checkout switches branch', async () => {
@@ -185,8 +196,8 @@ describe('GitService', () => {
     execSync('git checkout -b develop', { cwd: tmpDir });
     execSync('git checkout master || git checkout main', { cwd: tmpDir });
 
-    await git.checkout('develop');
-    const branches = await git.getBranches();
+    await branchesGit.checkout(git, 'develop');
+    const branches = await branchesGit.getBranches(git);
     expect(branches.find(b => b.current)!.name).toBe('develop');
   });
 
@@ -194,24 +205,62 @@ describe('GitService', () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'hello\nworld');
 
-    const diff = await git.getWorkingDiff('file.txt');
+    const diff = await statusGit.getWorkingDiff(git, 'file.txt');
     expect(diff).toContain('+world');
   });
 
   it('getCommitDiff works on the initial commit (no parent)', async () => {
     await git.openRepo(tmpDir);
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     const initialHash = log[log.length - 1].hash;
-    const files = await git.getCommitDiff(initialHash);
+    const files = await historyGit.getCommitDiff(git, initialHash);
     expect(files.length).toBeGreaterThan(0);
     expect(files.some(f => f.path === 'file.txt')).toBe(true);
   });
 
+  it('getCommitDiff reports added, modified and deleted files', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'added.txt'), 'new\n');
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'changed\n');
+    execSync('git add . && git commit -m "add and modify"', { cwd: tmpDir });
+    execSync('git rm -q added.txt && git commit -m "delete"', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const [deleted, changed] = await historyGit.getLog(git, 2, 0);
+
+    expect(await historyGit.getCommitDiff(git, changed.hash)).toEqual(
+      expect.arrayContaining([
+        { path: 'added.txt', status: 'A' },
+        { path: 'file.txt', status: 'M' },
+      ]),
+    );
+    expect(await historyGit.getCommitDiff(git, deleted.hash)).toEqual([
+      { path: 'added.txt', status: 'D' },
+    ]);
+  });
+
+  it('checkout of a missing branch never restores a file of that name', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'notes'), 'tracked\n');
+    execSync('git add . && git commit -m "notes file"', { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, 'notes'), 'unsaved work\n');
+    await git.openRepo(tmpDir);
+
+    await expect(branchesGit.checkout(git, 'notes')).rejects.toThrow();
+    expect(fs.readFileSync(path.join(tmpDir, 'notes'), 'utf8')).toBe('unsaved work\n');
+  });
+
+  it('lists a stash whose message contains the old field separator', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'dirty\n');
+    execSync('git stash push -m "a|||b"', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+    const [entry] = await stashGit.getStashList(git);
+    expect(entry.message).toContain('a|||b');
+    expect(entry.date).not.toBe('');
+  });
+
   it('getFileDiff works on the initial commit (no parent)', async () => {
     await git.openRepo(tmpDir);
-    const log = await git.getLog(10, 0);
+    const log = await historyGit.getLog(git, 10, 0);
     const initialHash = log[log.length - 1].hash;
-    const diff = await git.getFileDiff(initialHash, 'file.txt');
+    const diff = await historyGit.getFileDiff(git, initialHash, 'file.txt');
     expect(diff).toContain('+hello');
   });
 
@@ -219,7 +268,7 @@ describe('GitService', () => {
     await git.openRepo(tmpDir);
     fs.writeFileSync(path.join(tmpDir, 'newfile.txt'), 'line1\nline2\n');
 
-    const diff = await git.getWorkingDiff('newfile.txt');
+    const diff = await statusGit.getWorkingDiff(git, 'newfile.txt');
     expect(diff).toContain('diff --git a/newfile.txt b/newfile.txt');
     expect(diff).toContain('new file mode 100644');
     expect(diff).toContain('--- /dev/null');
@@ -230,13 +279,13 @@ describe('GitService', () => {
 
   it('getWorkingDiff returns empty diff for a clean tracked file', async () => {
     await git.openRepo(tmpDir);
-    const diff = await git.getWorkingDiff('file.txt');
+    const diff = await statusGit.getWorkingDiff(git, 'file.txt');
     expect(diff).toBe('');
   });
 
   it('getBranches reports no tracking for a branch without an upstream', async () => {
     await git.openRepo(tmpDir);
-    const current = (await git.getBranches()).find(b => b.current)!;
+    const current = (await branchesGit.getBranches(git)).find(b => b.current)!;
     expect(current.tracking).toBeUndefined();
   });
 
@@ -246,14 +295,14 @@ describe('GitService', () => {
     execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
     execSync('git push -u origin HEAD', { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    const current = (await git.getBranches()).find(b => b.current)!;
+    const current = (await branchesGit.getBranches(git)).find(b => b.current)!;
     expect(current.tracking).toMatch(/^origin\//);
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
 
   it('getStatus reports no upstream for an unpublished branch', async () => {
     await git.openRepo(tmpDir);
-    expect((await git.getStatus()).upstream).toBeNull();
+    expect((await statusGit.getStatus(git)).upstream).toBeNull();
   });
 
   it('getStatus reports the upstream of a published branch', async () => {
@@ -262,7 +311,7 @@ describe('GitService', () => {
     execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
     execSync('git push -u origin HEAD', { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    expect((await git.getStatus()).upstream).toMatch(/^origin\//);
+    expect((await statusGit.getStatus(git)).upstream).toMatch(/^origin\//);
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
 
@@ -271,12 +320,12 @@ describe('GitService', () => {
     execSync('git init --bare', { cwd: remoteDir });
     execSync(`git remote add origin "${remoteDir}"`, { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    const before = (await git.getBranches()).find(b => b.current)!;
+    const before = (await branchesGit.getBranches(git)).find(b => b.current)!;
     expect(before.tracking).toBeUndefined();
 
-    await git.pushSetUpstream('origin', before.name);
+    await remoteGit.pushSetUpstream(git, 'origin', before.name);
 
-    const after = (await git.getBranches()).find(b => b.current)!;
+    const after = (await branchesGit.getBranches(git)).find(b => b.current)!;
     expect(after.tracking).toMatch(/^origin\//);
     fs.rmSync(remoteDir, { recursive: true, force: true });
   });
@@ -292,7 +341,7 @@ describe('switchRemoteProtocol', () => {
     execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
 
-    expect(await git.switchRemoteProtocol('https')).toEqual({
+    expect(await remoteGit.switchRemoteProtocol(git, 'https')).toEqual({
       url: 'https://github.com/owner/repo.git',
       host: 'github.com',
       protocol: 'https',
@@ -307,7 +356,7 @@ describe('switchRemoteProtocol', () => {
     execSync('git remote add origin https://github.com/owner/repo.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
 
-    expect(await git.switchRemoteProtocol('ssh')).toEqual({
+    expect(await remoteGit.switchRemoteProtocol(git, 'ssh')).toEqual({
       url: 'git@github.com:owner/repo.git',
       host: 'github.com',
       protocol: 'ssh',
@@ -320,13 +369,13 @@ describe('switchRemoteProtocol', () => {
     execSync('git remote set-url --push origin git@github.com:owner/fork.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
 
-    await git.switchRemoteProtocol('https');
+    await remoteGit.switchRemoteProtocol(git, 'https');
     expect(urls()).toEqual({
       fetch: 'https://github.com/owner/repo.git',
       push: 'https://github.com/owner/fork.git',
     });
 
-    await git.switchRemoteProtocol('ssh');
+    await remoteGit.switchRemoteProtocol(git, 'ssh');
     expect(urls()).toEqual({
       fetch: 'git@github.com:owner/repo.git',
       push: 'git@github.com:owner/fork.git',
@@ -336,10 +385,10 @@ describe('switchRemoteProtocol', () => {
   it('ignores a remembered ssh address once the remote points elsewhere', async () => {
     execSync('git remote add origin git@github.com:owner/repo.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
-    await git.switchRemoteProtocol('https');
+    await remoteGit.switchRemoteProtocol(git, 'https');
     execSync('git remote set-url origin https://github.com/other/project.git', { cwd: tmpDir });
 
-    await git.switchRemoteProtocol('ssh');
+    await remoteGit.switchRemoteProtocol(git, 'ssh');
     expect(urls().fetch).toBe('git@github.com:other/project.git');
   });
 
@@ -347,7 +396,7 @@ describe('switchRemoteProtocol', () => {
     execSync('git remote add origin https://github.com/owner/repo.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
 
-    await expect(git.switchRemoteProtocol('https')).rejects.toThrow();
+    await expect(remoteGit.switchRemoteProtocol(git, 'https')).rejects.toThrow();
     expect(urls().fetch).toBe('https://github.com/owner/repo.git');
   });
 });
@@ -358,9 +407,9 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
     fs.writeFileSync(path.join(tmpDir, '-A'), 'dash file');
     fs.writeFileSync(path.join(tmpDir, 'other.txt'), 'other');
 
-    await git.stageFiles(['-A']);
+    await statusGit.stageFiles(git, ['-A']);
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.staged.map(f => f.path)).toEqual(['-A']);
     expect(status.unstaged.map(f => f.path)).toEqual(['other.txt']);
   });
@@ -370,9 +419,9 @@ describe('stageFiles/markResolved with dash-prefixed paths', () => {
     fs.writeFileSync(path.join(tmpDir, '-A'), 'dash file');
     fs.writeFileSync(path.join(tmpDir, 'other.txt'), 'other');
 
-    await git.markResolved('-A');
+    await mergeGit.markResolved(git, '-A');
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.staged.map(f => f.path)).toEqual(['-A']);
     expect(status.unstaged.map(f => f.path)).toEqual(['other.txt']);
   });
@@ -395,20 +444,20 @@ describe('rebase lifecycle', () => {
 
   it('isRebasing is false in a normal repo state', async () => {
     await git.openRepo(tmpDir);
-    expect(await git.isRebasing()).toBe(false);
+    expect(await rebaseGit.isRebasing(git)).toBe(false);
   });
 
   it('conflicted rebase rejects, isRebasing becomes true, abortRebase restores a clean tree', async () => {
     await git.openRepo(tmpDir);
     const { mainBranch } = makeRebaseConflict();
 
-    await expect(git.rebase(mainBranch)).rejects.toThrow();
-    expect(await git.isRebasing()).toBe(true);
+    await expect(rebaseGit.rebase(git, mainBranch)).rejects.toThrow();
+    expect(await rebaseGit.isRebasing(git)).toBe(true);
 
-    await git.abortRebase();
-    expect(await git.isRebasing()).toBe(false);
+    await rebaseGit.abortRebase(git);
+    expect(await rebaseGit.isRebasing(git)).toBe(false);
 
-    const status = await git.getStatus();
+    const status = await statusGit.getStatus(git);
     expect(status.staged).toEqual([]);
     expect(status.unstaged).toEqual([]);
     expect(fs.readFileSync(path.join(tmpDir, 'file.txt'), 'utf-8')).toBe('feature change');
@@ -418,16 +467,16 @@ describe('rebase lifecycle', () => {
     await git.openRepo(tmpDir);
     const { mainBranch } = makeRebaseConflict();
 
-    await expect(git.rebase(mainBranch)).rejects.toThrow();
-    await expect(git.continueRebase()).rejects.toThrow();
-    expect(await git.isRebasing()).toBe(true);
+    await expect(rebaseGit.rebase(git, mainBranch)).rejects.toThrow();
+    await expect(rebaseGit.continueRebase(git)).rejects.toThrow();
+    expect(await rebaseGit.isRebasing(git)).toBe(true);
 
     fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'resolved');
     execSync('git add file.txt', { cwd: tmpDir });
-    await git.continueRebase();
+    await rebaseGit.continueRebase(git);
 
-    expect(await git.isRebasing()).toBe(false);
-    const log = await git.getLog(10, 0);
+    expect(await rebaseGit.isRebasing(git)).toBe(false);
+    const log = await historyGit.getLog(git, 10, 0);
     expect(log.map(c => c.message)).toContain('feature edit');
     expect(log.map(c => c.message)).toContain('main edit');
   });
@@ -458,19 +507,19 @@ describe('empty repository (unborn HEAD)', () => {
 
   it('getLog returns [] instead of throwing', async () => {
     await git.openRepo(emptyDir);
-    await expect(git.getLog(50, 0)).resolves.toEqual([]);
+    await expect(historyGit.getLog(git, 50, 0)).resolves.toEqual([]);
   });
 
   it('unstageFiles removes a staged file from the index without HEAD', async () => {
     await git.openRepo(emptyDir);
     fs.writeFileSync(path.join(emptyDir, 'new.txt'), 'content');
 
-    await git.stageFiles(['new.txt']);
-    let status = await git.getStatus();
+    await statusGit.stageFiles(git, ['new.txt']);
+    let status = await statusGit.getStatus(git);
     expect(status.staged.some(f => f.path === 'new.txt')).toBe(true);
 
-    await git.unstageFiles(['new.txt']);
-    status = await git.getStatus();
+    await statusGit.unstageFiles(git, ['new.txt']);
+    status = await statusGit.getStatus(git);
     expect(status.staged.some(f => f.path === 'new.txt')).toBe(false);
     expect(status.unstaged.some(f => f.path === 'new.txt' && !f.staged)).toBe(true);
     expect(fs.readFileSync(path.join(emptyDir, 'new.txt'), 'utf-8')).toBe('content');
@@ -483,25 +532,25 @@ describe('readFile/writeFile path guards', () => {
   });
 
   it('allows normal reads and writes inside the repo', async () => {
-    await git.writeFile('sub/dir-file.txt', 'nested').catch(() => {});
-    await git.writeFile('plain.txt', 'ok');
-    expect(await git.readFile('plain.txt')).toBe('ok');
-    await git.writeFile('.gitignore', 'node_modules\n');
-    expect(await git.readFile('.gitignore')).toBe('node_modules\n');
+    await filesGit.writeFile(git, 'sub/dir-file.txt', 'nested').catch(() => {});
+    await filesGit.writeFile(git, 'plain.txt', 'ok');
+    expect(await filesGit.readFile(git, 'plain.txt')).toBe('ok');
+    await filesGit.writeFile(git, '.gitignore', 'node_modules\n');
+    expect(await filesGit.readFile(git, '.gitignore')).toBe('node_modules\n');
   });
 
   it('rejects writes into .git', async () => {
-    await expect(git.writeFile('.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
+    await expect(filesGit.writeFile(git, '.git/hooks/pre-commit', '#!/bin/sh\n')).rejects.toThrow();
     expect(fs.existsSync(path.join(tmpDir, '.git', 'hooks', 'pre-commit'))).toBe(false);
-    await expect(git.writeFile('.git/config', '[core]')).rejects.toThrow();
+    await expect(filesGit.writeFile(git, '.git/config', '[core]')).rejects.toThrow();
   });
 
   it('rejects reads from .git', async () => {
-    await expect(git.readFile('.git/config')).rejects.toThrow();
+    await expect(filesGit.readFile(git, '.git/config')).rejects.toThrow();
   });
 
   it('rejects .git regardless of case', async () => {
-    await expect(git.writeFile('.GIT/config', 'x')).rejects.toThrow();
+    await expect(filesGit.writeFile(git, '.GIT/config', 'x')).rejects.toThrow();
   });
 
   // Creating symlinks on Windows requires elevation/developer mode, which CI
@@ -513,7 +562,7 @@ describe('readFile/writeFile path guards', () => {
     fs.writeFileSync(path.join(outside, 'secret.txt'), 'secret');
     fs.symlinkSync(outside, path.join(tmpDir, 'link'));
 
-    await expect(git.readFile('link/secret.txt')).rejects.toThrow(/outside repository/);
+    await expect(filesGit.readFile(git, 'link/secret.txt')).rejects.toThrow(/outside repository/);
     fs.rmSync(outside, { recursive: true, force: true });
   });
 
@@ -521,7 +570,9 @@ describe('readFile/writeFile path guards', () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'git-desktop-outside-'));
     fs.symlinkSync(outside, path.join(tmpDir, 'link'));
 
-    await expect(git.writeFile('link/evil.txt', 'x')).rejects.toThrow(/outside repository/);
+    await expect(filesGit.writeFile(git, 'link/evil.txt', 'x')).rejects.toThrow(
+      /outside repository/,
+    );
     expect(fs.existsSync(path.join(outside, 'evil.txt'))).toBe(false);
     fs.rmSync(outside, { recursive: true, force: true });
   });
@@ -532,8 +583,10 @@ describe('readFile/writeFile path guards', () => {
     fs.writeFileSync(target, 'outside content');
     fs.symlinkSync(target, path.join(tmpDir, 'file-link.txt'));
 
-    await expect(git.readFile('file-link.txt')).rejects.toThrow(/outside repository/);
-    await expect(git.writeFile('file-link.txt', 'overwrite')).rejects.toThrow(/outside repository/);
+    await expect(filesGit.readFile(git, 'file-link.txt')).rejects.toThrow(/outside repository/);
+    await expect(filesGit.writeFile(git, 'file-link.txt', 'overwrite')).rejects.toThrow(
+      /outside repository/,
+    );
     expect(fs.readFileSync(target, 'utf-8')).toBe('outside content');
     fs.rmSync(outside, { recursive: true, force: true });
   });
@@ -555,16 +608,16 @@ describe('applyPatch (hunk-level staging)', () => {
     seedMultiHunk();
     await git.openRepo(tmpDir);
 
-    const raw = await git.getWorkingDiff('multi.txt');
+    const raw = await statusGit.getWorkingDiff(git, 'multi.txt');
     expect((raw.match(/^@@ /gm) || []).length).toBe(2);
 
-    await git.applyPatch(buildHunkPatch(raw, 0), { cached: true });
+    await statusGit.applyPatch(git, buildHunkPatch(raw, 0), { cached: true });
 
-    const staged = await git.getStagedDiff('multi.txt');
+    const staged = await statusGit.getStagedDiff(git, 'multi.txt');
     expect(staged).toContain('LINE2');
     expect(staged).not.toContain('LINE18');
 
-    const working = await git.getWorkingDiff('multi.txt');
+    const working = await statusGit.getWorkingDiff(git, 'multi.txt');
     expect(working).toContain('LINE18');
     expect(working).not.toContain('LINE2');
   });
@@ -573,13 +626,13 @@ describe('applyPatch (hunk-level staging)', () => {
     seedMultiHunk();
     await git.openRepo(tmpDir);
 
-    await git.stageFiles(['multi.txt']);
-    let staged = await git.getStagedDiff('multi.txt');
+    await statusGit.stageFiles(git, ['multi.txt']);
+    let staged = await statusGit.getStagedDiff(git, 'multi.txt');
     expect((staged.match(/^@@ /gm) || []).length).toBe(2);
 
-    await git.applyPatch(buildHunkPatch(staged, 0), { cached: true, reverse: true });
+    await statusGit.applyPatch(git, buildHunkPatch(staged, 0), { cached: true, reverse: true });
 
-    staged = await git.getStagedDiff('multi.txt');
+    staged = await statusGit.getStagedDiff(git, 'multi.txt');
     expect(staged).not.toContain('LINE2');
     expect(staged).toContain('LINE18');
   });
@@ -597,6 +650,6 @@ describe('applyPatch (hunk-level staging)', () => {
       '+something',
       '',
     ].join('\n');
-    await expect(git.applyPatch(bogus, { cached: true })).rejects.toThrow();
+    await expect(statusGit.applyPatch(git, bogus, { cached: true })).rejects.toThrow();
   });
 });

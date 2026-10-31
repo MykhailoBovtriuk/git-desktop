@@ -1,7 +1,6 @@
 import path from 'path';
 
-export type AppAssetResolution =
-  { ok: true; filePath: string } | { ok: false; reason: 'forbidden' };
+type AppAssetResolution = { ok: true; filePath: string } | { ok: false; reason: 'forbidden' };
 
 export function resolveAppAssetPath(distRoot: string, requestUrl: string): AppAssetResolution {
   const root = path.resolve(distRoot);

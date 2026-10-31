@@ -33,11 +33,10 @@ export function StashForm({ canStash, onStash, listMode, onToggle }: StashFormPr
       <div className="flex items-center gap-2">
         <Button
           variant="primary"
-          size="sm"
+          size="block"
           fullWidth
           disabled={!canStash || !message.trim()}
           onClick={handleStash}
-          className="py-1.5 font-medium"
         >
           {t('stashStaged')}
         </Button>

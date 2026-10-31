@@ -6,13 +6,7 @@ import { useRepoStore } from '../stores/repo-store';
 import { useTerminalStore } from '../stores/terminal-store';
 import { useUiStore } from '../stores/ui-store';
 
-/**
- * Keeps the right panel's stores in step with the main process and the open
- * repository, whether or not the panel is on screen:
- * - the log follows the repository and every pushed entry;
- * - the terminal wakes the first time its tab opens (node-pty loads then, not
- *   at startup), then picks up the repository's live sessions and their exits.
- */
+// The terminal wakes the first time its tab opens: node-pty loads then, not at startup.
 export function usePanelFeeds() {
   const repoPath = useRepoStore(s => s.repoPath);
   const terminalWanted = useUiStore(s => s.rightPanel === 'terminal');

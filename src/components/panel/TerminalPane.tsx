@@ -202,11 +202,7 @@ export function TerminalPane({ id, visible, exitCode, onRestart }: TerminalPaneP
           />
         </div>
       )}
-      <div
-        ref={hostRef}
-        className="flex-1 min-h-0 px-2 py-1"
-        style={{ background: 'var(--gd-base)' }}
-      />
+      <div ref={hostRef} className="flex-1 min-h-0 px-2 py-1 bg-base" />
     </div>
   );
 }

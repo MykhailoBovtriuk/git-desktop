@@ -9,10 +9,7 @@ import fs from 'fs/promises';
 const QUIT_DELAY_MS = 1_000;
 const MAC_QUIT_DELAY_MS = 2_000;
 
-/**
- * Hand the artifact to the platform. Linux only reveals the file: a .deb needs
- * root and an AppImage is moved by hand.
- */
+// Linux only reveals the file: a .deb needs root and an AppImage is moved by hand.
 export async function launchInstaller(
   filePath: string,
   platform: string = process.platform,

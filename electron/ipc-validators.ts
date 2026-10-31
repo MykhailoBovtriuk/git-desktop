@@ -1,3 +1,5 @@
+import path from 'path';
+
 export function assertString(value: unknown, name: string): asserts value is string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`Invalid argument: ${name} must be a non-empty string`);
@@ -41,10 +43,6 @@ export function assertBoundedLogLimit(limit: unknown): asserts limit is number {
   if ((limit as number) > 1000) {
     throw new Error('Invalid argument: limit must be <= 1000');
   }
-}
-
-export function assertStashIndex(index: unknown): asserts index is number {
-  assertNonNegativeInteger(index, 'index');
 }
 
 // A value starting with '-' reaches git as a flag: `--output=/path` would write
@@ -102,5 +100,32 @@ export function optionalBoolean(value: unknown, name: string): boolean {
 export function assertDimension(value: unknown, name: string): asserts value is number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 1000) {
     throw new Error(`Invalid argument: ${name} must be an integer between 1 and 1000`);
+  }
+}
+
+export function assertHost(value: unknown): asserts value is string {
+  assertString(value, 'host');
+  // Hosts reach `git credential` and a URL; a value with whitespace or a slash
+  // in it is either a mistake or an attempt to smuggle a second field in.
+  if (!/^[a-z0-9.-]+(:\d+)?$/i.test(value as string)) {
+    throw new Error('Invalid argument: host is not a hostname');
+  }
+}
+
+export function assertRepoPath(value: unknown): asserts value is string {
+  assertString(value, 'repoPath');
+  if (!path.isAbsolute(value as string) || /[\r\n\0]/.test(value as string)) {
+    throw new Error('Invalid argument: repoPath is not an absolute path');
+  }
+}
+
+/**
+ * A value for `git credential`, which is one `key=value` per line: a newline
+ * would inject a second field.
+ */
+export function assertCredentialField(value: unknown, name: string): asserts value is string {
+  assertString(value, name);
+  if (/[\r\n\0]/.test(value as string)) {
+    throw new Error(`Invalid argument: ${name} contains a line break`);
   }
 }

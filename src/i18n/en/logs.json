@@ -1,6 +1,5 @@
 {
   "title": "Logs",
-  "terminal": "Terminal",
   "toggle": "Logs ({{shortcut}})",
   "unread_one": "{{count}} new error",
   "unread_other": "{{count}} new errors",

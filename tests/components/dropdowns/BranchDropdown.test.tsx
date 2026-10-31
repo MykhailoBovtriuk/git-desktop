@@ -105,8 +105,8 @@ describe('BranchDropdown pull and push', () => {
     render(<BranchDropdown onClose={onClose} />);
     openContext('main');
     const items = screen.getAllByRole('button').map(b => b.textContent);
-    expect(items.indexOf('pull↓2')).toBe(items.indexOf('checkout') + 1);
-    fireEvent.click(screen.getByText('pull'));
+    expect(items.indexOf('sync:pull↓2')).toBe(items.indexOf('checkout') + 1);
+    fireEvent.click(screen.getByText('sync:pull'));
     expect(onClose).toHaveBeenCalled();
     await waitFor(() => expect(repoState.pull).toHaveBeenCalledTimes(1));
   });
@@ -116,24 +116,24 @@ describe('BranchDropdown pull and push', () => {
     render(<BranchDropdown onClose={() => {}} />);
     openContext('main');
     expect(screen.getByText('↑1')).toBeTruthy();
-    fireEvent.click(screen.getByText('push'));
+    fireEvent.click(screen.getByText('sync:push'));
     await waitFor(() => expect(repoState.push).toHaveBeenCalledTimes(1));
   });
 
   it('offers neither for another branch', () => {
     render(<BranchDropdown onClose={() => {}} />);
     openContext('feature');
-    expect(screen.queryByText('pull')).toBeNull();
-    expect(screen.queryByText('push')).toBeNull();
+    expect(screen.queryByText('sync:pull')).toBeNull();
+    expect(screen.queryByText('sync:push')).toBeNull();
   });
 
   it('offers publish instead before the branch has an upstream', async () => {
     repoState.aheadBehind = { ahead: 0, behind: 0, upstream: null };
     render(<BranchDropdown onClose={() => {}} />);
     openContext('main');
-    expect(screen.queryByText('pull')).toBeNull();
-    expect(screen.queryByText('push')).toBeNull();
-    fireEvent.click(screen.getByText('publishBranch'));
+    expect(screen.queryByText('sync:pull')).toBeNull();
+    expect(screen.queryByText('sync:push')).toBeNull();
+    fireEvent.click(screen.getByText('sync:publishBranch'));
     await waitFor(() => expect(repoState.publishBranch).toHaveBeenCalledTimes(1));
   });
 
@@ -141,8 +141,8 @@ describe('BranchDropdown pull and push', () => {
     repoState.remoteHost = null;
     render(<BranchDropdown onClose={() => {}} />);
     openContext('main');
-    expect(screen.queryByText('pull')).toBeNull();
-    expect(screen.queryByText('publishBranch')).toBeNull();
+    expect(screen.queryByText('sync:pull')).toBeNull();
+    expect(screen.queryByText('sync:publishBranch')).toBeNull();
   });
 });
 
@@ -151,7 +151,7 @@ describe('BranchDropdown fetch', () => {
     const onClose = vi.fn();
     render(<BranchDropdown onClose={onClose} />);
     expect(screen.getByText('remote')).toBeTruthy();
-    fireEvent.click(screen.getByText('fetch'));
+    fireEvent.click(screen.getByText('sync:fetch'));
     await waitFor(() => expect(repoState.fetch).toHaveBeenCalledTimes(1));
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -159,6 +159,6 @@ describe('BranchDropdown fetch', () => {
   it('has no fetch without a remote', () => {
     repoState.remoteHost = null;
     render(<BranchDropdown onClose={() => {}} />);
-    expect(screen.queryByText('fetch')).toBeNull();
+    expect(screen.queryByText('sync:fetch')).toBeNull();
   });
 });

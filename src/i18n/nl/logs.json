@@ -1,6 +1,5 @@
 {
   "title": "Logboek",
-  "terminal": "Terminal",
   "toggle": "Logboek ({{shortcut}})",
   "unread_one": "{{count}} nieuwe fout",
   "unread_other": "{{count}} nieuwe fouten",

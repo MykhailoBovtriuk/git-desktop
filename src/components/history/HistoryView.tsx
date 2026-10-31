@@ -6,7 +6,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { gitApi } from '../../api/git-api';
 import { CommitList } from './CommitList';
 import { DiffViewer } from '../diff/DiffViewer';
-import { FilePathList, ResizeHandle, TextInput } from '../../shared/ui';
+import { Button, FilePathList, ResizeHandle, TextInput, EmptyState } from '../../shared/ui';
 import { errorMessage } from '../../lib/error-message';
 import { useResizableWidth } from '../../hooks/use-resizable-width';
 
@@ -21,7 +21,7 @@ export function HistoryView() {
       addToast: s.addToast,
     })),
   );
-  const { commits } = useRepoStore(useShallow(s => ({ commits: s.commits })));
+  const commits = useRepoStore(s => s.commits);
   const [filter, setFilter] = useState('');
   const [changedFiles, setChangedFiles] = useState<{ path: string; status: string }[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -71,12 +71,9 @@ export function HistoryView() {
         style={{ width: commitsColumn.width }}
       >
         <div className="flex items-center gap-2 px-3 py-2 border-b border-surface0 shrink-0">
-          <button
-            onClick={() => setActiveView('changes')}
-            className="text-blue text-xs hover:underline"
-          >
+          <Button variant="link" size="xs" onClick={() => setActiveView('changes')}>
             ← {t('back')}
-          </button>
+          </Button>
           <TextInput
             variant="filter"
             value={filter}
@@ -116,9 +113,7 @@ export function HistoryView() {
             </div>
           </>
         ) : (
-          <div className="h-full flex items-center justify-center text-subtext text-sm">
-            {t('selectCommitHint')}
-          </div>
+          <EmptyState>{t('selectCommitHint')}</EmptyState>
         )}
       </div>
     </div>

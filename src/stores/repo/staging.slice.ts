@@ -18,13 +18,13 @@ export const createStagingSlice: RepoSlice<StagingSlice> = (_set, get) => ({
   },
 
   stageHunk: async patch =>
-    get().runOperation('stage', async () => {
+    get().runOperation(async () => {
       await gitApi.applyPatch(patch, { cached: true });
       await get().loadStatus();
     }),
 
   unstageHunk: async patch =>
-    get().runOperation('unstage', async () => {
+    get().runOperation(async () => {
       await gitApi.applyPatch(patch, { cached: true, reverse: true });
       await get().loadStatus();
     }),
@@ -35,7 +35,7 @@ export const createStagingSlice: RepoSlice<StagingSlice> = (_set, get) => ({
   },
 
   commit: async message =>
-    get().runOperation('commit', async () => {
+    get().runOperation(async () => {
       await gitApi.commit(message);
       await get().refresh();
     }),

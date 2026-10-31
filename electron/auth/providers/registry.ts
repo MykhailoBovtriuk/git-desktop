@@ -38,20 +38,6 @@ export function providerForHost(host: string): ProviderDefinition | null {
   return PROVIDERS.find(p => p.knownHosts.includes(needle)) ?? null;
 }
 
-export function isConfigured(id: ProviderId): boolean {
-  if (NO_BAKED_KEY_NEEDED.has(id)) return true;
-  return keysFor(id) !== null;
-}
-
-const NO_BAKED_KEY_NEEDED: ReadonlySet<ProviderId> = new Set<ProviderId>([
-  'token',
-  'gitlab-self',
-  'github-enterprise',
-  'gitea',
-  'bitbucket-server',
-  'azure-devops-server',
-]);
-
 const NEEDS_HOST: ReadonlySet<ProviderId> = new Set<ProviderId>([
   'github-enterprise',
   'gitlab-self',
@@ -83,7 +69,6 @@ export function providerOptions(host: string | null): ProviderOption[] {
       needsHost: NEEDS_HOST.has(p.id),
       needsClientId: ownApp,
       needsClientSecret: ownApp && !p.usesPkce,
-      tokenHelpUrl: host ? p.tokenHelpUrl(host) : null,
     };
   });
 }

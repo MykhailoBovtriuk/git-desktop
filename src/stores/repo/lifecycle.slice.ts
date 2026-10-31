@@ -3,6 +3,8 @@ import { useAccountStore } from '../account-store';
 import { useUiStore } from '../ui-store';
 import type { RemoteProtocol } from '../../types';
 import type { RepoState, RepoSlice } from './types';
+import { whileCurrent } from './epoch';
+import { mergeStateFrom } from './merge.slice';
 import { errorMessage } from '../../lib/error-message';
 
 type LifecycleSlice = Pick<
@@ -17,7 +19,6 @@ type LifecycleSlice = Pick<
   | 'hasIdentity'
   | 'loadIdentity'
   | 'recentRepos'
-  | 'busyOperation'
   | 'lastRefreshError'
   | 'runOperation'
   | 'openRepo'
@@ -25,6 +26,14 @@ type LifecycleSlice = Pick<
   | 'removeRecentRepo'
   | 'refresh'
 >;
+
+const NO_REPO = {
+  repoPath: null,
+  remoteUrl: null,
+  remoteHost: null,
+  remoteProtocol: null,
+  mergeState: null,
+} satisfies Partial<RepoState>;
 
 // Coalesce concurrent refreshes: within one generation, all callers share the
 // same round of loaders instead of firing duplicate IPC. Module-level because
@@ -48,7 +57,6 @@ async function promptSignInIfNeeded(
   }
 
   const account = useAccountStore.getState();
-  account.refreshCurrent(root);
   await account.refreshAuthSource(remoteHost, remoteProtocol, root);
 
   if (account.dismissedRepos.has(root)) return;
@@ -66,32 +74,21 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   remoteProtocol: null,
   hasIdentity: null,
   recentRepos: [],
-  busyOperation: null,
   lastRefreshError: null,
 
-  runOperation: async (name, fn) => {
-    set(s => ({ busyCount: s.busyCount + 1, busyOperation: name, epoch: s.epoch + 1 }));
+  runOperation: async fn => {
+    set(s => ({ busyCount: s.busyCount + 1, epoch: s.epoch + 1 }));
     try {
       return await fn();
     } finally {
-      set(s => {
-        const busyCount = s.busyCount - 1;
-        return {
-          busyCount,
-          busyOperation: busyCount === 0 ? null : s.busyOperation,
-          epoch: s.epoch + 1,
-        };
-      });
+      set(s => ({ busyCount: s.busyCount - 1, epoch: s.epoch + 1 }));
     }
   },
 
   switchRemoteProtocol: async to => {
     const { url, host, protocol } = await gitApi.switchRemoteProtocol(to);
     set(s => ({ epoch: s.epoch + 1, remoteUrl: url, remoteHost: host, remoteProtocol: protocol }));
-    const account = useAccountStore.getState();
-    const repoPath = get().repoPath;
-    account.refreshCurrent(repoPath);
-    await account.refreshAuthSource(host, protocol, repoPath);
+    await useAccountStore.getState().refreshAuthSource(host, protocol, get().repoPath);
   },
 
   openRepo: async path => {
@@ -99,13 +96,13 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     useUiStore.getState().closeOverlays();
     const root = opened?.root || path;
     set(s => ({
+      ...NO_REPO,
       epoch: s.epoch + 1,
       repoPath: root,
       remoteUrl: opened?.remoteUrl ?? null,
       remoteHost: opened?.remoteHost ?? null,
       remoteProtocol: opened?.remoteProtocol ?? null,
       hasIdentity: null,
-      mergeState: null,
       recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
@@ -116,13 +113,7 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
         if (conflicts.length > 0) {
           const msg = await gitApi.getMergeMessage().catch(() => '');
           const source = /Merge branch '([^']+)'/.exec(msg)?.[1] ?? '';
-          set({
-            mergeState: {
-              sourceBranch: source,
-              targetBranch: get().currentBranch,
-              conflictingFiles: conflicts,
-            },
-          });
+          set({ mergeState: mergeStateFrom(source, get().currentBranch, conflicts) });
         }
       } catch {}
     }
@@ -133,27 +124,13 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
     if (path) await get().openRepo(path);
   },
 
-  loadIdentity: async () => {
-    const startedEpoch = get().epoch;
-    const hasIdentity = await gitApi.hasIdentity();
-    if (get().epoch !== startedEpoch) return;
-    set({ hasIdentity });
-  },
+  loadIdentity: () => whileCurrent(get, gitApi.hasIdentity, hasIdentity => set({ hasIdentity })),
 
   removeRecentRepo: path => {
     void gitApi.forgetRepo(path).catch(() => {});
     set(s => ({
       recentRepos: s.recentRepos.filter(r => r && r !== path),
-      ...(s.repoPath === path
-        ? {
-            repoPath: null,
-            remoteUrl: null,
-            remoteHost: null,
-            remoteProtocol: null,
-            mergeState: null,
-            epoch: s.epoch + 1,
-          }
-        : {}),
+      ...(s.repoPath === path ? { ...NO_REPO, epoch: s.epoch + 1 } : {}),
     }));
   },
 

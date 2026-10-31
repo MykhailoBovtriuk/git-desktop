@@ -29,15 +29,10 @@ export function StashList({
   onDrop,
 }: StashListProps) {
   const { t, i18n } = useTranslation('stash');
-  const requestConfirm = useUiStore(s => s.requestConfirm);
+  const confirmDanger = useUiStore(s => s.confirmDanger);
 
   const handleDrop = async (index: number) => {
-    const ok = await requestConfirm({
-      title: t('drop'),
-      message: t('dropConfirm', { index }),
-      confirmLabel: t('drop'),
-      danger: true,
-    });
+    const ok = await confirmDanger(t('drop'), t('dropConfirm', { index }));
     if (ok) onDrop(index);
   };
 

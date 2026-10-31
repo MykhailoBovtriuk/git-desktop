@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { wrap, registerIpcHandlers } from '../electron/ipc-handlers';
+import { registerIpcHandlers } from '../electron/ipc-handlers';
+import { wrap } from '../electron/ipc/wrap';
 import { ipcMain } from 'electron';
 
 vi.mock('electron', () => ({
@@ -17,22 +18,19 @@ describe('wrap', () => {
 
   it('converts promise rejections into the error envelope', async () => {
     const result = await wrap(() => Promise.reject(new Error('boom')));
-    expect(result).toEqual({ error: 'boom', code: 'GIT_ERROR' });
+    expect(result).toEqual({ error: 'boom' });
   });
 
   it('converts synchronous throws into the error envelope', async () => {
     const result = await wrap(() => {
       throw new Error('Invalid argument: hash must be a commit hash');
     });
-    expect(result).toEqual({
-      error: 'Invalid argument: hash must be a commit hash',
-      code: 'GIT_ERROR',
-    });
+    expect(result).toEqual({ error: 'Invalid argument: hash must be a commit hash' });
   });
 
   it('stringifies non-Error throws instead of returning undefined error', async () => {
     const result = await wrap(() => Promise.reject('raw string failure'));
-    expect(result).toEqual({ error: 'raw string failure', code: 'GIT_ERROR' });
+    expect(result).toEqual({ error: 'raw string failure' });
   });
 });
 

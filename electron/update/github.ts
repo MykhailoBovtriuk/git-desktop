@@ -1,12 +1,9 @@
-import { getJson, OAuthError } from '../auth/http';
+import { getJson, HttpError } from '../auth/http';
 import { compareSemver, parseSemver, type SemVer } from './semver';
 import { assetNameFor, isAllowedDownloadUrl, type LinuxPackage } from './assets';
 import type { UpdateInfo } from '../../src/types';
 
-/**
- * The releases of this project. The list endpoint, not /releases/latest: needed
- * for pre-releases and for reinstalling.
- */
+// The list endpoint, not /releases/latest: needed for pre-releases and for reinstalling.
 const RELEASES_URL =
   'https://api.github.com/repos/MykhailoBovtriuk/git-desktop/releases?per_page=20';
 const ACCEPT = 'application/vnd.github+json';
@@ -17,7 +14,7 @@ const MIN_INTERVAL_MS = 30_000;
 const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
 const NOTES_LIMIT = 4_000;
 
-export type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
+type UpdateErrorReason = 'offline' | 'rate-limited' | 'failed';
 
 export class UpdateError extends Error {
   constructor(
@@ -57,7 +54,7 @@ export function resetReleaseCache(): void {
 function toUpdateError(err: unknown): UpdateError {
   if (err instanceof UpdateError) return err;
 
-  if (err instanceof OAuthError) {
+  if (err instanceof HttpError) {
     const exhausted = err.headers?.get('x-ratelimit-remaining') === '0';
     if (err.status === 429 || (err.status === 403 && exhausted)) {
       const reset = Number(err.headers?.get('x-ratelimit-reset'));
@@ -102,7 +99,7 @@ async function fetchReleases(force: boolean): Promise<GithubRelease[]> {
   return inFlight;
 }
 
-export interface LookupOptions {
+interface LookupOptions {
   currentVersion: string;
   includePrerelease: boolean;
   force: boolean;
@@ -111,7 +108,7 @@ export interface LookupOptions {
   linuxPackage: LinuxPackage;
 }
 
-export interface ReleaseLookup {
+interface ReleaseLookup {
   latest: UpdateInfo | null;
   current: UpdateInfo | null;
   checkedAt: number;
@@ -142,10 +139,7 @@ function toUpdateInfo(release: GithubRelease, opts: LookupOptions): UpdateInfo |
   };
 }
 
-/**
- * The newest release worth offering, plus the one installed. Ranked by version:
- * GitHub sorts by creation date.
- */
+// Ranked by version: GitHub sorts by creation date.
 export async function lookupReleases(opts: LookupOptions): Promise<ReleaseLookup> {
   const releases = await fetchReleases(opts.force);
   const running = normalizeVersion(opts.currentVersion);

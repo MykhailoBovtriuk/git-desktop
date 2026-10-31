@@ -1,13 +1,15 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { errorMessage } from '../../lib/error-message';
-import { Button, Modal, SegmentedControl, UserIcon } from '../../shared/ui';
+import { useBusy } from '../../hooks/use-busy';
+import { useCurrentAccount } from '../../hooks/use-current-account';
+import { Avatar, Button, Card, Modal, SegmentedControl } from '../../shared/ui';
+import type { SwitchableProtocol } from '../../types';
 
-type Protocol = 'ssh' | 'https';
+type Protocol = SwitchableProtocol;
 
 export function ConnectionModal() {
   const { t } = useTranslation('account');
@@ -28,44 +30,30 @@ export function ConnectionModal() {
       switchRemoteProtocol: s.switchRemoteProtocol,
     })),
   );
+  const current = useCurrentAccount();
   const account = useAccountStore(
     useShallow(s => ({
-      current: s.current,
       authSource: s.authSource,
       persistent: s.persistent,
       openSignIn: s.openSignIn,
       signOut: s.signOut,
       forgetSystemCredential: s.forgetSystemCredential,
       refreshAuthSource: s.refreshAuthSource,
-      refreshCurrent: s.refreshCurrent,
     })),
   );
-  const [busy, setBusy] = useState(false);
+  const [busy, track] = useBusy();
 
   if (!open || !remoteHost || !repoPath) return null;
 
   const protocol: Protocol | null =
     remoteProtocol === 'ssh' || remoteProtocol === 'https' ? remoteProtocol : null;
 
-  const act = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await fn();
-    } catch (err: unknown) {
-      addToast({
-        variant: 'error',
-        title: t('connection.failed'),
-        message: errorMessage(err),
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const act = (fn: () => Promise<void>) =>
+    track(fn).catch((err: unknown) =>
+      addToast({ variant: 'error', title: t('connection.failed'), message: errorMessage(err) }),
+    );
 
-  const refresh = async () => {
-    account.refreshCurrent(repoPath);
-    await account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
-  };
+  const refresh = () => account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
 
   const switchTo = (to: Protocol) => {
     if (busy || to === protocol) return;
@@ -128,27 +116,27 @@ export function ConnectionModal() {
           </div>
         ) : null}
 
-        <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
+        <Card>
           <AuthCard protocol={protocol} host={remoteHost} />
           <div className="flex items-center gap-2 shrink-0">
-            {protocol === 'https' && account.current && (
+            {protocol === 'https' && current && (
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={busy}
                 title={t('connection.signOutHint', { host: remoteHost })}
-                onClick={() => signOut(account.current!.repoPath)}
+                onClick={() => signOut(current!.repoPath)}
               >
                 {t('section.signOut')}
               </Button>
             )}
-            {protocol === 'https' && !account.current && account.authSource === 'system' && (
+            {protocol === 'https' && !current && account.authSource === 'system' && (
               <Button variant="secondary" size="sm" disabled={busy} onClick={forget}>
                 {t('connection.forget')}
               </Button>
             )}
             {protocol === 'https' &&
-              !account.current &&
+              !current &&
               (account.authSource === 'system' || account.authSource === 'none') && (
                 <Button
                   variant={account.authSource === 'none' ? 'primary' : 'secondary'}
@@ -160,7 +148,7 @@ export function ConnectionModal() {
                 </Button>
               )}
           </div>
-        </div>
+        </Card>
 
         {protocol === 'https' && !account.persistent && (
           <p className="text-yellow text-xs">{t('section.notPersistent')}</p>
@@ -172,9 +160,8 @@ export function ConnectionModal() {
 
 function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string }) {
   const { t } = useTranslation('account');
-  const { current, authSource } = useAccountStore(
-    useShallow(s => ({ current: s.current, authSource: s.authSource })),
-  );
+  const current = useCurrentAccount();
+  const authSource = useAccountStore(s => s.authSource);
 
   let title: string;
   let detail: string | null = null;
@@ -198,11 +185,7 @@ function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string 
 
   return (
     <div className="flex items-center gap-3 min-w-0">
-      {current?.avatarDataUrl && protocol === 'https' ? (
-        <img src={current.avatarDataUrl} alt="" className="w-8 h-8 rounded-full shrink-0" />
-      ) : (
-        <UserIcon size={20} aria-hidden="true" className="shrink-0 text-subtext" />
-      )}
+      <Avatar src={protocol === 'https' ? current?.avatarDataUrl : null} size="md" />
       <div className="min-w-0">
         <p className="text-text text-sm">{title}</p>
         {detail && <p className="text-subtext text-xs">{detail}</p>}

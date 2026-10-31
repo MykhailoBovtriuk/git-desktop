@@ -1,6 +1,5 @@
-// Extract one hunk from a single-file diff into a patch `git apply` accepts,
-// for hunk-level staging. Sliced verbatim, since parse-diff drops byte-level
-// details. `hunkIndex` is 0-based in DiffViewer order.
+// Sliced verbatim, since parse-diff drops byte-level details. `hunkIndex` is
+// 0-based in DiffViewer order.
 export function buildHunkPatch(rawDiff: string, hunkIndex: number): string {
   const lines = rawDiff.split('\n');
 

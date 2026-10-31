@@ -11,7 +11,7 @@ const KEEP_DAYS: Record<Exclude<LogRetention, 'session'>, number> = {
   month: 30,
   forever: Infinity,
 };
-export const DEFAULT_RETENTION: LogRetention = 'week';
+const DEFAULT_RETENTION: LogRetention = 'week';
 const SESSION_CAP = 2000;
 const CONFIG_FILE = 'config.json';
 const META_FILE = 'meta.json';

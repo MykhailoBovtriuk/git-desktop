@@ -3,7 +3,7 @@ import { fromTerminal, isMac } from '../lib/keyboard';
 
 interface Shortcut {
   key?: string;
-  /** Matched against `KeyboardEvent.code`, for keys whose `key` varies by layout (Backquote). */
+  /** For keys whose `key` varies by layout (Backquote). */
   code?: string;
   /**
    * 'cmd-or-ctrl': Cmd on macOS, Ctrl elsewhere; on Windows/Linux it stands

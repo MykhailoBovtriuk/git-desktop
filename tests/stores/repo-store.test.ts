@@ -23,7 +23,7 @@ vi.mock('../../src/api/git-api', () => ({
     }),
     checkout: vi.fn().mockResolvedValue(null),
     checkoutForce: vi.fn().mockResolvedValue(null),
-    merge: vi.fn().mockResolvedValue({ success: true, conflicts: [] }),
+    merge: vi.fn().mockResolvedValue({ conflicts: [] }),
     isMerging: vi.fn().mockResolvedValue(false),
     getMergeConflicts: vi.fn().mockResolvedValue([]),
     getMergeMessage: vi.fn().mockResolvedValue(''),
@@ -52,7 +52,6 @@ const accountState = {
   dismissedRepos: new Set<string>(),
   accounts: [] as unknown[],
   accountFor: () => null,
-  refreshCurrent: vi.fn(),
   authSource: null as string | null,
   refreshAuthSource: vi.fn(async (host: string | null, protocol: string | null) => {
     accountState.authSource = host ? await authSource(host, protocol) : null;
@@ -97,7 +96,6 @@ describe('repo-store', () => {
       hasMoreCommits: false,
       loadingMoreCommits: false,
       lastRefreshError: null,
-      busyOperation: null,
     } as any);
     vi.clearAllMocks();
   });
@@ -128,7 +126,7 @@ describe('repo-store', () => {
   it('merge with conflicts sets mergeState and throws MergeConflictError', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     const { MergeConflictError } = await import('../../src/stores/repo-store');
-    vi.mocked(gitApi.merge).mockResolvedValueOnce({ success: false, conflicts: ['src/foo.ts'] });
+    vi.mocked(gitApi.merge).mockResolvedValueOnce({ conflicts: ['src/foo.ts'] });
     useRepoStore.setState({ currentBranch: 'main' });
     await expect(useRepoStore.getState().merge('feature')).rejects.toBeInstanceOf(
       MergeConflictError,
@@ -373,26 +371,26 @@ describe('repo-store', () => {
     expect(useRepoStore.getState().lastRefreshError).toBeNull();
   });
 
-  it('runOperation sets busyOperation while running and clears it after', async () => {
-    let observed: string | null = 'unset';
-    await useRepoStore.getState().runOperation('commit', async () => {
-      observed = useRepoStore.getState().busyOperation;
+  it('runOperation counts as busy while running and clears it after', async () => {
+    let observed = -1;
+    await useRepoStore.getState().runOperation(async () => {
+      observed = useRepoStore.getState().busyCount;
     });
-    expect(observed).toBe('commit');
-    expect(useRepoStore.getState().busyOperation).toBeNull();
+    expect(observed).toBe(1);
+    expect(useRepoStore.getState().busyCount).toBe(0);
   });
 
-  it('runOperation clears busyOperation even when the operation throws', async () => {
+  it('runOperation clears busy even when the operation throws', async () => {
     await expect(
-      useRepoStore.getState().runOperation('push', async () => {
+      useRepoStore.getState().runOperation(async () => {
         throw new Error('nope');
       }),
     ).rejects.toThrow('nope');
-    expect(useRepoStore.getState().busyOperation).toBeNull();
+    expect(useRepoStore.getState().busyCount).toBe(0);
   });
 
   it('runOperation returns the operation result', async () => {
-    const result = await useRepoStore.getState().runOperation('pull', async () => '42 files');
+    const result = await useRepoStore.getState().runOperation(async () => '42 files');
     expect(result).toBe('42 files');
   });
 
@@ -491,7 +489,7 @@ describe('repo-store race conditions', () => {
       checkoutConflict: null,
       hasMoreCommits: false,
       loadingMoreCommits: false,
-      busyOperation: null,
+      busyCount: 0,
     } as any);
     vi.clearAllMocks();
   });
@@ -514,7 +512,7 @@ describe('repo-store race conditions', () => {
     const slow = deferred<unknown>();
     (gitApi.getStatus as any).mockImplementationOnce(() => slow.promise);
     const stale = useRepoStore.getState().loadStatus();
-    await useRepoStore.getState().runOperation('commit', async () => {});
+    await useRepoStore.getState().runOperation(async () => {});
     slow.resolve({
       staged: [{ path: 'ghost.txt', status: 'M', staged: true }],
       unstaged: [],
@@ -525,17 +523,17 @@ describe('repo-store race conditions', () => {
     expect(useRepoStore.getState().status.staged).toHaveLength(0);
   });
 
-  it('keeps busyOperation set until every concurrent operation finishes', async () => {
+  it('stays busy until every concurrent operation finishes', async () => {
     const g1 = deferred<void>();
     const g2 = deferred<void>();
-    const op1 = useRepoStore.getState().runOperation('pull', () => g1.promise);
-    const op2 = useRepoStore.getState().runOperation('checkout', () => g2.promise);
+    const op1 = useRepoStore.getState().runOperation(() => g1.promise);
+    const op2 = useRepoStore.getState().runOperation(() => g2.promise);
     g2.resolve();
     await op2;
-    expect(useRepoStore.getState().busyOperation).not.toBeNull();
+    expect(useRepoStore.getState().busyCount).toBe(1);
     g1.resolve();
     await op1;
-    expect(useRepoStore.getState().busyOperation).toBeNull();
+    expect(useRepoStore.getState().busyCount).toBe(0);
   });
 
   it('discards a "load more" page when the log was reloaded meanwhile', async () => {
@@ -570,7 +568,7 @@ describe('repo-store state consistency', () => {
       mergeState: null,
       merging: false,
       checkoutConflict: null,
-      busyOperation: null,
+      busyCount: 0,
     } as any);
     vi.clearAllMocks();
   });

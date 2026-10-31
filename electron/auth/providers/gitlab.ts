@@ -28,7 +28,6 @@ function makeGitLabProvider(
     endpoints: host => ({
       authorizeUrl: `https://${host}/oauth/authorize`,
       tokenUrl: `https://${host}/oauth/token`,
-      apiBase: `https://${host}/api/v4`,
     }),
     tokenHelpUrl: host => `https://${host}/-/user_settings/personal_access_tokens`,
     probe: async host => {

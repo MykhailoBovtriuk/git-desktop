@@ -1,5 +1,4 @@
 {
-  "signIn": "Sign in",
   "browser": {
     "title": "Sign in Using Your Browser",
     "body": "Your browser will redirect you back to Git Desktop once you've signed in. If your browser asks for your permission to launch Git Desktop, please allow it.",
@@ -32,7 +31,6 @@
     "useToken": "Use a token instead"
   },
   "section": {
-    "title": "Accounts",
     "signOut": "Sign Out",
     "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting.",
     "repoHint": "The account the repository {{repo}} signs in with. Every repository signs in on its own; terminals in its folder use the same login.",

@@ -19,7 +19,7 @@ interface SignInTarget {
   existing: ProviderAccount | null;
 }
 
-export type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
+type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
 
 interface AccountState {
   accounts: ProviderAccount[];
@@ -32,12 +32,10 @@ interface AccountState {
   busy: boolean;
   dismissedRepos: Set<string>;
 
-  current: ProviderAccount | null;
   authSource: AuthSource | null;
 
   loadAccounts: () => Promise<void>;
   accountFor: (repoPath: string | null) => ProviderAccount | null;
-  refreshCurrent: (repoPath: string | null) => void;
   refreshAuthSource: (
     host: string | null,
     protocol: RemoteProtocol | null,
@@ -69,23 +67,28 @@ function firstMethod(option: ProviderOption | undefined): SignInPhase {
 }
 
 export const useAccountStore = create<AccountState>()((set, get) => {
-  const proceed = async (providerId: ProviderId, host: string, repoPath: string) => {
-    const info = await accountApi.providersFor(host);
-    const existing = get().accounts.find(a => a.repoPath === repoPath) ?? null;
-    const option = info.options.find(o => o.id === providerId);
+  const setTarget = (target: Omit<SignInTarget, 'existing'>, phase?: SignInPhase) => {
+    const existing = get().accountFor(target.repoPath);
     set({
-      target: { host, providerId, options: info.options, repoPath, existing },
-      phase: existing ? 'existing' : firstMethod(option),
+      target: { ...target, existing },
+      phase:
+        phase ??
+        (existing ? 'existing' : firstMethod(target.options.find(o => o.id === target.providerId))),
       endpointError: null,
     });
   };
 
-  const guarded = async (fn: () => Promise<void>) => {
+  const proceed = async (providerId: ProviderId, host: string, repoPath: string) => {
+    const { options } = await accountApi.providersFor(host);
+    setTarget({ host, providerId, options, repoPath });
+  };
+
+  const guarded = async (fn: () => Promise<void>, { keepPhase = false } = {}) => {
     set({ busy: true, error: null });
     try {
       await fn();
     } catch (err: unknown) {
-      set({ phase: 'error', error: errorMessage(err) });
+      set({ error: errorMessage(err), ...(keepPhase ? {} : { phase: 'error' as const }) });
     } finally {
       set({ busy: false });
     }
@@ -101,7 +104,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
 
   return {
     accounts: [],
-    current: null,
     authSource: null,
     persistent: true,
     loaded: false,
@@ -140,11 +142,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       set({ authSource });
     },
 
-    refreshCurrent: repoPath =>
-      set(s => ({
-        current: repoPath ? (s.accounts.find(a => a.repoPath === repoPath) ?? null) : null,
-      })),
-
     openSignIn: (host, repoPath) =>
       guarded(async () => {
         const info = await accountApi.providersFor(host);
@@ -152,17 +149,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           await proceed(info.providerId, host, repoPath);
           return;
         }
-        set({
-          target: {
-            host,
-            providerId: null,
-            options: info.options,
-            repoPath,
-            existing: get().accounts.find(a => a.repoPath === repoPath) ?? null,
-          },
-          phase: 'choose',
-          endpointError: null,
-        });
+        setTarget({ host, providerId: null, options: info.options, repoPath }, 'choose');
       }),
 
     beginSignIn: (providerId, repoPath) =>
@@ -174,17 +161,10 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           await proceed(providerId, option.defaultHost, repoPath);
           return;
         }
-        set({
-          target: {
-            host: option.defaultHost ?? '',
-            providerId,
-            options: info.options,
-            repoPath,
-            existing: get().accounts.find(a => a.repoPath === repoPath) ?? null,
-          },
-          phase: 'endpoint',
-          endpointError: null,
-        });
+        setTarget(
+          { host: option.defaultHost ?? '', providerId, options: info.options, repoPath },
+          'endpoint',
+        );
       }),
 
     submitEndpoint: address =>
@@ -242,22 +222,20 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     submitToken: async (login, token) => {
       const target = get().target;
       if (!target) return;
-      set({ busy: true, error: null });
-      try {
-        await accountApi.signInWithToken(
-          target.providerId ?? 'token',
-          target.host,
-          login,
-          token,
-          target.repoPath,
-        );
-        set({ phase: null, target: null });
-        await get().loadAccounts();
-      } catch (err: unknown) {
-        set({ error: errorMessage(err) });
-      } finally {
-        set({ busy: false });
-      }
+      await guarded(
+        async () => {
+          await accountApi.signInWithToken(
+            target.providerId ?? 'token',
+            target.host,
+            login,
+            token,
+            target.repoPath,
+          );
+          set({ phase: null, target: null });
+          await get().loadAccounts();
+        },
+        { keepPhase: true },
+      );
     },
 
     cancelSignIn: async () => {
@@ -270,7 +248,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
 
     signOut: async repoPath => {
       await accountApi.signOut(repoPath);
-      set(s => ({ current: s.current?.repoPath === repoPath ? null : s.current }));
       await get().loadAccounts();
     },
 
@@ -286,8 +263,7 @@ function signedIn(
 ): boolean {
   const target = s.target;
   if (!target) return false;
-  const now = snapshot.accounts.find(a => a.repoPath === target.repoPath);
-  // Re-signing a host changes nothing a list compares, except the moment it
-  // arrives: any change event while waiting on a replaced account means done.
-  return !!now;
+  // A re-sign leaves the list unchanged, so while waiting any account for this
+  // repository counts as done.
+  return snapshot.accounts.some(a => a.repoPath === target.repoPath);
 }

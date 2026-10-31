@@ -1,4 +1,4 @@
-import { authedGet, getJson, fetchAvatar, probe } from '../http';
+import { authedGet, getJson, fetchAvatar, HttpError, probe } from '../http';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface BitbucketUser {
@@ -28,9 +28,8 @@ export const bitbucket: ProviderDefinition = {
   endpoints: () => ({
     authorizeUrl: 'https://bitbucket.org/site/oauth2/authorize',
     tokenUrl: 'https://bitbucket.org/site/oauth2/access_token',
-    apiBase: 'https://api.bitbucket.org/2.0',
   }),
-  // App passwords stop working for git on 9 June 2026; API tokens replace them.
+  // App passwords no longer work for git; API tokens replace them.
   tokenHelpUrl: () => 'https://id.atlassian.com/manage-profile/security/api-tokens',
   fetchAccount: async (host, token) => {
     const user = await getJson<BitbucketUser>('https://api.bitbucket.org/2.0/user', token);
@@ -75,7 +74,6 @@ export const bitbucketServer: ProviderDefinition = {
   endpoints: host => ({
     authorizeUrl: `https://${host}/rest/oauth2/latest/authorize`,
     tokenUrl: `https://${host}/rest/oauth2/latest/token`,
-    apiBase: `https://${host}/rest/api/1.0`,
   }),
   tokenHelpUrl: host => `https://${host}/plugins/servlet/access-tokens/manage`,
   probe: async host => {
@@ -93,7 +91,7 @@ export const bitbucketServer: ProviderDefinition = {
       `Bearer ${token}`,
     );
     const name = res.headers.get('x-ausername')?.trim();
-    if (!name) throw new Error(`https://${host} returned 401 for this token`);
+    if (!name) throw new HttpError(`https://${host} returned 401 for this token`, 401);
     const user = await getJson<BitbucketServerUser>(
       `https://${host}/rest/api/1.0/users/${encodeURIComponent(name)}`,
       token,

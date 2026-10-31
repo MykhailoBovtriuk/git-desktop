@@ -6,16 +6,13 @@ export interface FilePathListProps {
   files: { path: string }[];
   selected: string | null;
   onSelect: (path: string) => void;
-  width?: number;
+  width: number;
   children?: ReactNode;
 }
 
 export function FilePathList({ files, selected, onSelect, width, children }: FilePathListProps) {
   return (
-    <div
-      className={`border-r border-surface0 overflow-y-auto shrink-0 ${width === undefined ? 'w-48' : ''}`}
-      style={width === undefined ? undefined : { width }}
-    >
+    <div className="border-r border-surface0 overflow-y-auto shrink-0" style={{ width }}>
       {children}
       {files.map(f => (
         <button

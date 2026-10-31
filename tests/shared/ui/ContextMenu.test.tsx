@@ -9,7 +9,7 @@ function Harness({ open, anchor }: { open: boolean; anchor?: 'button' | 'panel' 
   return (
     <div data-dropdown-panel>
       <button ref={ref}>⋯</button>
-      <ContextMenu open={open} anchorRef={ref} anchor={anchor} height={44}>
+      <ContextMenu open={open} anchorRef={ref} anchor={anchor}>
         <span>action</span>
       </ContextMenu>
     </div>

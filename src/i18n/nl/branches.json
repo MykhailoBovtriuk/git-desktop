@@ -16,9 +16,6 @@
   "leaveAction": "Achterlaten",
   "created": "{{name}} aangemaakt",
   "createdLeft": "{{name}} aangemaakt, wijzigingen gestasht op {{branch}}",
-  "pull": "Pull",
-  "push": "Push",
-  "publishBranch": "Branch publiceren",
   "checkout": "Uitchecken",
   "mergeIntoCurrent": "Samenvoegen in huidige",
   "rebaseOntoCurrent": "Rebasen op huidige",
@@ -33,6 +30,5 @@
   "switchedTo": "Overgeschakeld naar {{name}}",
   "merged": "{{name}} samengevoegd",
   "rebasedOnto": "Gerebased op {{name}}",
-  "fetch": "Fetch",
   "fetching": "Fetchen…"
 }

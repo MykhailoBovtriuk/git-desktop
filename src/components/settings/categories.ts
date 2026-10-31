@@ -18,7 +18,7 @@ import { TerminalSection } from './TerminalSection';
 import { LogsSection } from './LogsSection';
 import { UpdateSection } from './UpdateSection';
 
-export interface CategoryDef {
+interface CategoryDef {
   id: SettingsCategory;
   icon: IconType;
   Component: ComponentType;

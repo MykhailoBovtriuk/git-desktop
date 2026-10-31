@@ -106,7 +106,7 @@ describe('useAutoRefresh', () => {
 
   it('skips refresh while an operation is busy', () => {
     withRepo();
-    mockGetState.mockReturnValue({ refresh: mockRefresh, busyOperation: 'commit' } as any);
+    mockGetState.mockReturnValue({ refresh: mockRefresh, busyCount: 1 } as any);
     renderHook(() => useAutoRefresh());
 
     gitChangedCb!();

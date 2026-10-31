@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { LogEntry, UpdateProgress } from '../src/types';
+import type { ElectronAPI, LogEntry, UpdateProgress } from '../src/types';
 
 const ALLOWED_CHANNELS = new Set<string>([
   'git:open-repo',
@@ -45,13 +45,11 @@ const ALLOWED_CHANNELS = new Set<string>([
   'git:stash-drop',
   'git:get-stash-diff',
   'git:get-stash-top',
-  'git:get-repo-path',
   'git:has-identity',
   'git:get-identity',
   'git:set-identity',
   'git:read-file',
   'git:write-file',
-  'git:get-conflict-sides',
   'account:list',
   'account:providers',
   'account:auth-source',
@@ -112,4 +110,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTerminalData: subscribe<[id: string, data: string]>('term:data'),
   onTerminalExit: subscribe<[id: string, exitCode: number]>('term:exit'),
   platform: process.platform,
-});
+} satisfies ElectronAPI);

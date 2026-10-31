@@ -25,8 +25,7 @@ const MIME_TYPES: Record<string, string> = {
   '.otf': 'font/otf',
 };
 
-// Register the custom protocol before app.ready. `app://` instead of `file://`:
-// Chromium gives each file:// URL its own origin, which breaks ES modules.
+// `app://` instead of `file://`: Chromium gives each file:// URL its own origin, which breaks ES modules.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',
@@ -117,9 +116,11 @@ function createWindow() {
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     console.error(`[render-process-gone]`, details);
   });
-  mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
-    console.log(`[renderer console] level=${level} ${sourceId}:${line} ${message}`);
-  });
+  if (!app.isPackaged) {
+    mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+      console.log(`[renderer console] level=${level} ${sourceId}:${line} ${message}`);
+    });
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;

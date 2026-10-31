@@ -129,7 +129,7 @@ npm run test:watch    # watch mode
 
 The suite (690+ tests) covers:
 
-- `GitService` against a real Git repo (temp dir + actual `git init`)
+- The `electron/git/*` modules against a real Git repo (temp dir + actual `git init`)
 - The auth stack: OAuth flow, credential verification, token store, provider registry, deep links
 - Diff parser, patch builder, commit graph layout
 - Zustand stores and the shared UI components
@@ -216,7 +216,6 @@ git-desktop/
 │   ├── ipc/                     # One file per IPC domain (repo, staging, merge, account, …)
 │   ├── git/                     # Git operations around a shared GitContext
 │   │                            #   (history, status, branches, remote, merge, rebase, stash, files)
-│   ├── git-service.ts           # Thin facade the IPC layer calls into
 │   ├── repo-watcher.ts          # fs.watch on .git → pushes repo:changed to the renderer
 │   └── auth/                    # Sign-in: OAuth engine, credential check, token store, deep links, git credentials
 │       └── providers/           # One file per hosting service (GitHub, GitLab, Azure, …)

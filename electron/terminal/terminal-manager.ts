@@ -5,11 +5,11 @@ import type { TerminalSession } from '../../src/types';
 import type { PtyModule } from './pty-loader';
 import { pickShell, terminalEnv, type ShellSpec } from './shell';
 
-export const BUFFER_CHARS = 200_000;
+const BUFFER_CHARS = 200_000;
 /** Output is batched for one frame: `yes` must not become an IPC per byte. */
 const FLUSH_MS = 16;
 
-export interface TerminalEvents {
+interface TerminalEvents {
   data: (id: string, data: string) => void;
   exit: (id: string, exitCode: number) => void;
 }

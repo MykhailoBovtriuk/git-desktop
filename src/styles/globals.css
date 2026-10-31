@@ -16,6 +16,15 @@
   --color-red: var(--gd-red);
   --color-peach: var(--gd-peach);
   --color-sky: var(--gd-sky);
+  --color-git: #f05032;
+}
+
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 :root {

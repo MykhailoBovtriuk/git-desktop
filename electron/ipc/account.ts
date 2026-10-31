@@ -1,8 +1,15 @@
-import { BrowserWindow, ipcMain, shell } from 'electron';
-import path from 'path';
-import type { AuthSource, ProviderAccount, ProviderId, ServerProbe } from '../../src/types';
-import { assertString } from '../ipc-validators';
-import { wrap } from './wrap';
+import { ipcMain, shell } from 'electron';
+import type {
+  AccountsSnapshot,
+  AuthSource,
+  ProviderAccount,
+  ProviderId,
+  ProvidersForHost,
+  ServerProbe,
+} from '../../src/types';
+import { assertCredentialField, assertHost, assertRepoPath, assertString } from '../ipc-validators';
+import { isRejected } from '../auth/http';
+import { wrap, sendToRenderer, type WindowOptions } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn } from '../auth/oauth-flow';
 import { providerById, providerForHost, providerOptions } from '../auth/providers/registry';
 import {
@@ -29,37 +36,13 @@ import {
 import type { ProviderDefinition } from '../auth/providers/types';
 import { ensureGlobalIdentity } from '../auth/identity-bootstrap';
 
-export interface AccountHandlerOptions {
-  getWindow?: () => BrowserWindow | null;
-}
-
 let notify: () => void = () => {};
 
-function assertHost(value: unknown): asserts value is string {
-  assertString(value, 'host');
-  // Hosts reach `git credential` and a URL; a value with whitespace or a slash
-  // in it is either a mistake or an attempt to smuggle a second field in.
-  if (!/^[a-z0-9.-]+(:\d+)?$/i.test(value as string)) {
-    throw new Error('Invalid argument: host is not a hostname');
-  }
-}
-
-function assertRepoPath(value: unknown): asserts value is string {
-  assertString(value, 'repoPath');
-  if (!path.isAbsolute(value as string) || /[\r\n\0]/.test(value as string)) {
-    throw new Error('Invalid argument: repoPath is not an absolute path');
-  }
-}
-
-/**
- * A value for `git credential`, which is one `key=value` per line: a newline
- * would inject a second field.
- */
-function assertCredentialField(value: unknown, name: string): asserts value is string {
-  assertString(value, name);
-  if (/[\r\n\0]/.test(value as string)) {
-    throw new Error(`Invalid argument: ${name} contains a line break`);
-  }
+function requireProvider(id: unknown): ProviderDefinition {
+  assertString(id, 'providerId');
+  const provider = providerById(id as ProviderId);
+  if (!provider) throw new Error(`Unknown provider: ${id}`);
+  return provider;
 }
 
 async function accountFromToken(
@@ -72,9 +55,8 @@ async function accountFromToken(
   const provider = providerId === 'token' ? providerForHost(host) : providerById(providerId);
   if (provider) {
     const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
       throw new Error(
-        /returned 40[13]/.test(message)
+        isRejected(err)
           ? `${provider.displayName} rejected this token`
           : `Could not check this token with ${provider.displayName}`,
       );
@@ -103,29 +85,18 @@ async function accountFromToken(
   };
 }
 
-async function adoptAccount(
-  account: ProviderAccount,
-  token: string,
-  refreshToken: string | null,
-  expiresAt: number | null,
-  clientId: string,
-  clientSecret: string | null,
-): Promise<ProviderAccount> {
+type Grant = Pick<
+  StoredCredential,
+  'accessToken' | 'refreshToken' | 'expiresAt' | 'clientId' | 'clientSecret'
+>;
+
+async function adoptAccount(account: ProviderAccount, grant: Grant): Promise<ProviderAccount> {
   await releaseRepo(account.repoPath, { revokeToken: true, notify: false });
-  await saveCredential({
-    repoPath: account.repoPath,
-    host: account.host,
-    account,
-    accessToken: token,
-    refreshToken,
-    expiresAt,
-    clientId,
-    clientSecret,
-  });
+  await saveCredential({ repoPath: account.repoPath, host: account.host, account, ...grant });
   // Order matters: git has to be able to authenticate before anything tells the
   // user they are signed in.
   const username = gitUsernameFor(account);
-  await approveCredentials(account.host, username, token);
+  await approveCredentials(account.host, username, grant.accessToken);
   await bindRepoUsername(account.repoPath, account.host, username);
   await ensureGlobalIdentity(account);
   notify();
@@ -151,12 +122,7 @@ async function releaseRepo(
   if (sharing) await approveCredentials(stored.host, username, sharing.accessToken);
   else await rejectCredentials(stored.host, username);
   if (opts.revokeToken && stored.accessToken !== sharing?.accessToken) {
-    void revoke(providerById(stored.account.providerId), {
-      host: stored.host,
-      token: stored.accessToken,
-      clientId: stored.clientId,
-      clientSecret: stored.clientSecret,
-    });
+    void revoke(stored.account.providerId, stored.host, stored);
   }
   if (opts.notify) notify();
   return stored;
@@ -170,33 +136,29 @@ export async function handleAuthCallback(url: string): Promise<void> {
   let result: Awaited<ReturnType<typeof completeSignIn>> | null = null;
   try {
     result = await completeSignIn(url);
-    await adoptAccount(
-      result.account,
-      result.token.accessToken,
-      result.token.refreshToken,
-      result.token.expiresAt,
-      result.clientId,
-      result.clientSecret,
-    );
+    await adoptAccount(result.account, grantOf(result));
   } catch (err: unknown) {
     if (result) {
-      void revoke(providerById(result.account.providerId), {
-        host: result.account.host,
-        token: result.token.accessToken,
-        clientId: result.clientId,
-        clientSecret: result.clientSecret,
-      });
+      void revoke(result.account.providerId, result.account.host, grantOf(result));
     }
     lastError = err instanceof Error ? err.message : String(err);
     notify();
   }
 }
 
-async function revoke(
-  provider: ProviderDefinition | null,
-  opts: Parameters<NonNullable<ProviderDefinition['revokeToken']>>[0],
-): Promise<void> {
-  await provider?.revokeToken?.(opts).catch(() => {});
+const grantOf = (result: Awaited<ReturnType<typeof completeSignIn>>): Grant => ({
+  accessToken: result.token.accessToken,
+  refreshToken: result.token.refreshToken,
+  expiresAt: result.token.expiresAt,
+  clientId: result.clientId,
+  clientSecret: result.clientSecret,
+});
+
+async function revoke(providerId: ProviderId, host: string, grant: Grant): Promise<void> {
+  const { accessToken: token, clientId, clientSecret } = grant;
+  await providerById(providerId)
+    ?.revokeToken?.({ host, token, clientId, clientSecret })
+    .catch(() => {});
 }
 
 /**
@@ -205,17 +167,11 @@ async function revoke(
  */
 let lastError: string | null = null;
 
-export interface AccountsSnapshot {
-  accounts: ProviderAccount[];
-  persistent: boolean;
-  error: string | null;
-}
-
-export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
-  notify = () => options.getWindow?.()?.webContents.send('account:changed');
+export function registerAccountHandlers(options: WindowOptions = {}) {
+  notify = () => sendToRenderer(options, 'account:changed');
 
   ipcMain.handle('account:list', () =>
-    wrap(async () => {
+    wrap(async (): Promise<AccountsSnapshot> => {
       const error = lastError;
       lastError = null;
       return { accounts: await listAccounts(), persistent: isPersistent(), error };
@@ -223,7 +179,7 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
   );
 
   ipcMain.handle('account:providers', (_e, host: unknown) =>
-    wrap(async () => {
+    wrap(async (): Promise<ProvidersForHost> => {
       const known = typeof host === 'string' && host ? host : null;
       return {
         host: known,
@@ -264,11 +220,9 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
       clientSecret: unknown,
     ) =>
       wrap(async () => {
-        assertString(providerId, 'providerId');
+        const provider = requireProvider(providerId);
         assertHost(host);
         assertRepoPath(repoPath);
-        const provider = providerById(providerId as ProviderId);
-        if (!provider) throw new Error(`Unknown provider: ${providerId}`);
 
         const url = beginSignIn({
           provider,
@@ -278,7 +232,6 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
           clientSecret: typeof clientSecret === 'string' ? clientSecret : undefined,
         });
         await shell.openExternal(url);
-        return null;
       }),
   );
 
@@ -286,31 +239,26 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     'account:sign-in-token',
     (_e, providerId: unknown, host: unknown, login: unknown, token: unknown, repoPath: unknown) =>
       wrap(async () => {
-        assertString(providerId, 'providerId');
-        if (!providerById(providerId as ProviderId)) {
-          throw new Error(`Unknown provider: ${providerId}`);
-        }
+        const { id } = requireProvider(providerId);
         assertHost(host);
         if (providerId === 'token' || login !== '') assertCredentialField(login, 'login');
         assertCredentialField(token, 'token');
         assertRepoPath(repoPath);
-        const account = await accountFromToken(
-          providerId as ProviderId,
-          host,
-          login as string,
-          token,
-          repoPath,
-        );
-        return adoptAccount(account, token, null, null, '', null);
+        const account = await accountFromToken(id, host, login as string, token, repoPath);
+        return adoptAccount(account, {
+          accessToken: token,
+          refreshToken: null,
+          expiresAt: null,
+          clientId: '',
+          clientSecret: null,
+        });
       }),
   );
 
   ipcMain.handle('account:probe-server', (_e, providerId: unknown, host: unknown) =>
     wrap(async (): Promise<ServerProbe> => {
-      assertString(providerId, 'providerId');
+      const provider = requireProvider(providerId);
       assertHost(host);
-      const provider = providerById(providerId as ProviderId);
-      if (!provider) throw new Error(`Unknown provider: ${providerId}`);
       return provider.probe ? provider.probe(host) : 'ok';
     }),
   );
@@ -319,14 +267,11 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
 
   ipcMain.handle('account:open-token-help', (_e, providerId: unknown, host: unknown) =>
     wrap(async () => {
-      assertString(providerId, 'providerId');
+      const provider = requireProvider(providerId);
       assertHost(host);
-      const provider = providerById(providerId as ProviderId);
-      if (!provider) throw new Error(`Unknown provider: ${providerId}`);
       // Built here, from a validated host — so this cannot become a way for the
       // renderer to open an arbitrary address.
       await shell.openExternal(provider.tokenHelpUrl(host));
-      return null;
     }),
   );
 
@@ -334,7 +279,6 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     wrap(async () => {
       cancelSignIn();
       lastError = null;
-      return null;
     }),
   );
 
@@ -351,7 +295,6 @@ export function registerAccountHandlers(options: AccountHandlerOptions = {}) {
     wrap(async () => {
       assertRepoPath(repoPath);
       await releaseRepo(repoPath, { revokeToken: true, notify: true });
-      return null;
     }),
   );
 }

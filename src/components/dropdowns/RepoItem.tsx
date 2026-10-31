@@ -1,6 +1,13 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu, DropdownRow, MenuItem, TruncatedText } from '../../shared/ui';
+import {
+  ContextMenu,
+  DropdownRow,
+  IconButton,
+  MenuItem,
+  MoreIcon,
+  TruncatedText,
+} from '../../shared/ui';
 
 interface RepoItemProps {
   name: string;
@@ -29,22 +36,22 @@ export function RepoItem({
           <TruncatedText className="text-text">{name}</TruncatedText>
         </button>
         {current && <span className="text-blue text-xs ml-2">✓</span>}
-        <button
+        <IconButton
           ref={btnRef}
+          icon={MoreIcon}
+          size="sm"
           onClick={e => {
             e.stopPropagation();
             onToggleContext();
           }}
-          className="ml-2 px-1 text-subtext hover:text-text"
+          className="ml-2"
           aria-label={t('moreActions')}
-        >
-          ⋯
-        </button>
+        />
       </DropdownRow>
 
       {/* anchor="panel": this dropdown is right-aligned to the titlebar, so a
           button-anchored menu would land on top of the repo list it belongs to. */}
-      <ContextMenu open={contextOpen} anchorRef={btnRef} anchor="panel" height={44}>
+      <ContextMenu open={contextOpen} anchorRef={btnRef} anchor="panel">
         <MenuItem tone="danger" onClick={onRemove}>
           {t('removeFromList')}
         </MenuItem>

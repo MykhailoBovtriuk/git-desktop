@@ -1,13 +1,14 @@
 import { ipcMain } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as files from '../git/files';
 import { assertString } from '../ipc-validators';
 import { wrap } from './wrap';
 
-export function registerFileHandlers(git: GitService) {
+export function registerFileHandlers(ctx: GitContext) {
   ipcMain.handle('git:read-file', (_e, p: string) =>
     wrap(() => {
       assertString(p, 'path');
-      return git.readFile(p);
+      return files.readFile(ctx, p);
     }),
   );
 
@@ -15,7 +16,7 @@ export function registerFileHandlers(git: GitService) {
     wrap(() => {
       assertString(p, 'path');
       if (typeof c !== 'string') throw new Error('Invalid argument: content must be a string');
-      return git.writeFile(p, c).then(() => null);
+      return files.writeFile(ctx, p, c);
     }),
   );
 }

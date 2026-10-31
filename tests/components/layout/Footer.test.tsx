@@ -56,7 +56,7 @@ function setup({
     sidebarOpen: true,
     toggleSidebar: vi.fn(),
   };
-  const accountState = { current: account, accountFor: () => account, authSource };
+  const accountState = { accountFor: () => account, authSource };
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(accountState)) as any);

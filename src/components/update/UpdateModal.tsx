@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useUpdateStore } from '../../stores/update-store';
 import { appApi } from '../../api/app-api';
-import { Button, DownloadIcon, Modal } from '../../shared/ui';
+import { Button, DownloadIcon, Modal, ProgressBar } from '../../shared/ui';
 import { updateErrorText } from './update-text';
 import { formatBytes } from '../../lib/format-bytes';
 
@@ -59,16 +59,7 @@ export function UpdateModal() {
         }
       >
         <div className="flex flex-col gap-2">
-          <div className="h-1.5 bg-surface2 rounded overflow-hidden">
-            <div
-              className={
-                total === 0
-                  ? 'h-full w-full bg-blue rounded animate-pulse'
-                  : 'h-full bg-blue rounded'
-              }
-              style={total === 0 ? undefined : { width: `${progress?.percent ?? 0}%` }}
-            />
-          </div>
+          <ProgressBar percent={total === 0 ? null : (progress?.percent ?? 0)} />
           {progress && (
             <p className="text-subtext text-xs">
               {total === 0

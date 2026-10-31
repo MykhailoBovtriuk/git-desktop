@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { HttpError } from '../../electron/auth/http';
 
 const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
 
@@ -231,7 +232,7 @@ describe('account:sign-in-token', () => {
   });
 
   it('reports a token a known host rejects, and stores nothing', async () => {
-    fetchAccount.mockRejectedValue(new Error('https://api.github.com/user returned 401'));
+    fetchAccount.mockRejectedValue(new HttpError('https://api.github.com/user returned 401', 401));
 
     const result = await signInToken('github.com', 'alice', '1-1');
     expect(result.error).toBe('GitHub rejected this token');

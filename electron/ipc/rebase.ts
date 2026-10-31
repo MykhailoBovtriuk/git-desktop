@@ -1,23 +1,24 @@
 import { ipcMain } from 'electron';
-import { GitService } from '../git-service';
+import { GitContext } from '../git/context';
+import * as rebase from '../git/rebase';
 import { assertBranchName } from '../ipc-validators';
 import { wrap, wrapLogged } from './wrap';
 
-export function registerRebaseHandlers(git: GitService) {
+export function registerRebaseHandlers(ctx: GitContext) {
   ipcMain.handle('git:rebase', (_e, branch: string) =>
-    wrapLogged('rebase', git, branch, () => {
+    wrapLogged('rebase', ctx, branch, () => {
       assertBranchName(branch, 'branch');
-      return git.rebase(branch).then(() => null);
+      return rebase.rebase(ctx, branch);
     }),
   );
 
-  ipcMain.handle('git:is-rebasing', () => wrap(() => git.isRebasing()));
+  ipcMain.handle('git:is-rebasing', () => wrap(() => rebase.isRebasing(ctx)));
 
   ipcMain.handle('git:abort-rebase', () =>
-    wrapLogged('rebase-abort', git, undefined, () => git.abortRebase().then(() => null)),
+    wrapLogged('rebase-abort', ctx, undefined, () => rebase.abortRebase(ctx)),
   );
 
   ipcMain.handle('git:continue-rebase', () =>
-    wrapLogged('rebase-continue', git, undefined, () => git.continueRebase().then(() => null)),
+    wrapLogged('rebase-continue', ctx, undefined, () => rebase.continueRebase(ctx)),
   );
 }

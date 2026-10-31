@@ -7,6 +7,7 @@ import {
   resolveRemoteHost,
   type ResolvedRemote,
 } from '../auth/remote-host';
+import type { SwitchableProtocol } from '../../src/types';
 
 async function originRemote(ctx: GitContext) {
   const remotes = await ctx.ensureRepo().getRemotes(true);
@@ -24,7 +25,7 @@ const SSH_PUSH_URL_KEY = 'gitdesktop-sshpushurl';
 
 export async function switchRemoteProtocol(
   ctx: GitContext,
-  to: 'ssh' | 'https',
+  to: SwitchableProtocol,
 ): Promise<ResolvedRemote> {
   const origin = await originRemote(ctx);
   const fetch = origin?.refs?.fetch;

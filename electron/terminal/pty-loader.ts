@@ -6,7 +6,7 @@ let cached: { pty: PtyModule | null; reason?: string } | null = null;
 
 /**
  * node-pty is native and has no prebuild for every target; a missing or broken
- * binary must cost the terminal, not the app. Loaded on first use, once.
+ * binary must cost the terminal, not the app.
  */
 export function loadPty(): { pty: PtyModule | null; reason?: string } {
   if (!cached) {

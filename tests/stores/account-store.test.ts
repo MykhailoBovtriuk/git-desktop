@@ -38,7 +38,6 @@ const option = (o: Partial<ProviderOption> & Pick<ProviderOption, 'id'>): Provid
   needsHost: true,
   needsClientId: true,
   needsClientSecret: false,
-  tokenHelpUrl: null,
   ...o,
 });
 
@@ -74,7 +73,6 @@ const answers = (providerId: string | null, host: string | null = null) => ({
 const reset = () =>
   useAccountStore.setState({
     accounts: [],
-    current: null,
     persistent: true,
     loaded: false,
     phase: null,
@@ -340,29 +338,21 @@ describe('account store', () => {
   });
 
   describe('the account shown for the open repository', () => {
-    it('points at whoever is signed in to the host', async () => {
+    it('points at whoever is signed in to the repository', async () => {
+      expect(store().accountFor(REPO)).toBeNull();
       await store().loadAccounts();
-      expect(store().current).toBeNull();
-
-      store().refreshCurrent(REPO);
-      expect(store().current).toEqual(ACCOUNT);
+      expect(store().accountFor(REPO)).toEqual(ACCOUNT);
     });
 
-    it('clears when the repository has no remote, or one nobody signed in to', async () => {
+    it('is empty for another repository or none', async () => {
       await store().loadAccounts();
-      store().refreshCurrent(REPO);
-
-      store().refreshCurrent('/src/other');
-      expect(store().current).toBeNull();
-
-      store().refreshCurrent(REPO);
-      store().refreshCurrent(null);
-      expect(store().current).toBeNull();
+      expect(store().accountFor('/src/other')).toBeNull();
+      expect(store().accountFor(null)).toBeNull();
     });
 
     it('never opens a dialog on its own', async () => {
       await store().loadAccounts();
-      store().refreshCurrent(REPO);
+      store().accountFor(REPO);
       expect(store().phase).toBeNull();
     });
   });

@@ -1,24 +1,16 @@
 import { create } from 'zustand';
 import type { ActiveView, OverlayView, Toast, ToastVariant } from '../types';
 
-export type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
-export const SETTINGS_CATEGORIES = [
-  'general',
-  'accounts',
-  'git',
-  'diff',
-  'terminal',
-  'logs',
-  'updates',
-] as const;
-export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
+type SelectedFileArea = 'staged' | 'unstaged' | 'commit';
+export type SettingsCategory =
+  'general' | 'accounts' | 'git' | 'diff' | 'terminal' | 'logs' | 'updates';
 
 export type RightPanelTab = 'logs' | 'terminal';
 
 const OVERLAY_VIEWS = new Set<ActiveView>(['settings', 'about']);
 export const isOverlayView = (view: ActiveView): boolean => OVERLAY_VIEWS.has(view);
 
-export interface ConfirmOptions {
+interface ConfirmOptions {
   title: string;
   message: string;
   confirmLabel: string;
@@ -75,6 +67,7 @@ interface UiState {
   setSelectedStash: (index: number | null) => void;
   confirmRequest: (ConfirmOptions & { resolve: (ok: boolean) => void }) | null;
   requestConfirm: (opts: ConfirmOptions) => Promise<boolean>;
+  confirmDanger: (label: string, message: string) => Promise<boolean>;
   resolveConfirm: (ok: boolean) => void;
 }
 
@@ -143,6 +136,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
       get().confirmRequest?.resolve(false);
       set({ confirmRequest: { ...opts, resolve } });
     }),
+  confirmDanger: (label, message) =>
+    get().requestConfirm({ title: label, message, confirmLabel: label, danger: true }),
   resolveConfirm: ok => {
     const request = get().confirmRequest;
     if (!request) return;

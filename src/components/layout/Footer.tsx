@@ -3,9 +3,10 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useAccountStore } from '../../stores/account-store';
-import { UserIcon, cn } from '../../shared/ui';
+import { Avatar, cn } from '../../shared/ui';
 import { PanelButtons } from './PanelButtons';
 import { SidebarToggle } from './SidebarToggle';
+import { useCurrentAccount } from '../../hooks/use-current-account';
 import { useRemoteSync } from '../../hooks/use-remote-sync';
 
 export function Footer() {
@@ -16,9 +17,8 @@ export function Footer() {
   const remoteHost = useRepoStore(s => s.remoteHost);
   const openConnection = useUiStore(s => s.openConnection);
   const { run, loading: syncing } = useRemoteSync();
-  const { account, authSource } = useAccountStore(
-    useShallow(s => ({ account: s.current, authSource: s.authSource })),
-  );
+  const account = useCurrentAccount();
+  const authSource = useAccountStore(s => s.authSource);
 
   const hash = headCommit ?? '—';
   const diverged = aheadBehind.ahead > 0 || aheadBehind.behind > 0;
@@ -59,11 +59,7 @@ export function Footer() {
               aria-label={indicator.title}
               className="flex items-center gap-1.5 min-w-0 rounded px-1 py-0.5 hover:bg-surface1 transition-colors"
             >
-              {account?.avatarDataUrl ? (
-                <img src={account.avatarDataUrl} alt="" className="w-4 h-4 rounded-full shrink-0" />
-              ) : (
-                <UserIcon size={12} aria-hidden="true" className="shrink-0 text-subtext" />
-              )}
+              <Avatar src={account?.avatarDataUrl} size="sm" />
               <span className={cn('truncate', indicator.className)}>{indicator.label}</span>
             </button>
           </>

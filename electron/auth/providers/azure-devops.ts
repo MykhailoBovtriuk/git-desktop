@@ -1,4 +1,4 @@
-import { authedGet, getJson, probe } from '../http';
+import { authedGet, basicAuth, getJson, HttpError, probe } from '../http';
 import type { ServerProbe } from '../../../src/types';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
@@ -30,7 +30,6 @@ export const azureDevOps: ProviderDefinition = {
     // is what a desktop client shipped to unknown users needs.
     authorizeUrl: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
     tokenUrl: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
-    apiBase: 'https://app.vssps.visualstudio.com/_apis',
   }),
   tokenHelpUrl: () => 'https://dev.azure.com',
   fetchAccount: async (host, token) => {
@@ -84,7 +83,7 @@ export const azureDevOpsServer: ProviderDefinition = {
   oauth: false,
   usesPkce: false,
   scopes: [],
-  endpoints: host => ({ authorizeUrl: '', tokenUrl: '', apiBase: `https://${host}` }),
+  endpoints: () => ({ authorizeUrl: '', tokenUrl: '' }),
   tokenHelpUrl: host => `https://${host}/_usersSettings/tokens`,
   probe: async host => {
     let reached = false;
@@ -98,7 +97,7 @@ export const azureDevOpsServer: ProviderDefinition = {
     return (reached ? 'mismatch' : 'unreachable') satisfies ServerProbe;
   },
   fetchAccount: async (host, token) => {
-    const basic = `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
+    const basic = basicAuth('', token);
     let lastError: unknown = null;
     for (const root of SERVER_ROOTS) {
       try {
@@ -120,7 +119,7 @@ export const azureDevOpsServer: ProviderDefinition = {
         lastError = err;
       }
     }
-    throw lastError ?? new Error(`https://${host} returned 401`);
+    throw lastError ?? new HttpError(`https://${host} returned 401`, 401);
   },
   gitUsername: () => 'pat',
 };

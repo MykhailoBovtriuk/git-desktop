@@ -1,6 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import path from 'path';
-import { wrap } from './wrap';
+import { wrap, sendToRenderer, type WindowOptions } from './wrap';
 import { assertString } from '../ipc-validators';
 import { lookupReleases } from '../update/github';
 import { downloadUrlFor, linuxPackageFormat } from '../update/assets';
@@ -13,10 +13,6 @@ import type {
   UpdateInfo,
   UpdateProgress,
 } from '../../src/types';
-
-export interface UpdateHandlerOptions {
-  getWindow?: () => BrowserWindow | null;
-}
 
 const DEV_BUILD = 'dev-build';
 const NO_RELEASE = 'no-release';
@@ -148,12 +144,11 @@ async function startDownload(version: unknown): Promise<DownloadedUpdate> {
   return lastDownload;
 }
 
-export function registerUpdateHandlers(options: UpdateHandlerOptions = {}) {
+export function registerUpdateHandlers(options: WindowOptions = {}) {
   // A download outlives the window that started it: a reload must not crash
   // the send, and must not stop the download either.
   notifyProgress = progress => {
-    const win = options.getWindow?.() ?? null;
-    if (win && !win.isDestroyed()) win.webContents.send('app:update-progress', progress);
+    sendToRenderer(options, 'app:update-progress', progress);
   };
 
   ipcMain.handle('app:check-for-update', (_e, includePrerelease: unknown, force: unknown) =>
@@ -167,7 +162,6 @@ export function registerUpdateHandlers(options: UpdateHandlerOptions = {}) {
   ipcMain.handle('app:cancel-update-download', () =>
     wrap(async () => {
       active?.controller.abort();
-      return null;
     }),
   );
 
@@ -175,7 +169,6 @@ export function registerUpdateHandlers(options: UpdateHandlerOptions = {}) {
     wrap(async () => {
       if (!lastDownload) throw new Error(NO_DOWNLOAD);
       await launchInstaller(lastDownload.filePath);
-      return null;
     }),
   );
 }

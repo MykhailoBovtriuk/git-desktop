@@ -4,7 +4,7 @@ import { useUpdateStore } from '../../stores/update-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { appApi } from '../../api/app-api';
 import { useAppVersion } from '../../hooks/use-app-version';
-import { Button, DownloadIcon, Switch, TruncatedText } from '../../shared/ui';
+import { Button, Card, DownloadIcon, Switch, TruncatedText, ProgressBar } from '../../shared/ui';
 import { updateErrorText } from '../update/update-text';
 import { SettingsSection } from './SettingsSection';
 
@@ -116,7 +116,7 @@ export function UpdateSection() {
       <p className="text-subtext text-xs pt-1">{t('hint')}</p>
 
       <section className="py-4 border-b border-surface0">
-        <div className="bg-mantle rounded p-3 flex items-center justify-between gap-4">
+        <Card>
           <div className="min-w-0">
             <p className="text-text text-sm">{version ? t('currentVersion', { version }) : ''}</p>
             {status && (
@@ -126,19 +126,10 @@ export function UpdateSection() {
             )}
           </div>
           {action}
-        </div>
+        </Card>
 
         {phase === 'downloading' && (
-          <div className="h-1.5 bg-surface2 rounded overflow-hidden mt-2">
-            <div
-              className={
-                progress?.totalBytes
-                  ? 'h-full bg-blue rounded'
-                  : 'h-full w-full bg-blue rounded animate-pulse'
-              }
-              style={progress?.totalBytes ? { width: `${progress.percent}%` } : undefined}
-            />
-          </div>
+          <ProgressBar percent={progress?.totalBytes ? progress.percent : null} className="mt-2" />
         )}
 
         {error && <p className="text-red text-xs mt-2">{updateErrorText(t, error)}</p>}

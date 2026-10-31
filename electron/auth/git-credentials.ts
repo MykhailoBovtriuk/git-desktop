@@ -19,7 +19,8 @@ export function allowedHelpers(platform: string = process.platform): string[] {
 
 function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    const options = { env: env ?? process.env, cwd: os.homedir() };
+    // A credential manager can block on a UI prompt; never let it stall IPC.
+    const options = { env: env ?? process.env, cwd: os.homedir(), timeout: 10_000 };
     const child = execFile('git', args, options, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout);
@@ -35,7 +36,7 @@ function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<s
  * credential approve` silently stores nothing. Any scope counts, the system
  * one included, and so does a helper scoped to the host's URL: the global
  * config is written only when git would otherwise have nowhere to keep a
- * token. Returns the helper, or null if none is trusted.
+ * token.
  */
 export async function ensureCredentialHelper(host?: string): Promise<string | null> {
   const lookup = host
@@ -100,10 +101,6 @@ export async function storedUsername(host: string): Promise<string | null> {
   return (await lookupStored(host))?.username ?? null;
 }
 
-export async function hasStoredCredential(host: string): Promise<boolean> {
-  return (await lookupStored(host)) !== null;
-}
-
 const usernameKey = (host: string) => `credential.https://${host}.username`;
 
 /**
@@ -136,7 +133,7 @@ export async function rejectCredentials(host: string, username: string): Promise
   await run(['credential', 'reject'], describe(host, username)).catch(() => {});
 }
 
-export function helperCli(helper: string): CredentialHelperEntry['cli'] {
+function helperCli(helper: string): CredentialHelperEntry['cli'] {
   if (/\bgh(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'gh';
   if (/\bglab(\.exe)?["']?\s+auth\s+git-credential\b/.test(helper)) return 'glab';
   if (/(^|[\\/\s])(git-credential-)?manager(-core)?(\.exe)?$/.test(helper.trim())) return 'gcm';

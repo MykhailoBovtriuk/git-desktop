@@ -4,8 +4,8 @@ import path from 'path';
 import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { isAllowedDownloadUrl } from './assets';
+import { USER_AGENT } from '../auth/http';
 
-const USER_AGENT = 'git-desktop';
 const PROGRESS_INTERVAL_MS = 200;
 
 export function versionedFileName(assetName: string, version: string): string {
@@ -14,7 +14,7 @@ export function versionedFileName(assetName: string, version: string): string {
   return `${base}-${version}${ext}`;
 }
 
-export interface DownloadRequest {
+interface DownloadRequest {
   url: string;
   expectedSize: number;
   targetPath: string;

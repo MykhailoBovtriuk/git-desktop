@@ -1,4 +1,4 @@
-import simpleGit, { SimpleGit } from 'simple-git';
+import simpleGit, { SimpleGit, type SimpleGitOptions } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import { attachOutputLogger } from '../log/git-logger';
@@ -20,7 +20,7 @@ export class GitContext {
   git: SimpleGit | null = null;
   repoPath: string | null = null;
 
-  createGit(dir: string): SimpleGit {
+  createGit(dir: string, extra: Partial<SimpleGitOptions> = {}): SimpleGit {
     // simple-git's .env() replaces the child env, hence the merge over
     // process.env. Our unsafe values are hardcoded; allowUnsafeSshCommand is
     // only for removing core.sshCommand.
@@ -32,6 +32,9 @@ export class GitContext {
           allowUnsafeEditor: true,
           allowUnsafeSshCommand: true,
         },
+        // Fires only after this long without output, so long transfers are unaffected.
+        timeout: { block: 120_000 },
+        ...extra,
       }).env(credentialSafeEnv()),
     );
   }
@@ -84,22 +87,27 @@ export class GitContext {
     }
   }
 
-  async hasHead(): Promise<boolean> {
+  async resolveRef(ref: string, ...flags: string[]): Promise<string | null> {
     try {
-      const out = await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', 'HEAD']);
-      return out.trim().length > 0;
+      const out = await this.ensureRepo().raw(['rev-parse', '--verify', '--quiet', ...flags, ref]);
+      return out.trim() || null;
     } catch {
-      return false;
+      return null;
     }
   }
 
+  async hasHead(): Promise<boolean> {
+    return (await this.resolveRef('HEAD')) !== null;
+  }
+
   async hasParent(hash: string): Promise<boolean> {
-    try {
-      await this.ensureRepo().raw(['rev-parse', '--verify', `${hash}^`]);
-      return true;
-    } catch {
-      return false;
-    }
+    return (await this.resolveRef(`${hash}^`)) !== null;
+  }
+
+  // Not `.git/<name>`: in a worktree or submodule `.git` is a file.
+  async gitPath(name: string): Promise<string> {
+    const rel = (await this.ensureRepo().raw(['rev-parse', '--git-path', name])).trim();
+    return path.isAbsolute(rel) ? rel : path.resolve(this.repoPath!, rel);
   }
 
   getRepoPath(): string | null {

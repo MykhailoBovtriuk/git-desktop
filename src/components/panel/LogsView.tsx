@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+import { useConfirmClearLogs } from '../../hooks/use-confirm-clear-logs';
 import { useLogStore } from '../../stores/log-store';
-import { useUiStore } from '../../stores/ui-store';
 import { formatEntry } from '../../lib/format-log';
 import { useCopy } from '../../hooks/use-copy';
 import { Button, CheckIcon, CopyIcon, IconButton, TextInput, TrashIcon, cn } from '../../shared/ui';
@@ -36,18 +36,16 @@ function Chip({
 
 export function LogsView() {
   const { t } = useTranslation('logs');
-  const { entries, hasMore, loadingMore, loadOlder, clear, focusId, setFocus } = useLogStore(
+  const { entries, hasMore, loadingMore, loadOlder, focusId, setFocus } = useLogStore(
     useShallow(s => ({
       entries: s.entries,
       hasMore: s.hasMore,
       loadingMore: s.loadingMore,
       loadOlder: s.loadOlder,
-      clear: s.clear,
       focusId: s.focusId,
       setFocus: s.setFocus,
     })),
   );
-  const requestConfirm = useUiStore(s => s.requestConfirm);
   const [query, setQuery] = useState('');
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -108,15 +106,7 @@ export function LogsView() {
 
   const copyAll = () => copy(visible.map(e => formatEntry(e, t(`op.${e.op}`))).join('\n\n'));
 
-  const confirmClear = async () => {
-    const ok = await requestConfirm({
-      title: t('settings.clearTitle'),
-      message: t('settings.clearMessage'),
-      confirmLabel: t('settings.clearConfirm'),
-      danger: true,
-    });
-    if (ok) await clear().catch(() => {});
-  };
+  const confirmClear = useConfirmClearLogs();
 
   return (
     <div className="flex flex-col h-full min-h-0">

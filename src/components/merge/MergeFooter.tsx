@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Switch } from '../../shared/ui';
+import { Button, Switch } from '../../shared/ui';
 
 interface MergeFooterProps {
   sourceBranch: string;
@@ -40,20 +40,12 @@ export function MergeFooter({
           title={t('autoCommitHint')}
           label={t('autoCommit')}
         />
-        <button
-          onClick={onAbort}
-          disabled={saving}
-          className="px-3 py-1 text-xs text-red hover:bg-surface0 rounded transition-colors disabled:opacity-40"
-        >
+        <Button variant="danger" size="sm" onClick={onAbort} disabled={saving}>
           {t('abortMerge')}
-        </button>
-        <button
-          onClick={onSave}
-          disabled={saveDisabled}
-          className="px-3 py-1 text-xs bg-blue text-mantle rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
-        >
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={saveDisabled}>
           {t('saveMarkResolved')}
-        </button>
+        </Button>
       </div>
     </div>
   );

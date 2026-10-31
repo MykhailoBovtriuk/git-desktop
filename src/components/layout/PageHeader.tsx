@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
-import { Breadcrumbs, type Crumb } from '../../shared/ui';
+import { Breadcrumbs, Button, type Crumb } from '../../shared/ui';
 
 interface PageHeaderProps {
   crumbs: Crumb[];
@@ -15,9 +15,9 @@ export function PageHeader({ crumbs, onBack, children }: PageHeaderProps) {
     // back link it would collapse, so it keeps the height that link gave it.
     <div className="relative flex items-center min-h-8 px-4 py-2 border-b border-surface0 shrink-0">
       {onBack && (
-        <button onClick={onBack} className="text-blue text-xs hover:underline shrink-0">
+        <Button variant="link" size="xs" onClick={onBack} className="shrink-0">
           ← {t('back')}
-        </button>
+        </Button>
       )}
 
       <Breadcrumbs crumbs={crumbs} className="absolute left-1/2 -translate-x-1/2 max-w-[60%]" />

@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   allProviders,
-  isConfigured,
   providerById,
   providerForHost,
   providerOptions,
 } from '../../electron/auth/providers/registry';
-import { resetKeyCache } from '../../electron/auth/oauth-config';
+import { keysFor, resetKeyCache } from '../../electron/auth/oauth-config';
 
 describe('provider registry', () => {
   beforeEach(() => {
@@ -39,26 +38,22 @@ describe('provider registry', () => {
   });
 
   it('hides a provider whose client id this build lacks', () => {
-    expect(isConfigured('gitlab')).toBe(false);
+    expect(keysFor('gitlab')).toBeNull();
     process.env.OAUTH_GITLAB_ID = 'abc';
     resetKeyCache();
-    expect(isConfigured('gitlab')).toBe(true);
+    expect(keysFor('gitlab')).not.toBeNull();
   });
 
   it('hides a secret-requiring provider that has only half its keys', () => {
     process.env.OAUTH_GITHUB_ID = 'abc';
     resetKeyCache();
-    expect(isConfigured('github')).toBe(false);
+    expect(keysFor('github')).toBeNull();
     process.env.OAUTH_GITHUB_SECRET = 'shh';
     resetKeyCache();
-    expect(isConfigured('github')).toBe(true);
+    expect(keysFor('github')).not.toBeNull();
   });
 
   it('always offers the self-hosted and token paths', () => {
-    for (const id of ['token', 'gitlab-self', 'github-enterprise', 'gitea'] as const) {
-      expect(isConfigured(id), id).toBe(true);
-    }
-
     const ids = providerOptions('git.acme.internal').map(o => o.id);
     expect(ids).toContain('token');
     expect(ids).toContain('gitlab-self');

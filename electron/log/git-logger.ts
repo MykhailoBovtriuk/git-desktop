@@ -4,7 +4,7 @@ import type { SimpleGit } from 'simple-git';
 import type { LogCommand, LogEntry, LogOp } from '../../src/types';
 import { redact } from './redact';
 
-export const MAX_STREAM_CHARS = 64 * 1024;
+const MAX_STREAM_CHARS = 64 * 1024;
 const TRUNCATED = '\n…[truncated]';
 
 type LogSink = (entry: LogEntry) => void;

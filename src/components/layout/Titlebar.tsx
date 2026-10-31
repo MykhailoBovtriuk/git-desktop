@@ -5,8 +5,9 @@ import { useRepoStore } from '../../stores/repo-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
 import { AppMenuButtons } from './AppMenuButtons';
+import { useBusy } from '../../hooks/use-busy';
 import { useDismiss } from '../../hooks/use-dismiss';
-import { DragRegion, IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
+import { IconButton, RefreshIcon, TruncatedText } from '../../shared/ui';
 import { TitlebarBrand, WindowControlsSpacer } from './TitlebarBrand';
 import { basenameFromPath } from '../../lib/basename';
 
@@ -23,19 +24,11 @@ export function Titlebar() {
   );
   const [branchOpen, setBranchOpen] = useState(false);
   const [repoOpen, setRepoOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, track] = useBusy();
   const branchRef = useRef<HTMLDivElement>(null);
   const repoRef = useRef<HTMLDivElement>(null);
 
-  const handleRefresh = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  const handleRefresh = () => track(refresh);
 
   useDismiss(branchRef, branchOpen, () => setBranchOpen(false));
   useDismiss(repoRef, repoOpen, () => setRepoOpen(false));
@@ -43,16 +36,16 @@ export function Titlebar() {
   const repoName = repoPath ? basenameFromPath(repoPath) : '';
 
   return (
-    <DragRegion className="relative h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none">
+    <div className="app-drag relative h-10 bg-mantle border-b border-surface0 flex items-center gap-4 shrink-0 select-none">
       <TitlebarBrand />
 
       <div className="flex-1 min-w-0" />
 
       <div className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[42%]">
-        <DragRegion draggable={false} className="shrink-0">
+        <div className="app-no-drag shrink-0">
           <AppMenuButtons />
-        </DragRegion>
-        <DragRegion draggable={false} ref={branchRef} className="relative min-w-0">
+        </div>
+        <div ref={branchRef} className="app-no-drag relative min-w-0">
           <button
             onClick={() => !mergeState && setBranchOpen(o => !o)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors min-w-0 ${mergeState ? 'opacity-40 cursor-not-allowed' : ''}`}
@@ -62,8 +55,8 @@ export function Titlebar() {
             <span className="text-subtext text-xs shrink-0">▼</span>
           </button>
           {branchOpen && <BranchDropdown onClose={() => setBranchOpen(false)} />}
-        </DragRegion>
-        <DragRegion draggable={false} className="shrink-0">
+        </div>
+        <div className="app-no-drag shrink-0">
           <IconButton
             icon={RefreshIcon}
             spinning={refreshing}
@@ -72,7 +65,7 @@ export function Titlebar() {
             aria-label={t('checkForChanges')}
             title={t('checkForChanges')}
           />
-        </DragRegion>
+        </div>
         {lastRefreshError && (
           <span
             aria-label={t('refreshError')}
@@ -84,7 +77,7 @@ export function Titlebar() {
         )}
       </div>
 
-      <DragRegion draggable={false} ref={repoRef} className="relative pr-4 shrink-0">
+      <div ref={repoRef} className="app-no-drag relative pr-4 shrink-0">
         <button
           onClick={() => setRepoOpen(o => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface0 hover:bg-surface1 text-sm transition-colors"
@@ -93,9 +86,9 @@ export function Titlebar() {
           <span className="text-subtext text-xs">▼</span>
         </button>
         {repoOpen && <RepoDropdown onClose={() => setRepoOpen(false)} />}
-      </DragRegion>
+      </div>
 
       <WindowControlsSpacer />
-    </DragRegion>
+    </div>
   );
 }

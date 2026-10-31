@@ -49,14 +49,13 @@ function setup({
     switchRemoteProtocol: vi.fn().mockResolvedValue(undefined),
   };
   const account = {
-    current,
+    accountFor: () => current,
     authSource,
     persistent,
     openSignIn: vi.fn(),
     signOut: vi.fn().mockResolvedValue(undefined),
     forgetSystemCredential: vi.fn().mockResolvedValue(undefined),
     refreshAuthSource: vi.fn().mockResolvedValue(undefined),
-    refreshCurrent: vi.fn(),
   };
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(ui)) as any);
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repo)) as any);

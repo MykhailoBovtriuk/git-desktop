@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { basenameFromPath } from '../../lib/basename';
 import type { FileStatus } from '../../types';
 import {
   CheckIcon,
@@ -61,7 +62,7 @@ export function FileList({
   return (
     <div className="flex flex-col">
       {files.map(file => {
-        const name = file.path.split('/').pop() ?? file.path;
+        const name = basenameFromPath(file.path);
         const isSelected = selectedFile === file.path;
 
         return (

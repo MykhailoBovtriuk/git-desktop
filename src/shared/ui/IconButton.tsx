@@ -1,11 +1,11 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 import type { IconType } from 'react-icons';
 import { cn } from './cn';
 
-type Tint = 'green' | 'red' | 'yellow' | 'blue' | 'subtext';
+type Tint = 'green' | 'red' | 'yellow' | 'blue' | 'git' | 'subtext';
 type Size = 'sm' | 'md';
 
-export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface IconButtonProps extends Omit<ComponentPropsWithRef<'button'>, 'children'> {
   icon: IconType;
   tint?: Tint;
   size?: Size;
@@ -18,6 +18,7 @@ const TINT: Record<Tint, string> = {
   red: 'text-red',
   yellow: 'text-yellow',
   blue: 'text-blue',
+  git: 'text-git',
   subtext: 'text-subtext hover:text-text',
 };
 
@@ -35,8 +36,8 @@ export function IconButton({
 }: IconButtonProps) {
   return (
     <button
-      {...rest}
       aria-pressed={active}
+      {...rest}
       className={cn(
         'inline-flex items-center justify-center rounded transition-colors hover:bg-surface1 disabled:opacity-40',
         TINT[active ? 'blue' : tint],

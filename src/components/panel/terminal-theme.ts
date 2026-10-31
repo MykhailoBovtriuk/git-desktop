@@ -2,30 +2,29 @@ import type { ITheme } from '@xterm/xterm';
 
 export function readTerminalTheme(): ITheme {
   const styles = getComputedStyle(document.documentElement);
-  const v = (name: string, fallback: string) =>
-    styles.getPropertyValue(`--gd-${name}`).trim() || fallback;
-  const text = v('text', '#cdd6f4');
+  const v = (name: string) => styles.getPropertyValue(`--gd-${name}`).trim();
+  const text = v('text');
   return {
-    background: v('base', '#1e1e2e'),
+    background: v('base'),
     foreground: text,
     cursor: text,
-    cursorAccent: v('base', '#1e1e2e'),
-    selectionBackground: v('surface2', '#585b70'),
-    black: v('surface1', '#45475a'),
-    red: v('red', '#f38ba8'),
-    green: v('green', '#a6e3a1'),
-    yellow: v('yellow', '#f9e2af'),
-    blue: v('blue', '#89b4fa'),
-    magenta: v('peach', '#fab387'),
-    cyan: v('sky', '#89dceb'),
-    white: v('subtext', '#bac2de'),
-    brightBlack: v('surface2', '#585b70'),
-    brightRed: v('red', '#f38ba8'),
-    brightGreen: v('green', '#a6e3a1'),
-    brightYellow: v('yellow', '#f9e2af'),
-    brightBlue: v('blue', '#89b4fa'),
-    brightMagenta: v('peach', '#fab387'),
-    brightCyan: v('sky', '#89dceb'),
+    cursorAccent: v('base'),
+    selectionBackground: v('surface2'),
+    black: v('surface1'),
+    red: v('red'),
+    green: v('green'),
+    yellow: v('yellow'),
+    blue: v('blue'),
+    magenta: v('peach'),
+    cyan: v('sky'),
+    white: v('subtext'),
+    brightBlack: v('surface2'),
+    brightRed: v('red'),
+    brightGreen: v('green'),
+    brightYellow: v('yellow'),
+    brightBlue: v('blue'),
+    brightMagenta: v('peach'),
+    brightCyan: v('sky'),
     brightWhite: text,
   };
 }

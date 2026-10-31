@@ -7,6 +7,7 @@ import type {
   MergeState,
   RemoteProtocol,
   StashEntry,
+  SwitchableProtocol,
 } from '../../types';
 
 export const LOG_PAGE_SIZE = 200;
@@ -32,9 +33,8 @@ export interface RepoState {
   hasMoreCommits: boolean;
   loadingMoreCommits: boolean;
   loadMoreCommits: () => Promise<void>;
-  busyOperation: string | null;
   lastRefreshError: string | null;
-  runOperation: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
+  runOperation: <T>(fn: () => Promise<T>) => Promise<T>;
   loadStashes: () => Promise<void>;
   stashSave: (message?: string, staged?: boolean) => Promise<void>;
   stashApply: (index: number) => Promise<void>;
@@ -44,7 +44,7 @@ export interface RepoState {
   remoteUrl: string | null;
   remoteHost: string | null;
   remoteProtocol: RemoteProtocol | null;
-  switchRemoteProtocol: (to: 'ssh' | 'https') => Promise<void>;
+  switchRemoteProtocol: (to: SwitchableProtocol) => Promise<void>;
   /**
    * Whether git has an author to commit as. Null until known — an unknown
    * answer must never block a commit, only a definite "no" does.
@@ -85,6 +85,6 @@ export interface RepoState {
   continueRebase: () => Promise<void>;
 }
 
-export type RepoSet = StoreApi<RepoState>['setState'];
-export type RepoGet = StoreApi<RepoState>['getState'];
+type RepoSet = StoreApi<RepoState>['setState'];
+type RepoGet = StoreApi<RepoState>['getState'];
 export type RepoSlice<T> = (set: RepoSet, get: RepoGet) => T;

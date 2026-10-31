@@ -68,12 +68,7 @@ export interface FileDiff {
   deletions: number;
 }
 
-export interface IpcError {
-  error: string;
-  code: string;
-}
-
-export type IpcResult<T> = { data: T } | IpcError;
+export type IpcResult<T> = { data: T } | { error: string };
 
 export type ActiveView =
   | 'changes'
@@ -131,7 +126,6 @@ export interface ProviderOption {
   needsHost: boolean;
   needsClientId: boolean;
   needsClientSecret: boolean;
-  tokenHelpUrl: string | null;
 }
 
 export type ServerProbe = 'ok' | 'mismatch' | 'unreachable';
@@ -144,6 +138,19 @@ export interface CredentialHelperEntry {
 }
 
 export type RemoteProtocol = 'ssh' | 'https' | 'other';
+export type SwitchableProtocol = Exclude<RemoteProtocol, 'other'>;
+
+export interface AccountsSnapshot {
+  accounts: ProviderAccount[];
+  persistent: boolean;
+  error: string | null;
+}
+
+export interface ProvidersForHost {
+  host: string | null;
+  providerId: ProviderId | null;
+  options: ProviderOption[];
+}
 
 export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
 
@@ -172,7 +179,7 @@ export interface UpdateInfo {
   prerelease: boolean;
 }
 
-export type UpdateStatus = 'up-to-date' | 'available' | 'skipped';
+type UpdateStatus = 'up-to-date' | 'available' | 'skipped';
 
 export interface UpdateCheckResult {
   status: UpdateStatus;
@@ -224,7 +231,7 @@ export type LogOp =
   | 'stash-pop'
   | 'stash-drop';
 
-export type LogStatus = 'running' | 'success' | 'error';
+type LogStatus = 'running' | 'success' | 'error';
 
 export interface LogCommand {
   argv: string[];

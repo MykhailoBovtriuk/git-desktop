@@ -7,6 +7,7 @@ import type {
   GitStatus,
   RemoteProtocol,
   StashEntry,
+  SwitchableProtocol,
 } from '../types';
 import { invoke } from './invoke';
 
@@ -33,7 +34,7 @@ export const gitApi = {
   fetch: () => invoke<null>('git:fetch'),
   pull: () => invoke<string>('git:pull'),
   push: () => invoke<null>('git:push'),
-  switchRemoteProtocol: (to: 'ssh' | 'https') =>
+  switchRemoteProtocol: (to: SwitchableProtocol) =>
     invoke<{ url: string | null; host: string | null; protocol: RemoteProtocol | null }>(
       'git:switch-remote-protocol',
       to,
@@ -43,7 +44,7 @@ export const gitApi = {
   createBranch: (name: string) => invoke<null>('git:create-branch', name),
   checkout: (branch: string) => invoke<null>('git:checkout', branch),
   checkoutForce: (branch: string) => invoke<null>('git:checkout-force', branch),
-  merge: (branch: string) => invoke<{ success: boolean; conflicts: string[] }>('git:merge', branch),
+  merge: (branch: string) => invoke<{ conflicts: string[] }>('git:merge', branch),
   rebase: (branch: string) => invoke<null>('git:rebase', branch),
   isRebasing: () => invoke<boolean>('git:is-rebasing'),
   abortRebase: () => invoke<null>('git:abort-rebase'),
@@ -68,15 +69,12 @@ export const gitApi = {
   concludeMerge: () => invoke<null>('git:conclude-merge'),
   getMergeMessage: () => invoke<string>('git:get-merge-message'),
   markResolved: (filePath: string) => invoke<null>('git:mark-resolved', filePath),
-  getRepoPath: () => invoke<string | null>('git:get-repo-path'),
   hasIdentity: () => invoke<boolean>('git:has-identity'),
   getIdentity: () => invoke<GitIdentities>('git:get-identity'),
   setIdentity: (scope: 'global' | 'local', identity: GitIdentity) =>
     invoke<null>('git:set-identity', scope, identity),
   readFile: (p: string) => invoke<string>('git:read-file', p),
   writeFile: (p: string, c: string) => invoke<null>('git:write-file', p, c),
-  getConflictSides: (p: string) =>
-    invoke<{ ours: string; theirs: string; base: string }>('git:get-conflict-sides', p),
   getStashList: () => invoke<StashEntry[]>('git:get-stash-list'),
   stashSave: (message?: string, staged?: boolean, includeUntracked?: boolean) =>
     invoke<null>('git:stash-save', message, staged, includeUntracked),

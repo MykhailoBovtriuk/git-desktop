@@ -1,6 +1,7 @@
 import { gitApi } from '../../api/git-api';
 import type { RepoState, RepoSlice } from './types';
 import { LOG_PAGE_SIZE } from './types';
+import { whileCurrent } from './epoch';
 
 type LoadersSlice = Pick<
   RepoState,
@@ -36,22 +37,15 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
   hasMoreCommits: false,
   loadingMoreCommits: false,
 
-  loadLog: async () => {
-    const startedEpoch = get().epoch;
-    const page = await gitApi.getLog(LOG_PAGE_SIZE + 1, 0);
-    if (get().epoch !== startedEpoch) return;
-    set({
-      commits: page.slice(0, LOG_PAGE_SIZE),
-      hasMoreCommits: page.length > LOG_PAGE_SIZE,
-    });
-  },
+  loadLog: () =>
+    whileCurrent(
+      get,
+      () => gitApi.getLog(LOG_PAGE_SIZE + 1, 0),
+      page =>
+        set({ commits: page.slice(0, LOG_PAGE_SIZE), hasMoreCommits: page.length > LOG_PAGE_SIZE }),
+    ),
 
-  loadHeadCommit: async () => {
-    const startedEpoch = get().epoch;
-    const headCommit = await gitApi.getHeadCommit();
-    if (get().epoch !== startedEpoch) return;
-    set({ headCommit });
-  },
+  loadHeadCommit: () => whileCurrent(get, gitApi.getHeadCommit, headCommit => set({ headCommit })),
 
   loadMoreCommits: async () => {
     const { hasMoreCommits, loadingMoreCommits, commits, epoch: startedEpoch } = get();
@@ -71,43 +65,31 @@ export const createLoadersSlice: RepoSlice<LoadersSlice> = (set, get) => ({
     }
   },
 
-  loadBranches: async () => {
-    const startedEpoch = get().epoch;
-    const branches = await gitApi.getBranches();
-    if (get().epoch !== startedEpoch) return;
-    const current = branches.find(b => b.current);
-    set({ branches, currentBranch: current?.name ?? '' });
-  },
+  loadBranches: () =>
+    whileCurrent(get, gitApi.getBranches, branches =>
+      set({ branches, currentBranch: branches.find(b => b.current)?.name ?? '' }),
+    ),
 
-  loadStatus: async () => {
-    const startedEpoch = get().epoch;
-    const result = await gitApi.getStatus();
-    let merging = false;
-    try {
-      merging = await gitApi.isMerging();
-    } catch {
-      merging = false;
-    }
-    let rebasing = false;
-    try {
-      rebasing = await gitApi.isRebasing();
-    } catch {
-      rebasing = false;
-    }
-    if (get().epoch !== startedEpoch) return;
-    set({
-      status: { staged: result.staged, unstaged: result.unstaged },
-      aheadBehind: { ahead: result.ahead, behind: result.behind, upstream: result.upstream },
-      merging,
-      rebasing,
-    });
-  },
+  loadStatus: () =>
+    whileCurrent(
+      get,
+      () =>
+        Promise.all([
+          gitApi.getStatus(),
+          gitApi.isMerging().catch(() => false),
+          gitApi.isRebasing().catch(() => false),
+        ]),
+      ([result, merging, rebasing]) =>
+        set({
+          status: { staged: result.staged, unstaged: result.unstaged },
+          aheadBehind: { ahead: result.ahead, behind: result.behind, upstream: result.upstream },
+          merging,
+          rebasing,
+        }),
+    ),
 
   loadStashes: async () => {
     if (!get().repoPath) return;
-    const startedEpoch = get().epoch;
-    const stashes = await gitApi.getStashList();
-    if (get().epoch !== startedEpoch) return;
-    set({ stashes });
+    await whileCurrent(get, gitApi.getStashList, stashes => set({ stashes }));
   },
 });

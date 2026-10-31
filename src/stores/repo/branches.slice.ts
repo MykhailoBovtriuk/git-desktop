@@ -5,7 +5,7 @@ type BranchesSlice = Pick<RepoState, 'createBranch' | 'deleteBranch' | 'deleteRe
 
 export const createBranchesSlice: RepoSlice<BranchesSlice> = (_set, get) => ({
   createBranch: async (name, changes) =>
-    get().runOperation('createBranch', async () => {
+    get().runOperation(async () => {
       // Stash before switching: the new branch shares the commit, so stashing
       // afterwards would park the work on it.
       if (changes === 'leave') {
@@ -16,13 +16,13 @@ export const createBranchesSlice: RepoSlice<BranchesSlice> = (_set, get) => ({
     }),
 
   deleteBranch: async (branch, force) =>
-    get().runOperation('deleteBranch', async () => {
+    get().runOperation(async () => {
       await gitApi.deleteBranch(branch, force);
       await get().loadBranches();
     }),
 
   deleteRemoteBranch: async (remote, branch) =>
-    get().runOperation('deleteBranch', async () => {
+    get().runOperation(async () => {
       await gitApi.deleteRemoteBranch(remote, branch);
       await get().loadBranches();
     }),

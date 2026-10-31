@@ -178,13 +178,15 @@ export function SignInModal() {
   }
 
   const switchLink = (to: 'browser' | 'token', label: string) => (
-    <button
+    <Button
       type="button"
+      variant="link"
+      size="xs"
       onClick={() => switchMethod(to)}
-      className="text-blue text-xs hover:underline self-start"
+      className="self-start"
     >
       {label}
-    </button>
+    </Button>
   );
 
   if (phase === 'token') {
@@ -226,15 +228,17 @@ export function SignInModal() {
             placeholder={t('token.tokenPlaceholder')}
           />
           {provider?.id && provider.id !== 'token' && (
-            <button
+            <Button
               type="button"
+              variant="link"
+              size="xs"
               onClick={() =>
                 void accountApi.openTokenHelp(provider.id, target.host).catch(() => {})
               }
-              className="text-blue text-xs hover:underline self-start"
+              className="self-start"
             >
               {t('token.where')}
-            </button>
+            </Button>
           )}
           {provider?.configured
             ? switchLink('browser', t('token.useBrowser'))

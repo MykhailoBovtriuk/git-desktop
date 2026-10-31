@@ -4,6 +4,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
+import { useBusy } from '../../hooks/use-busy';
+import { errorMessage } from '../../lib/error-message';
 import { useGitAction } from '../../hooks/use-git-action';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 import { getLocalStorage } from '../../lib/storage';
@@ -19,19 +21,19 @@ export function useMergeEditor() {
       concludeMerge: s.concludeMerge,
     })),
   );
-  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast, requestConfirm } =
+  const { activeMergeFile, setActiveMergeFile, setActiveView, addToast, confirmDanger } =
     useUiStore(
       useShallow(s => ({
         activeMergeFile: s.activeMergeFile,
         setActiveMergeFile: s.setActiveMergeFile,
         setActiveView: s.setActiveView,
         addToast: s.addToast,
-        requestConfirm: s.requestConfirm,
+        confirmDanger: s.confirmDanger,
       })),
     );
   const [segsByFile, setSegsByFile] = useState<Record<string, Segment[]>>({});
   const [resolved, setResolved] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  const [saving, track] = useBusy();
   const runAction = useGitAction();
   const [autoCommit, setAutoCommit] = useState(
     () => getLocalStorage().getItem('merge-auto-commit') !== 'false',
@@ -48,7 +50,9 @@ export function useMergeEditor() {
     gitApi
       .readFile(activeMergeFile)
       .then(content => setSegsByFile(m => ({ ...m, [activeMergeFile]: parseConflicts(content) })))
-      .catch(err => addToast({ variant: 'error', title: t('loadFailed'), message: String(err) }));
+      .catch(err =>
+        addToast({ variant: 'error', title: t('loadFailed'), message: errorMessage(err) }),
+      );
   }, [activeMergeFile, segsByFile, addToast, t]);
 
   const files = mergeState?.conflictingFiles ?? [];
@@ -81,8 +85,7 @@ export function useMergeEditor() {
       return;
     }
     const file = activeMergeFile;
-    setSaving(true);
-    try {
+    await track(async () => {
       const ok = await runAction(
         async () => {
           await gitApi.writeFile(file, rebuild(segs));
@@ -125,31 +128,21 @@ export function useMergeEditor() {
           }),
         });
       }
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const handleAbort = async () => {
     if (saving) return;
     if (resolved.size > 0) {
-      const ok = await requestConfirm({
-        title: t('abortMerge'),
-        message: t('abortConfirm'),
-        confirmLabel: t('abortMerge'),
-        danger: true,
-      });
+      const ok = await confirmDanger(t('abortMerge'), t('abortConfirm'));
       if (!ok) return;
     }
-    setSaving(true);
-    try {
+    await track(async () => {
       const ok = await runAction(() => abortMerge(), { title: t('abortFailed') });
       if (!ok) return;
       setActiveView('changes');
       addToast({ variant: 'info', title: t('mergeAborted'), message: t('mergeAbortedMessage') });
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const saveDisabled = !activeMergeFile || loadedSegs === undefined || remaining > 0 || saving;

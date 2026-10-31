@@ -1,4 +1,4 @@
-import { GitService } from './git-service';
+import { GitContext } from './git/context';
 import { wrap } from './ipc/wrap';
 import { registerRepoHandlers, type RepoHandlerOptions } from './ipc/repo';
 import { registerStagingHandlers } from './ipc/staging';
@@ -10,20 +10,16 @@ import { registerStashHandlers } from './ipc/stash';
 import { registerDiffHandlers } from './ipc/diff';
 import { registerFileHandlers } from './ipc/files';
 import { forgetRepoAccount, registerAccountHandlers } from './ipc/account';
-import { registerAppHandlers, type AppHandlerOptions } from './ipc/app';
-import { registerUpdateHandlers, type UpdateHandlerOptions } from './ipc/update';
+import { registerAppHandlers } from './ipc/app';
+import { registerUpdateHandlers } from './ipc/update';
 import { registerLogHandlers, type LogHandlerOptions } from './ipc/logs';
 import { registerTerminalHandlers, type TerminalControl } from './ipc/terminal';
 import { ipcMain } from 'electron';
-import { assertString } from './ipc-validators';
+import { assertRepoPath } from './ipc-validators';
 
-export { wrap };
-export type IpcHandlerOptions = RepoHandlerOptions &
-  AppHandlerOptions &
-  UpdateHandlerOptions &
-  LogHandlerOptions;
+export type IpcHandlerOptions = RepoHandlerOptions & LogHandlerOptions;
 
-const gitService = new GitService();
+const gitContext = new GitContext();
 
 let registered = false;
 let terminals: TerminalControl | null = null;
@@ -42,28 +38,27 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
 
   ipcMain.handle('repo:forget', (_e, repoPath: unknown) =>
     wrap(async () => {
-      assertString(repoPath, 'repoPath');
+      assertRepoPath(repoPath);
       terminalControl.killRepo(repoPath);
       await logStore.forgetRepo(repoPath);
       await forgetRepoAccount(repoPath);
-      return null;
     }),
   );
-  registerRepoHandlers(gitService, {
+  registerRepoHandlers(gitContext, {
     ...options,
     onRepoOpened: root => {
       options.onRepoOpened?.(root);
       void logStore.ensureRepo(root).catch(() => {});
     },
   });
-  registerStagingHandlers(gitService);
-  registerRemoteHandlers(gitService);
-  registerBranchHandlers(gitService);
-  registerMergeHandlers(gitService);
-  registerRebaseHandlers(gitService);
-  registerStashHandlers(gitService);
-  registerDiffHandlers(gitService);
-  registerFileHandlers(gitService);
+  registerStagingHandlers(gitContext);
+  registerRemoteHandlers(gitContext);
+  registerBranchHandlers(gitContext);
+  registerMergeHandlers(gitContext);
+  registerRebaseHandlers(gitContext);
+  registerStashHandlers(gitContext);
+  registerDiffHandlers(gitContext);
+  registerFileHandlers(gitContext);
   registerAccountHandlers(options);
   registerAppHandlers(options);
   registerUpdateHandlers(options);
