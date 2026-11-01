@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { LOG_RETENTIONS } from '../../src/types';
+import { errorMessage } from '../../src/lib/error-message';
 import type { LogEntry, LogRetention, LogStats } from '../../src/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -16,6 +17,8 @@ const SESSION_CAP = 2000;
 const CONFIG_FILE = 'config.json';
 const META_FILE = 'meta.json';
 const DAY_FILE = /^(\d{4}-\d{2}-\d{2})\.jsonl$/;
+/** Entries that belong to no repository; never a repoFolderName, which always ends in a hash. */
+const APP_FOLDER = '_app';
 
 function dayKey(ts: number): string {
   const d = new Date(ts);
@@ -58,6 +61,8 @@ export class LogStore {
   private retention: LogRetention = DEFAULT_RETENTION;
   private session: LogEntry[] = [];
   private writes: Promise<void> = Promise.resolve();
+  private writeErrors = 0;
+  private lastWriteError: string | null = null;
 
   constructor(
     private readonly root: string | null,
@@ -89,8 +94,9 @@ export class LogStore {
     await this.prune();
   }
 
-  repoDir(repoPath: string): string | null {
-    return this.root ? path.join(this.root, repoFolderName(repoPath)) : null;
+  repoDir(repoPath: string | null): string | null {
+    if (!this.root) return null;
+    return path.join(this.root, repoPath === null ? APP_FOLDER : repoFolderName(repoPath));
   }
 
   async ensureRepo(repoPath: string): Promise<void> {
@@ -109,10 +115,12 @@ export class LogStore {
 
   append(entry: LogEntry): Promise<void> {
     if (entry.status === 'running') return Promise.resolve();
-    this.session.push(entry);
+    const known = this.session.findIndex(e => e.id === entry.id);
+    if (known >= 0) this.session[known] = entry;
+    else this.session.push(entry);
     if (this.session.length > SESSION_CAP)
       this.session.splice(0, this.session.length - SESSION_CAP);
-    const dir = entry.repoPath ? this.repoDir(entry.repoPath) : null;
+    const dir = this.repoDir(entry.repoPath);
     if (!dir || this.retention === 'session') return Promise.resolve();
     const line = JSON.stringify(entry) + '\n';
     const file = path.join(dir, `${dayKey(entry.ts)}.jsonl`);
@@ -120,11 +128,27 @@ export class LogStore {
     this.writes = this.writes
       .then(() => fs.mkdir(dir, { recursive: true }))
       .then(() => fs.appendFile(file, line))
-      .catch(() => {});
+      .catch((err: unknown) => {
+        this.writeErrors++;
+        this.lastWriteError = errorMessage(err);
+      });
     return this.writes;
   }
 
-  async list(repoPath: string, before = Infinity, limit = 200): Promise<LogEntry[]> {
+  async list(repoPath: string | null, before = Infinity, limit = 200): Promise<LogEntry[]> {
+    if (repoPath === null) return this.listOne(null, before, limit);
+    const [mine, app] = await Promise.all([
+      this.listOne(repoPath, before, limit),
+      this.listOne(null, before, limit),
+    ]);
+    return [...mine, ...app].sort((a, b) => b.ts - a.ts).slice(0, limit);
+  }
+
+  private async listOne(
+    repoPath: string | null,
+    before: number,
+    limit: number,
+  ): Promise<LogEntry[]> {
     await this.writes;
     const dir = this.repoDir(repoPath);
     if (!dir || this.retention === 'session') {
@@ -147,8 +171,19 @@ export class LogStore {
     return out;
   }
 
-  async stats(repoPath: string): Promise<LogStats> {
+  async stats(repoPath: string | null): Promise<LogStats> {
     await this.writes;
+    const app = await this.size(null);
+    const own = repoPath === null ? { bytes: 0, entries: 0 } : await this.size(repoPath);
+    return {
+      ...own,
+      app,
+      writeErrors: this.writeErrors,
+      lastWriteError: this.lastWriteError,
+    };
+  }
+
+  private async size(repoPath: string | null): Promise<{ bytes: number; entries: number }> {
     const dir = this.repoDir(repoPath);
     if (!dir || this.retention === 'session') {
       const mine = this.session.filter(e => e.repoPath === repoPath);
@@ -165,7 +200,7 @@ export class LogStore {
     return { bytes, entries };
   }
 
-  async clear(repoPath: string): Promise<void> {
+  async clear(repoPath: string | null): Promise<void> {
     await this.writes;
     this.session = this.session.filter(e => e.repoPath !== repoPath);
     const dir = this.repoDir(repoPath);
@@ -213,8 +248,10 @@ export class LogStore {
         out.push(JSON.parse(line) as LogEntry);
       } catch {}
     }
+    // A folded repeat is written again under the same id; the last line wins.
+    const byId = new Map(out.map(e => [e.id, e]));
     // Lines land when an operation ends, so one that started earlier but ran
     // longer is written after a quicker one.
-    return out.sort((a, b) => a.ts - b.ts);
+    return [...byId.values()].sort((a, b) => a.ts - b.ts);
   }
 }

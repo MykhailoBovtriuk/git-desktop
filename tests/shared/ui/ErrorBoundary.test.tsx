@@ -43,4 +43,18 @@ describe('ErrorBoundary', () => {
     );
     expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument();
   });
+
+  it('hands the failure to onError and renders the given fallback', () => {
+    const onError = vi.fn();
+    render(
+      <ErrorBoundary onError={onError} fallback={error => <p>panel down: {error.message}</p>}>
+        <Boom />
+      </ErrorBoundary>,
+    );
+    expect(screen.getByText('panel down: kaboom')).toBeInTheDocument();
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'kaboom' }),
+      expect.any(String),
+    );
+  });
 });

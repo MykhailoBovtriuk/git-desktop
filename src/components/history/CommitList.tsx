@@ -6,13 +6,14 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { relativeTime } from '../../lib/relative-time';
 import { ListItem, TruncatedText, RefBadges } from '../../shared/ui';
+import { showErrorToast } from '../../stores/error-toast';
 
 interface CommitListProps {
   filter: string;
 }
 
 export function CommitList({ filter }: CommitListProps) {
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { commits, hasMoreCommits, loadingMoreCommits, loadMoreCommits } = useRepoStore(
     useShallow(s => ({
       commits: s.commits,
@@ -61,9 +62,9 @@ export function CommitList({ filter }: CommitListProps) {
   useEffect(() => {
     if (filter || !hasMoreCommits || loadingMoreCommits) return;
     if (filtered.length > 0 && lastIndex >= filtered.length - 1) {
-      loadMoreCommits();
+      void loadMoreCommits().catch(err => showErrorToast(t('common:loadMoreFailed'), err));
     }
-  }, [lastIndex, filtered.length, hasMoreCommits, loadingMoreCommits, filter, loadMoreCommits]);
+  }, [lastIndex, filtered.length, hasMoreCommits, loadingMoreCommits, filter, loadMoreCommits, t]);
 
   return (
     <div ref={parentRef} className="overflow-y-auto flex-1">

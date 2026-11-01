@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import i18n from 'i18next';
 import { getLocalStorage } from '../lib/storage';
+import { basenameFromPath } from '../lib/basename';
+import { showErrorToast } from './error-toast';
 import type { RepoState } from './repo/types';
 import { createLifecycleSlice } from './repo/lifecycle.slice';
 import { createLoadersSlice } from './repo/loaders.slice';
@@ -50,8 +53,9 @@ export const useRepoStore = create<RepoState>()(
           useRepoStore
             .getState()
             .openRepo(path)
-            .catch(() => {
+            .catch((err: unknown) => {
               useRepoStore.setState({ repoPath: null });
+              showErrorToast(i18n.t('repo:reopenFailed', { name: basenameFromPath(path) }), err);
             });
         }, 0);
       },

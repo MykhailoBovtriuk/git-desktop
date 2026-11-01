@@ -5,10 +5,10 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { gitApi } from '../../api/git-api';
 import { useBusy } from '../../hooks/use-busy';
-import { errorMessage } from '../../lib/error-message';
 import { useGitAction } from '../../hooks/use-git-action';
 import { parseConflicts, rebuild, type Choice, type Segment } from '../../lib/merge-conflicts';
 import { getLocalStorage } from '../../lib/storage';
+import { showErrorToast } from '../../stores/error-toast';
 
 export function useMergeEditor() {
   const { t } = useTranslation('merge');
@@ -50,9 +50,7 @@ export function useMergeEditor() {
     gitApi
       .readFile(activeMergeFile)
       .then(content => setSegsByFile(m => ({ ...m, [activeMergeFile]: parseConflicts(content) })))
-      .catch(err =>
-        addToast({ variant: 'error', title: t('loadFailed'), message: errorMessage(err) }),
-      );
+      .catch(err => showErrorToast(t('loadFailed'), err));
   }, [activeMergeFile, segsByFile, addToast, t]);
 
   const files = mergeState?.conflictingFiles ?? [];

@@ -47,6 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repoState)) as any);
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(uiState)) as any);
+  (useUiStore as unknown as { getState: () => unknown }).getState = () => uiState;
 });
 
 const saveButton = () => screen.getByText('saveMarkResolved').closest('button')!;
