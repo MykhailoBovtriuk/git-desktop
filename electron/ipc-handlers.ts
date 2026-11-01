@@ -1,5 +1,5 @@
 import { GitContext } from './git/context';
-import { wrap } from './ipc/wrap';
+import { wrapLoggedFor } from './ipc/wrap';
 import { registerRepoHandlers, type RepoHandlerOptions } from './ipc/repo';
 import { registerStagingHandlers } from './ipc/staging';
 import { registerRemoteHandlers } from './ipc/remote';
@@ -32,16 +32,18 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}) {
   if (registered) return;
   registered = true;
 
-  const logStore = registerLogHandlers(options);
+  const logStore = registerLogHandlers({ ...options, getRepoPath: () => gitContext.getRepoPath() });
   terminals = registerTerminalHandlers(options);
   const terminalControl = terminals;
 
   ipcMain.handle('repo:forget', (_e, repoPath: unknown) =>
-    wrap(async () => {
+    wrapLoggedFor('repo-forget', null, repoPath, async () => {
       assertRepoPath(repoPath);
       terminalControl.killRepo(repoPath);
-      await logStore.forgetRepo(repoPath);
+      // Logged to the app log, and signed out before the repository's own log
+      // is deleted, so nothing is written back into it.
       await forgetRepoAccount(repoPath);
+      await logStore.forgetRepo(repoPath);
     }),
   );
   registerRepoHandlers(gitContext, {

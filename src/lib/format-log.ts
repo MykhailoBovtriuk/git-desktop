@@ -32,18 +32,19 @@ export function formatDuration(ms: number | undefined): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-const MARK = { running: '…', success: '✓', error: '✗' } as const;
+const MARK = { running: '…', success: '✓', info: 'ℹ', warning: '⚠', error: '✗' } as const;
 
 export function formatEntry(entry: LogEntry, title: string): string {
   const head = [
     `[${formatTime(entry.ts)}]`,
     title,
     MARK[entry.status],
+    entry.count ? `×${entry.count}` : '',
     entry.durationMs !== undefined ? `(${formatDuration(entry.durationMs)})` : '',
   ]
     .filter(Boolean)
     .join(' ');
-  const lines = [head];
+  const lines = [entry.detail ? `${head} — ${entry.detail}` : head];
   for (const command of entry.commands) {
     lines.push(commandLine(command));
     const out = [cleanOutput(command.stdout), cleanOutput(command.stderr)].filter(Boolean);
