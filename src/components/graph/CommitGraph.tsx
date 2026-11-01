@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/ui-store';
 import { computeLayout } from './graph-layout';
 import { relativeTime } from '../../lib/relative-time';
 import { TruncatedText, EmptyState, RefBadges } from '../../shared/ui';
+import { showErrorToast } from '../../stores/error-toast';
 
 const ROW_H = 28;
 const LANE_W = 20;
@@ -105,7 +106,9 @@ export function CommitGraph() {
 
         {hasMoreCommits && (
           <button
-            onClick={loadMoreCommits}
+            onClick={() =>
+              void loadMoreCommits().catch(err => showErrorToast(t('common:loadMoreFailed'), err))
+            }
             disabled={loadingMoreCommits}
             className="w-full h-7 px-2 text-xs text-blue hover:bg-surface0 disabled:opacity-50"
             style={{ paddingLeft: graphW }}

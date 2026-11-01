@@ -6,7 +6,7 @@ import { useAppVersion } from '../../hooks/use-app-version';
 import { appApi } from '../../api/app-api';
 import { PageHeader } from '../layout/PageHeader';
 import { Badge, Button } from '../../shared/ui';
-import { errorMessage } from '../../lib/error-message';
+import { showErrorToast } from '../../stores/error-toast';
 
 const REPO_URL = 'https://github.com/MykhailoBovtriuk/git-desktop';
 
@@ -26,19 +26,12 @@ const SUPPORT_LINKS = [
 export function AboutView() {
   const { t } = useTranslation('about');
   const closeOverlays = useUiStore(s => s.closeOverlays);
-  const addToast = useUiStore(s => s.addToast);
   const version = useAppVersion();
   const repoOpen = useRepoStore(s => !!s.repoPath);
   useEscapeToClose(closeOverlays);
 
   const open = (url: string) => {
-    appApi.openExternal(url).catch((err: unknown) => {
-      addToast({
-        variant: 'error',
-        title: t('title'),
-        message: errorMessage(err),
-      });
-    });
+    appApi.openExternal(url).catch((err: unknown) => showErrorToast(t('title'), err));
   };
 
   return (

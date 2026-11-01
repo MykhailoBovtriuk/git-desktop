@@ -10,6 +10,7 @@ vi.mock('react-i18next', () => ({
 
 import { useGitAction } from '../../src/hooks/use-git-action';
 import { useUiStore } from '../../src/stores/ui-store';
+import { useLogStore } from '../../src/stores/log-store';
 import { useAccountStore } from '../../src/stores/account-store';
 import {
   CheckoutConflictError,
@@ -76,6 +77,23 @@ describe('useGitAction', () => {
     const { result } = renderHook(() => useGitAction());
     await result.current(() => Promise.reject(new Error('weird failure')), { title: 'Op' });
     expect(lastToast()).toMatchObject({ variant: 'error', message: 'weird failure' });
+  });
+
+  it('links the toast to the very entry main logged the failure under', async () => {
+    const { result } = renderHook(() => useGitAction());
+    const err = Object.assign(new Error('rejected'), { logId: 'entry-7' });
+    await result.current(() => Promise.reject(err), { title: 'Push' });
+    const details = lastToast().details!;
+    expect(details).toBeDefined();
+    details.onClick();
+    expect(useLogStore.getState().focusId).toBe('entry-7');
+    expect(useUiStore.getState().rightPanel).toBe('logs');
+  });
+
+  it('offers no link to the logs for a failure nothing logged', async () => {
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.reject(new Error('local only')), { title: 'Op' });
+    expect(lastToast().details).toBeUndefined();
   });
 
   it('swallows CheckoutConflictError without a toast', async () => {
