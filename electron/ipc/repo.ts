@@ -12,23 +12,38 @@ import {
   assertNonNegativeInteger,
   assertIdentity,
 } from '../ipc-validators';
-import { wrap } from './wrap';
+import { wrap, wrapLogged, wrapLoggedFor, wrapRead, QUIET } from './wrap';
+import { markCurrent } from '../log/git-logger';
+import { errorMessage } from '../../src/lib/error-message';
 
 export interface RepoHandlerOptions {
   onRepoOpened?: (root: string) => void;
 }
 
 export function registerRepoHandlers(ctx: GitContext, options: RepoHandlerOptions = {}) {
+  // Logged to the app log: until it succeeds there is no repository to log to.
   ipcMain.handle('git:open-repo', (_e, dirPath: string) =>
-    wrap(async () => {
-      assertString(dirPath, 'dirPath');
-      const root = await ctx.openRepo(dirPath);
-      options.onRepoOpened?.(root);
-      await stripLegacyProfileKeys(root);
-      const remoteUrl = await remote.getRemoteUrl(ctx).catch(() => null);
-      const { url, host, protocol } = await resolveRemote(remoteUrl);
-      return { root, remoteUrl: url, remoteHost: host, remoteProtocol: protocol };
-    }),
+    wrapLoggedFor(
+      'open-repo',
+      null,
+      dirPath,
+      async () => {
+        assertString(dirPath, 'dirPath');
+        const root = await ctx.openRepo(dirPath);
+        options.onRepoOpened?.(root);
+        await stripLegacyProfileKeys(root);
+        const remoteUrl = await remote.getRemoteUrl(ctx).catch((err: unknown) => {
+          markCurrent({
+            status: 'warning',
+            error: `Could not read the remote: ${errorMessage(err)}`,
+          });
+          return null;
+        });
+        const { url, host, protocol } = await resolveRemote(remoteUrl);
+        return { root, remoteUrl: url, remoteHost: host, remoteProtocol: protocol };
+      },
+      QUIET,
+    ),
   );
 
   ipcMain.handle('git:open-dialog', () =>
@@ -43,21 +58,25 @@ export function registerRepoHandlers(ctx: GitContext, options: RepoHandlerOption
   );
 
   ipcMain.handle('git:get-log', (_e, limit: number, offset: number) =>
-    wrap(() => {
+    wrapRead(ctx, 'history', async () => {
       assertBoundedLogLimit(limit);
       assertNonNegativeInteger(offset, 'offset');
       return history.getLog(ctx, limit, offset);
     }),
   );
 
-  ipcMain.handle('git:get-status', () => wrap(() => status.getStatus(ctx)));
+  ipcMain.handle('git:get-status', () => wrapRead(ctx, 'status', () => status.getStatus(ctx)));
 
-  ipcMain.handle('git:get-head-commit', () => wrap(() => history.getHeadCommit(ctx)));
+  ipcMain.handle('git:get-head-commit', () =>
+    wrapRead(ctx, 'HEAD', () => history.getHeadCommit(ctx)),
+  );
 
-  ipcMain.handle('git:get-identity', () => wrap(() => getIdentity(ctx.getRepoPath())));
+  ipcMain.handle('git:get-identity', () =>
+    wrapRead(ctx, 'identity', () => getIdentity(ctx.getRepoPath())),
+  );
 
   ipcMain.handle('git:set-identity', (_e, scope: unknown, identity: unknown) =>
-    wrap(async () => {
+    wrapLogged('identity-set', ctx, scope, async () => {
       if (scope !== 'global' && scope !== 'local') throw new Error('Invalid argument: scope');
       assertIdentity(identity);
       await setIdentity(scope, ctx.getRepoPath(), identity);
@@ -65,7 +84,7 @@ export function registerRepoHandlers(ctx: GitContext, options: RepoHandlerOption
   );
 
   ipcMain.handle('git:has-identity', () =>
-    wrap(async () => {
+    wrapRead(ctx, 'identity', async () => {
       const root = ctx.getRepoPath();
       return root ? hasIdentity(root) : true;
     }),

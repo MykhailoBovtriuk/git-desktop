@@ -1,5 +1,7 @@
 import type { Branch } from '../../src/types';
 import { GitContext } from './context';
+import { markCurrent } from '../log/git-logger';
+import { errorMessage } from '../../src/lib/error-message';
 
 export async function getBranches(ctx: GitContext): Promise<Branch[]> {
   const git = ctx.ensureRepo();
@@ -16,7 +18,12 @@ export async function getBranches(ctx: GitContext): Promise<Branch[]> {
       const [name, upstream] = line.split('\x00');
       if (upstream) tracking.set(name, upstream);
     }
-  } catch {}
+  } catch (err) {
+    markCurrent({
+      status: 'warning',
+      error: `Branches listed without their upstreams: ${errorMessage(err)}`,
+    });
+  }
 
   const branches: Branch[] = [];
   for (const [name, info] of Object.entries(summary.branches)) {

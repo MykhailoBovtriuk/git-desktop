@@ -209,6 +209,21 @@ describe('git operations', () => {
     expect(diff).toContain('+world');
   });
 
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'getWorkingDiff reports an unreadable untracked file instead of an empty diff',
+    async () => {
+      await git.openRepo(tmpDir);
+      const file = path.join(tmpDir, 'secret.txt');
+      fs.writeFileSync(file, 'x');
+      fs.chmodSync(file, 0o000);
+      try {
+        await expect(statusGit.getWorkingDiff(git, 'secret.txt')).rejects.toThrow(/EACCES/);
+      } finally {
+        fs.chmodSync(file, 0o644);
+      }
+    },
+  );
+
   it('getCommitDiff works on the initial commit (no parent)', async () => {
     await git.openRepo(tmpDir);
     const log = await historyGit.getLog(git, 10, 0);

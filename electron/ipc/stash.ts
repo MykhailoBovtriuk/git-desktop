@@ -2,14 +2,16 @@ import { ipcMain } from 'electron';
 import { GitContext } from '../git/context';
 import * as stash from '../git/stash';
 import { assertNonNegativeInteger, assertOptionalString, optionalBoolean } from '../ipc-validators';
-import { wrap, wrapLogged } from './wrap';
+import { wrapLogged, wrapRead } from './wrap';
 
 function stashDetail(index: unknown): string | undefined {
   return typeof index === 'number' ? `stash@{${index}}` : undefined;
 }
 
 export function registerStashHandlers(ctx: GitContext) {
-  ipcMain.handle('git:get-stash-list', () => wrap(() => stash.getStashList(ctx)));
+  ipcMain.handle('git:get-stash-list', () =>
+    wrapRead(ctx, 'stashes', () => stash.getStashList(ctx)),
+  );
 
   ipcMain.handle(
     'git:stash-save',
@@ -25,7 +27,9 @@ export function registerStashHandlers(ctx: GitContext) {
       }),
   );
 
-  ipcMain.handle('git:get-stash-top', () => wrap(() => stash.getStashTop(ctx)));
+  ipcMain.handle('git:get-stash-top', () =>
+    wrapRead(ctx, 'stash top', () => stash.getStashTop(ctx)),
+  );
 
   ipcMain.handle('git:stash-apply', (_e, index: number) =>
     wrapLogged('stash-apply', ctx, stashDetail(index), () => {
@@ -49,7 +53,7 @@ export function registerStashHandlers(ctx: GitContext) {
   );
 
   ipcMain.handle('git:get-stash-diff', (_e, index: number) =>
-    wrap(() => {
+    wrapRead(ctx, stashDetail(index), async () => {
       assertNonNegativeInteger(index, 'index');
       return stash.getStashDiff(ctx, index);
     }),
