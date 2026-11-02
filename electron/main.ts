@@ -6,6 +6,21 @@ import { resolveAppAssetPath } from './app-asset-path';
 import { RepoWatcher } from './repo-watcher';
 import { initDeepLinks, registerProtocol } from './auth/deep-link';
 import { handleAuthCallback } from './ipc/account';
+import { logEvent } from './log/git-logger';
+import { errorWithCause } from '../src/lib/error-message';
+
+process.on('uncaughtException', err => {
+  console.error('[uncaughtException]', err);
+  logEvent({ op: 'app-crash', repoPath: null, status: 'error', error: err });
+});
+process.on('unhandledRejection', reason => {
+  console.error('[unhandledRejection]', reason);
+  logEvent({ op: 'app-unhandled', repoPath: null, status: 'error', error: reason });
+});
+
+function processGone(detail: string, error: string): void {
+  logEvent({ op: 'renderer-gone', repoPath: null, status: 'error', detail, error });
+}
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -60,9 +75,11 @@ if (!isPrimaryInstance) {
   app.quit();
 }
 
-const repoWatcher = new RepoWatcher(() => {
-  mainWindow?.webContents.send('repo:changed');
-});
+const repoWatcher = new RepoWatcher(
+  () => mainWindow?.webContents.send('repo:changed'),
+  (repoPath, detail, err) =>
+    logEvent({ op: 'watcher', repoPath, status: 'warning', detail, error: err }),
+);
 
 function createWindow() {
   const icon = nativeImage.createFromPath(iconPath);
@@ -112,9 +129,11 @@ function createWindow() {
 
   mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
     console.error(`[did-fail-load] code=${code} desc=${desc} url=${url}`);
+    processGone('did-fail-load', `${desc} (${code}) ${url}`);
   });
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     console.error(`[render-process-gone]`, details);
+    processGone('render-process-gone', `${details.reason} (exit code ${details.exitCode})`);
   });
   if (!app.isPackaged) {
     mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
@@ -147,6 +166,7 @@ app.whenReady().then(() => {
     const resolved = resolveAppAssetPath(distRoot, request.url);
     if (!resolved.ok) {
       console.error(`[app://] 403 forbidden for ${request.url}`);
+      logEvent({ op: 'asset-load', repoPath: null, status: 'error', error: `403 ${request.url}` });
       return new Response('Forbidden', { status: 403 });
     }
     const { filePath } = resolved;
@@ -158,6 +178,8 @@ app.whenReady().then(() => {
       return new Response(body, { headers: { 'Content-Type': contentType } });
     } catch (err) {
       console.error(`[app://] 404 for ${request.url}:`, err);
+      const error = errorWithCause(`404 ${request.url}`, err);
+      logEvent({ op: 'asset-load', repoPath: null, status: 'error', error });
       return new Response('Not Found', { status: 404 });
     }
   });
@@ -193,6 +215,12 @@ app.whenReady().then(() => {
     logDir: path.join(app.getPath('userData'), 'logs'),
   });
   createWindow();
+});
+
+app.on('child-process-gone', (_e, details) => {
+  if (details.reason !== 'clean-exit') {
+    processGone(details.type, `${details.reason} (exit code ${details.exitCode})`);
+  }
 });
 
 app.on('before-quit', () => killAllTerminals());

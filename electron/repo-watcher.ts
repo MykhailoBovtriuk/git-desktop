@@ -20,16 +20,32 @@ const isRelevantTopLevel = (name: string): boolean =>
 export class RepoWatcher {
   private watchers: fs.FSWatcher[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private root = '';
 
-  constructor(private readonly onChange: () => void) {}
+  constructor(
+    private readonly onChange: () => void,
+    private readonly onProblem: (
+      repoRoot: string,
+      detail: string,
+      err?: unknown,
+    ) => void = () => {},
+  ) {}
 
   watch(repoRoot: string): void {
     this.close();
+    this.root = repoRoot;
 
     const gitDir = path.join(repoRoot, '.git');
     try {
-      if (!fs.statSync(gitDir).isDirectory()) return;
-    } catch {
+      if (!fs.statSync(gitDir).isDirectory()) {
+        this.onProblem(
+          repoRoot,
+          'Not watching for changes: .git is not a folder (worktree or submodule)',
+        );
+        return;
+      }
+    } catch (err) {
+      this.onProblem(repoRoot, 'Not watching for changes: .git is unreadable', err);
       return;
     }
 
@@ -38,15 +54,19 @@ export class RepoWatcher {
   }
 
   private addWatcher(dir: string, recursive: boolean, accept: (name: string | null) => boolean) {
+    const problem = (err: unknown) =>
+      this.onProblem(this.root, `Not watching ${path.relative(this.root, dir)} for changes`, err);
     try {
       const watcher = fs.watch(dir, { recursive }, (_event, filename) => {
         const name = filename ? filename.toString() : null;
         if (name && path.basename(name).endsWith('.lock')) return;
         if (accept(name)) this.schedule();
       });
-      watcher.on('error', () => {});
+      watcher.on('error', problem);
       this.watchers.push(watcher);
-    } catch {}
+    } catch (err) {
+      problem(err);
+    }
   }
 
   private schedule() {

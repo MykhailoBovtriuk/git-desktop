@@ -1,4 +1,5 @@
 import type * as NodePty from 'node-pty';
+import { logEvent } from '../log/git-logger';
 
 export type PtyModule = typeof NodePty;
 
@@ -15,6 +16,7 @@ export function loadPty(): { pty: PtyModule | null; reason?: string } {
       cached = { pty: require('node-pty') as PtyModule };
     } catch (err: unknown) {
       cached = { pty: null, reason: err instanceof Error ? err.message : String(err) };
+      logEvent({ op: 'terminal-load', repoPath: null, status: 'error', error: err });
     }
   }
   return cached;

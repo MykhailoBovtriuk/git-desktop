@@ -1,5 +1,5 @@
 import { app, ipcMain, shell } from 'electron';
-import { wrap, type WindowOptions } from './wrap';
+import { wrap, wrapLoggedFor, type WindowOptions, QUIET } from './wrap';
 import { assertString } from '../ipc-validators';
 
 /**
@@ -33,13 +33,19 @@ export function registerAppHandlers(options: WindowOptions = {}) {
   ipcMain.handle('app:get-version', () => ({ data: app.getVersion() }));
 
   ipcMain.handle('shell:open-external', (_e, url: string) =>
-    wrap(async () => {
-      assertString(url, 'url');
-      if (!isAllowedExternalUrl(url)) {
-        throw new Error(`Blocked external URL: ${url}`);
-      }
-      await shell.openExternal(url);
-    }),
+    wrapLoggedFor(
+      'ui-action',
+      null,
+      url,
+      async () => {
+        assertString(url, 'url');
+        if (!isAllowedExternalUrl(url)) {
+          throw new Error(`Blocked external URL: ${url}`);
+        }
+        await shell.openExternal(url);
+      },
+      QUIET,
+    ),
   );
 
   // Windows/Linux draw the window controls with colours fixed at creation, so a

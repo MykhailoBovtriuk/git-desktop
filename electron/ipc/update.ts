@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron';
 import path from 'path';
-import { wrap, sendToRenderer, type WindowOptions } from './wrap';
+import { wrap, wrapLoggedFor, sendToRenderer, type WindowOptions, QUIET } from './wrap';
 import { assertString } from '../ipc-validators';
 import { lookupReleases } from '../update/github';
 import { downloadUrlFor, linuxPackageFormat } from '../update/assets';
@@ -152,11 +152,19 @@ export function registerUpdateHandlers(options: WindowOptions = {}) {
   };
 
   ipcMain.handle('app:check-for-update', (_e, includePrerelease: unknown, force: unknown) =>
-    wrap(() => checkForUpdate(includePrerelease === true, force === true)),
+    wrapLoggedFor(
+      'update-check',
+      null,
+      undefined,
+      () => checkForUpdate(includePrerelease === true, force === true),
+      QUIET,
+    ),
   );
 
   ipcMain.handle('app:download-update', (_e, version: unknown) =>
-    wrap(() => startDownload(version)),
+    wrapLoggedFor('update-download', null, version, () => startDownload(version), {
+      expected: err => (err as { name?: unknown } | null)?.name === 'AbortError',
+    }),
   );
 
   ipcMain.handle('app:cancel-update-download', () =>
@@ -166,7 +174,7 @@ export function registerUpdateHandlers(options: WindowOptions = {}) {
   );
 
   ipcMain.handle('app:install-update', () =>
-    wrap(async () => {
+    wrapLoggedFor('update-install', null, lastDownload?.version, async () => {
       if (!lastDownload) throw new Error(NO_DOWNLOAD);
       await launchInstaller(lastDownload.filePath);
     }),
