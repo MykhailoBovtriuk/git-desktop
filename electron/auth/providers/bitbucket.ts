@@ -1,4 +1,6 @@
 import { authedGet, getJson, fetchAvatar, HttpError, probe } from '../http';
+import { logEvent } from '../../log/git-logger';
+import { errorWithCause } from '../../../src/lib/error-message';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface BitbucketUser {
@@ -36,7 +38,16 @@ export const bitbucket: ProviderDefinition = {
     const emails = await getJson<BitbucketEmails>(
       'https://api.bitbucket.org/2.0/user/emails',
       token,
-    ).catch(() => ({ values: [] }) as BitbucketEmails);
+    ).catch((err: unknown) => {
+      logEvent({
+        op: 'account-profile',
+        repoPath: null,
+        status: 'warning',
+        detail: user.username || user.nickname || undefined,
+        error: errorWithCause('Could not read the account email', err),
+      });
+      return { values: [] } as BitbucketEmails;
+    });
     const primary =
       emails.values.find(e => e.is_primary && e.is_confirmed) ??
       emails.values.find(e => e.is_confirmed);

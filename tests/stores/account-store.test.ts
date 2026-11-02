@@ -135,7 +135,7 @@ describe('account store', () => {
       await store().openSignIn('git.acme.internal', REPO);
       await store().chooseProvider('gitlab-self');
 
-      expect(api.probeServer).toHaveBeenCalledWith('gitlab-self', 'git.acme.internal');
+      expect(api.probeServer).toHaveBeenCalledWith('gitlab-self', 'git.acme.internal', REPO);
       expect(store().phase).toBe('browser');
       expect(store().target?.providerId).toBe('gitlab-self');
     });
@@ -190,7 +190,7 @@ describe('account store', () => {
       await store().beginSignIn('github-enterprise', REPO);
       await store().submitEndpoint('https://GHE.acme.com/some/repo');
 
-      expect(api.probeServer).toHaveBeenCalledWith('github-enterprise', 'ghe.acme.com');
+      expect(api.probeServer).toHaveBeenCalledWith('github-enterprise', 'ghe.acme.com', REPO);
       expect(store().phase).toBe('browser');
       expect(store().target).toMatchObject({
         host: 'ghe.acme.com',

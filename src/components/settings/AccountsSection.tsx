@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { showErrorToast } from '../../stores/error-toast';
 import { useAsync } from '../../hooks/use-async';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
@@ -159,7 +160,11 @@ export function AccountsSection() {
               <AccountRow
                 account={current}
                 showHost={!service.self || selfHosted}
-                onSignOut={() => void signOut(current.repoPath)}
+                onSignOut={() =>
+                  void signOut(current.repoPath).catch(err =>
+                    showErrorToast(t('section.signOutFailed'), err),
+                  )
+                }
               />
             ) : (
               <div className="flex items-center justify-between gap-4">

@@ -5,6 +5,7 @@ import type { ProviderAccount } from '../../src/types';
 import { providerById } from './providers/registry';
 import { refreshToken } from './oauth-flow';
 import { approveCredentials, gitUsernameFor } from './git-credentials';
+import { logEvent, logged } from '../log/git-logger';
 
 /**
  * Signed-in accounts, one per repository: each repository the app has open
@@ -67,7 +68,13 @@ function decrypt(value: string | null): string | null {
 async function load(): Promise<void> {
   if (loaded) return;
   loaded = true;
-  if (!canEncrypt()) return;
+  const warn = (error: unknown) =>
+    logEvent({ op: 'accounts-load', repoPath: null, status: 'warning', error });
+  if (!canEncrypt()) {
+    warn('Secure storage is unavailable: sign-ins are kept for this session only');
+    return;
+  }
+  let skipped = 0;
   try {
     const raw = await fs.readFile(storeFile(), 'utf8');
     const parsed = JSON.parse(raw) as PersistedEntry[] | { accounts: PersistedEntry[] };
@@ -78,6 +85,7 @@ async function load(): Promise<void> {
       const repoPath = entry.repoPath;
       if (!repoPath) continue;
       const accessToken = decrypt(entry.accessTokenEnc);
+      if (!accessToken) skipped++;
       if (!accessToken || memory.has(repoPath)) continue;
       memory.set(repoPath, {
         repoPath,
@@ -90,7 +98,10 @@ async function load(): Promise<void> {
         clientSecret: entry.clientSecret,
       });
     }
-  } catch {}
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'ENOENT') warn(err);
+  }
+  if (skipped > 0) warn(`${skipped} saved sign-in(s) could not be decrypted and were skipped`);
 }
 
 async function persist(): Promise<void> {
@@ -156,35 +167,45 @@ export async function getFreshToken(repoPath: string): Promise<string | null> {
     credential.expiresAt !== null && credential.expiresAt - Date.now() < REFRESH_MARGIN_MS;
   if (!expiring) return credential.accessToken;
 
-  if (!credential.refreshToken) {
+  const warn = (error: string) =>
+    logEvent({ op: 'token-refresh', repoPath, status: 'warning', detail: host, error });
+
+  const refresh = credential.refreshToken;
+  if (!refresh) {
     // Expired with no way back. Leave the entry in place so the UI can still
     // name the account it is asking the user to sign into again.
+    warn('The sign-in has expired and cannot be renewed: sign in again');
     return null;
   }
 
   const provider = providerById(credential.account.providerId);
-  if (!provider) return null;
+  if (!provider) {
+    warn(`Unknown provider ${credential.account.providerId}`);
+    return null;
+  }
 
   try {
-    const next = await refreshToken(
-      provider,
-      host,
-      credential.refreshToken,
-      credential.clientId,
-      credential.clientSecret,
-    );
-    const updated: StoredCredential = {
-      ...credential,
-      accessToken: next.accessToken,
-      // A provider that rotates refresh tokens sends a new one; one that does
-      // not sends none, and the old one stays valid.
-      refreshToken: next.refreshToken ?? credential.refreshToken,
-      expiresAt: next.expiresAt,
-    };
-    memory.set(repoPath, updated);
-    await persist();
-    await approveCredentials(host, gitUsernameFor(updated.account), updated.accessToken);
-    return updated.accessToken;
+    return await logged('token-refresh', repoPath, host, async () => {
+      const next = await refreshToken(
+        provider,
+        host,
+        refresh,
+        credential.clientId,
+        credential.clientSecret,
+      );
+      const updated: StoredCredential = {
+        ...credential,
+        accessToken: next.accessToken,
+        // A provider that rotates refresh tokens sends a new one; one that does
+        // not sends none, and the old one stays valid.
+        refreshToken: next.refreshToken ?? refresh,
+        expiresAt: next.expiresAt,
+      };
+      memory.set(repoPath, updated);
+      await persist();
+      await approveCredentials(host, gitUsernameFor(updated.account), updated.accessToken);
+      return updated.accessToken;
+    });
   } catch {
     return null;
   }

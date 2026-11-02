@@ -2,6 +2,8 @@ import { execFile } from 'child_process';
 import os from 'os';
 import type { CredentialHelperEntry, ProviderAccount } from '../../src/types';
 import { providerById } from './providers/registry';
+import { logEvent, markCurrent, recordCommand } from '../log/git-logger';
+import { describeError, errorWithCause } from '../../src/lib/error-message';
 
 /**
  * Values we are willing to write, per platform. A credential helper is a
@@ -21,7 +23,11 @@ function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<s
   return new Promise((resolve, reject) => {
     // A credential manager can block on a UI prompt; never let it stall IPC.
     const options = { env: env ?? process.env, cwd: os.homedir(), timeout: 10_000 };
-    const child = execFile('git', args, options, (err, stdout) => {
+    const child = execFile('git', args, options, (err, stdout, stderr) => {
+      // `credential fill` answers with the password itself, so its output
+      // never reaches the log; stdin is never recorded at all.
+      const shown = args[0] === 'credential' && args[1] === 'fill' ? '' : stdout;
+      recordCommand(['git', ...args], shown, stderr || (err ? err.message : ''));
       if (err) reject(err);
       else resolve(stdout);
     });
@@ -48,10 +54,25 @@ export async function ensureCredentialHelper(host?: string): Promise<string | nu
   if (existing) return existing;
 
   const helper = allowedHelpers()[0];
-  if (!helper) return null;
+  if (!helper) {
+    logEvent({
+      op: 'credential-store',
+      repoPath: null,
+      status: 'warning',
+      detail: host,
+      error: `No credential helper is available on ${process.platform}: git will not remember the token`,
+    });
+    return null;
+  }
   // One argv entry, even for "cache --timeout=3600": execFile bypasses the
   // shell, so splitting would turn --timeout into a flag for git config itself.
   await run(['config', '--global', 'credential.helper', helper]);
+  logEvent({
+    op: 'credential-store',
+    repoPath: null,
+    status: 'info',
+    detail: `Set global credential.helper = ${helper}, none was configured`,
+  });
   return helper;
 }
 
@@ -90,7 +111,19 @@ async function lookupStored(host: string): Promise<{ username: string; password:
   delete env.GIT_ASKPASS;
   delete env.SSH_ASKPASS;
   const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
-    () => '',
+    (err: { code?: number | string; killed?: boolean }) => {
+      // Exit 128 with prompts off is "nothing stored": the normal answer.
+      if (err.killed || typeof err.code === 'string') {
+        logEvent({
+          op: 'credential-store',
+          repoPath: null,
+          status: 'warning',
+          detail: host,
+          error: errorWithCause('The credential helper did not answer', err),
+        });
+      }
+      return '';
+    },
   );
   const password = /^password=(.+)$/m.exec(out)?.[1];
   if (!password) return null;
@@ -118,7 +151,16 @@ export async function bindRepoUsername(
 
 export async function unbindRepoUsername(repoPath: string, host: string): Promise<void> {
   await run(['-C', repoPath, 'config', '--local', '--unset-all', usernameKey(host)]).catch(
-    () => {},
+    (err: { code?: number }) => {
+      if (err.code === 5) return;
+      logEvent({
+        op: 'sign-out',
+        repoPath,
+        status: 'warning',
+        detail: host,
+        error: errorWithCause('Could not remove the username from .git/config', err),
+      });
+    },
   );
 }
 
@@ -130,7 +172,15 @@ export async function forgetStoredCredential(host: string): Promise<boolean> {
 }
 
 export async function rejectCredentials(host: string, username: string): Promise<void> {
-  await run(['credential', 'reject'], describe(host, username)).catch(() => {});
+  await run(['credential', 'reject'], describe(host, username)).catch((err: unknown) =>
+    logEvent({
+      op: 'credential-store',
+      repoPath: null,
+      status: 'warning',
+      detail: host,
+      error: errorWithCause('Could not remove the token from the credential store', err),
+    }),
+  );
 }
 
 function helperCli(helper: string): CredentialHelperEntry['cli'] {
@@ -148,7 +198,10 @@ export async function listCredentialHelpers(): Promise<CredentialHelperEntry[]> 
     '--show-scope',
     '--get-regexp',
     '^credential\\..*helper$',
-  ]).catch(() => '');
+  ]).catch((err: { code?: number }) => {
+    if (err.code !== 1) markCurrent({ status: 'warning', error: describeError(err) });
+    return '';
+  });
   const entries: CredentialHelperEntry[] = [];
   for (const line of out.split('\n')) {
     const match = /^(\w+)\t(\S+)\s?(.*)$/.exec(line);

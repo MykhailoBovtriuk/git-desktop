@@ -29,14 +29,14 @@ export const accountApi = {
     token: string,
     repoPath: string,
   ) => invoke<ProviderAccount>('account:sign-in-token', providerId, host, login, token, repoPath),
-  probeServer: (providerId: ProviderId, host: string) =>
-    invoke<ServerProbe>('account:probe-server', providerId, host),
+  probeServer: (providerId: ProviderId, host: string, repoPath: string | null) =>
+    invoke<ServerProbe>('account:probe-server', providerId, host, repoPath),
   credentialHelpers: () => invoke<CredentialHelperEntry[]>('account:credential-helpers'),
   openTokenHelp: (providerId: ProviderId, host: string) =>
     invoke<null>('account:open-token-help', providerId, host),
   cancelSignIn: () => invoke<null>('account:cancel-sign-in'),
   signOut: (repoPath: string) => invoke<null>('account:sign-out', repoPath),
-  forgetSystemCredential: (host: string) =>
-    invoke<boolean>('account:forget-system-credential', host),
+  forgetSystemCredential: (host: string, repoPath: string | null) =>
+    invoke<boolean>('account:forget-system-credential', host, repoPath),
   onAccountChanged: (cb: () => void) => window.electronAPI.onAccountChanged(cb),
 };

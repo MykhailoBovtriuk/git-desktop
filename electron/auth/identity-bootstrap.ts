@@ -1,5 +1,6 @@
 import type { GitIdentities, GitIdentity, ProviderAccount } from '../../src/types';
 import { gitConfigGet, gitConfigSet, gitConfigUnset, type ConfigScope } from '../git/exec';
+import { logEvent } from '../log/git-logger';
 
 const GLOBAL: ConfigScope = { kind: 'global' };
 
@@ -40,6 +41,21 @@ export async function hasIdentity(repoRoot: string): Promise<boolean> {
 export async function ensureGlobalIdentity(account: ProviderAccount): Promise<void> {
   const { name, email } = await readIdentity(GLOBAL);
   const nextName = account.name || account.login;
-  if (!name && nextName) await gitConfigSet(GLOBAL, 'user.name', nextName);
-  if (!email && account.email) await gitConfigSet(GLOBAL, 'user.email', account.email);
+  const set: string[] = [];
+  if (!name && nextName) {
+    await gitConfigSet(GLOBAL, 'user.name', nextName);
+    set.push(`user.name = ${nextName}`);
+  }
+  if (!email && account.email) {
+    await gitConfigSet(GLOBAL, 'user.email', account.email);
+    set.push(`user.email = ${account.email}`);
+  }
+  if (set.length) {
+    logEvent({
+      op: 'identity-auto',
+      repoPath: account.repoPath,
+      status: 'info',
+      detail: `Global ${set.join(', ')} from the ${account.displayName} account`,
+    });
+  }
 }
