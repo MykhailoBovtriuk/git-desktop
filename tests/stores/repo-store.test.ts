@@ -324,8 +324,6 @@ describe('repo-store', () => {
       repoPath: '/tmp/test-repo',
       checkoutConflict: { branch: 'feature' },
     } as any);
-    // Empty stack before, a new stash after — proves a stash was created so the
-    // pop targets our own stash@{0}, not a pre-existing one.
     (gitApi.getStashTop as any).mockResolvedValueOnce(null).mockResolvedValueOnce('newstashsha');
     await useRepoStore.getState().migrateCheckout();
     expect(gitApi.stashSave).toHaveBeenCalled();

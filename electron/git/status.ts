@@ -159,8 +159,11 @@ async function synthesizeUntrackedDiff(ctx: GitContext, filePath: string): Promi
     ].join('\n');
     const body = lines.map(l => `+${l}`).join('\n');
     return `${header}\n${body}`;
-  } catch {
-    return '';
+  } catch (err) {
+    // Gone between status and read: nothing to show. Anything else (no
+    // permission, a folder) is an error, not an empty diff.
+    if ((err as { code?: string }).code === 'ENOENT') return '';
+    throw err;
   }
 }
 

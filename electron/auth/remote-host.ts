@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { gitConfigGet, runGit } from '../git/exec';
 import type { RemoteProtocol } from '../../src/types';
+import { logEvent } from '../log/git-logger';
 
 const run = promisify(execFile);
 
@@ -96,7 +97,15 @@ async function resolveSshAlias(host: string): Promise<string> {
     const line = stdout.split('\n').find(l => l.startsWith('hostname '));
     const value = line?.slice('hostname '.length).trim();
     if (value) resolved = value.toLowerCase();
-  } catch {}
+  } catch (err) {
+    logEvent({
+      op: 'open-repo',
+      repoPath: null,
+      status: 'warning',
+      detail: `ssh host alias ${host}`,
+      error: err,
+    });
+  }
   aliasCache.set(host, resolved);
   return resolved;
 }

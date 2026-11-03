@@ -34,7 +34,8 @@
     "signOut": "Sign Out",
     "notPersistent": "This system has no keychain Git Desktop can use, so tokens are kept in memory only — you will need to sign in again after restarting.",
     "repoHint": "The account the repository {{repo}} signs in with. Every repository signs in on its own; terminals in its folder use the same login.",
-    "noRepo": "Open a repository to sign it in. Every repository has its own account."
+    "noRepo": "Open a repository to sign it in. Every repository has its own account.",
+    "signOutFailed": "Could not sign out"
   },
   "signedInAs": "Signed in as {{name}} on {{host}}",
   "connection": {

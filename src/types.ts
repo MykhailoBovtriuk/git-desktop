@@ -1,3 +1,5 @@
+import type { GitErrorKind } from './lib/git-error-mapper';
+
 export interface Commit {
   hash: string;
   abbreviatedHash: string;
@@ -68,7 +70,7 @@ export interface FileDiff {
   deletions: number;
 }
 
-export type IpcResult<T> = { data: T } | { error: string };
+export type IpcResult<T> = { data: T } | { error: string; logId?: string };
 
 export type ActiveView =
   | 'changes'
@@ -144,6 +146,7 @@ export interface AccountsSnapshot {
   accounts: ProviderAccount[];
   persistent: boolean;
   error: string | null;
+  errorLogId?: string | null;
 }
 
 export interface ProvidersForHost {
@@ -205,33 +208,80 @@ export interface DownloadedUpdate {
 
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
 
-export type LogOp =
-  | 'commit'
-  | 'stage'
-  | 'unstage'
-  | 'discard'
-  | 'fetch'
-  | 'pull'
-  | 'push'
-  | 'publish'
-  | 'remote-protocol'
-  | 'branch-create'
-  | 'branch-delete'
-  | 'remote-branch-delete'
-  | 'checkout'
-  | 'merge'
-  | 'merge-abort'
-  | 'merge-conclude'
-  | 'resolve'
-  | 'rebase'
-  | 'rebase-abort'
-  | 'rebase-continue'
-  | 'stash-save'
-  | 'stash-apply'
-  | 'stash-pop'
-  | 'stash-drop';
+export type LogCategory = 'git' | 'auth' | 'update' | 'app';
 
-type LogStatus = 'running' | 'success' | 'error';
+// Every operation names its category here, so a new one cannot be left out.
+// Derived on read, never stored: entries written before categories existed read the same.
+const LOG_OP_CATEGORY = {
+  commit: 'git',
+  stage: 'git',
+  unstage: 'git',
+  discard: 'git',
+  fetch: 'git',
+  pull: 'git',
+  push: 'git',
+  publish: 'git',
+  'remote-protocol': 'git',
+  'branch-create': 'git',
+  'branch-delete': 'git',
+  'remote-branch-delete': 'git',
+  checkout: 'git',
+  merge: 'git',
+  'merge-abort': 'git',
+  'merge-conclude': 'git',
+  resolve: 'git',
+  rebase: 'git',
+  'rebase-abort': 'git',
+  'rebase-continue': 'git',
+  'stash-save': 'git',
+  'stash-apply': 'git',
+  'stash-pop': 'git',
+  'stash-drop': 'git',
+  'open-repo': 'git',
+  refresh: 'git',
+  'read-file': 'git',
+  'write-file': 'git',
+  'identity-set': 'git',
+  'identity-auto': 'git',
+  'legacy-cleanup': 'git',
+  watcher: 'git',
+  'sign-in-browser': 'auth',
+  'sign-in-callback': 'auth',
+  'sign-in-token': 'auth',
+  'sign-out': 'auth',
+  'token-refresh': 'auth',
+  'token-revoke': 'auth',
+  'credential-store': 'auth',
+  'credential-forget': 'auth',
+  'probe-server': 'auth',
+  'accounts-load': 'auth',
+  'account-profile': 'auth',
+  'update-check': 'update',
+  'update-download': 'update',
+  'update-install': 'update',
+  'terminal-load': 'app',
+  'terminal-create': 'app',
+  'terminal-io': 'app',
+  'repo-forget': 'app',
+  'app-crash': 'app',
+  'app-unhandled': 'app',
+  'renderer-gone': 'app',
+  'asset-load': 'app',
+  'ui-crash': 'app',
+  'ui-unhandled': 'app',
+  'ui-action': 'app',
+} as const satisfies Record<string, LogCategory>;
+
+export type LogOp = keyof typeof LOG_OP_CATEGORY;
+
+export const LOG_CATEGORIES: readonly LogCategory[] = ['git', 'auth', 'update', 'app'];
+
+export const logCategory = (op: LogOp): LogCategory => LOG_OP_CATEGORY[op] ?? 'git';
+
+export const REPORTABLE_OPS = ['ui-crash', 'ui-unhandled'] as const;
+export type ReportableOp = (typeof REPORTABLE_OPS)[number];
+
+export type LogStatus = 'running' | 'success' | 'info' | 'warning' | 'error';
 
 export interface LogCommand {
   argv: string[];
@@ -249,6 +299,9 @@ export interface LogEntry {
   status: LogStatus;
   commands: LogCommand[];
   error?: string;
+  errorKind?: GitErrorKind;
+  count?: number;
+  lastTs?: number;
 }
 
 export const LOG_RETENTIONS = ['session', 'day', 'week', 'month', 'forever'] as const;
@@ -257,6 +310,9 @@ export type LogRetention = (typeof LOG_RETENTIONS)[number];
 export interface LogStats {
   bytes: number;
   entries: number;
+  app: { bytes: number; entries: number };
+  writeErrors: number;
+  lastWriteError: string | null;
 }
 
 export interface GitIdentity {

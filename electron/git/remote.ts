@@ -8,6 +8,7 @@ import {
   type ResolvedRemote,
 } from '../auth/remote-host';
 import type { SwitchableProtocol } from '../../src/types';
+import { logEvent } from '../log/git-logger';
 
 async function originRemote(ctx: GitContext) {
   const remotes = await ctx.ensureRepo().getRemotes(true);
@@ -74,7 +75,15 @@ async function refreshCredentialIfNeeded(ctx: GitContext): Promise<void> {
     if (account && account.host === (await resolveRemoteHost(await getRemoteUrl(ctx)))) {
       await getFreshToken(repoPath);
     }
-  } catch {}
+  } catch (err) {
+    logEvent({
+      op: 'token-refresh',
+      repoPath: ctx.repoPath,
+      status: 'warning',
+      detail: 'before talking to the remote',
+      error: err,
+    });
+  }
 }
 
 export async function fetch(ctx: GitContext): Promise<void> {

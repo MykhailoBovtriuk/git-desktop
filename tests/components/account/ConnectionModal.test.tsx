@@ -58,6 +58,7 @@ function setup({
     refreshAuthSource: vi.fn().mockResolvedValue(undefined),
   };
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(ui)) as any);
+  (useUiStore as unknown as { getState: () => unknown }).getState = () => ui;
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repo)) as any);
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(account)) as any);
   return { ui, repo, account };
@@ -115,7 +116,9 @@ describe('ConnectionModal', () => {
     expect(screen.getByText('connection.signIn')).toBeTruthy();
     fireEvent.click(screen.getByText('connection.forget'));
 
-    await waitFor(() => expect(account.forgetSystemCredential).toHaveBeenCalledWith('github.com'));
+    await waitFor(() =>
+      expect(account.forgetSystemCredential).toHaveBeenCalledWith('github.com', '/tmp/r'),
+    );
     expect(ui.requestConfirm).toHaveBeenCalledWith(expect.objectContaining({ danger: true }));
     expect(account.refreshAuthSource).toHaveBeenCalledWith('github.com', 'https', '/tmp/r');
   });

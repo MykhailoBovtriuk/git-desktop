@@ -7,8 +7,8 @@ import { gitApi } from '../../api/git-api';
 import { CommitList } from './CommitList';
 import { DiffViewer } from '../diff/DiffViewer';
 import { Button, FilePathList, ResizeHandle, TextInput, EmptyState } from '../../shared/ui';
-import { errorMessage } from '../../lib/error-message';
 import { useResizableWidth } from '../../hooks/use-resizable-width';
+import { showErrorToast } from '../../stores/error-toast';
 
 export function HistoryView() {
   const { t } = useTranslation();
@@ -48,12 +48,7 @@ export function HistoryView() {
       } catch (err) {
         if (!cancelled) {
           setChangedFiles([]);
-          console.error('commit diff load failed:', err);
-          addToast({
-            variant: 'error',
-            title: t('error'),
-            message: errorMessage(err),
-          });
+          showErrorToast(t('error'), err);
         }
       } finally {
         if (!cancelled) setLoadingFiles(false);

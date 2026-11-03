@@ -38,7 +38,8 @@
     "effective": "Volgende commit hier: {{who}}",
     "missing": "Geen auteur ingesteld: git weigert te committen.",
     "save": "Opslaan",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "loadFailed": "Kon de commitauteur niet lezen: {{reason}}"
   },
   "diff": {
     "fontSize": "Lettergrootte",

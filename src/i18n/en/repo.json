@@ -11,5 +11,6 @@
   "removeCurrentTitle": "Remove open repository?",
   "removeCurrentMessage": "\"{{name}}\" is currently open. Removing it from the list will also close it and delete its logs. The folder on disk is not touched.",
   "removeTitle": "Remove repository from list?",
-  "removeMessage": "\"{{name}}\" will be removed from the list and its logs deleted. The folder on disk is not touched."
+  "removeMessage": "\"{{name}}\" will be removed from the list and its logs deleted. The folder on disk is not touched.",
+  "reopenFailed": "Could not reopen {{name}}"
 }

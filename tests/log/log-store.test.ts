@@ -164,4 +164,53 @@ describe('LogStore', () => {
     fs.appendFileSync(path.join(root, repoFolderName(REPO), '2026-10-04.jsonl'), '{"id":"half');
     expect(await store.list(REPO)).toHaveLength(1);
   });
+
+  it('keeps entries of no repository in the app log, listed with every repository', async () => {
+    const store = new LogStore(root, () => NOW);
+    await store.append({ ...entry(NOW - 10, REPO, 'repo') });
+    await store.append({ ...entry(NOW, REPO, 'app'), repoPath: null });
+    expect(fs.readdirSync(path.join(root, '_app'))).toEqual(['2026-10-04.jsonl']);
+    expect((await store.list(REPO)).map(e => e.id)).toEqual(['app', 'repo']);
+    expect((await store.list(null)).map(e => e.id)).toEqual(['app']);
+  });
+
+  it('keeps the app log when a repository is forgotten or cleared', async () => {
+    const store = new LogStore(root, () => NOW);
+    await store.append({ ...entry(NOW, REPO, 'app'), repoPath: null });
+    await store.append(entry(NOW));
+    await store.clear(REPO);
+    await store.forgetRepo(REPO);
+    expect((await store.list(null)).map(e => e.id)).toEqual(['app']);
+    await store.clear(null);
+    expect(await store.list(null)).toEqual([]);
+  });
+
+  it('reports the app log apart from the repository in stats', async () => {
+    const store = new LogStore(root, () => NOW);
+    await store.append(entry(NOW));
+    await store.append({ ...entry(NOW, REPO, 'app'), repoPath: null });
+    const stats = await store.stats(REPO);
+    expect(stats.entries).toBe(1);
+    expect(stats.app.entries).toBe(1);
+    expect(stats.writeErrors).toBe(0);
+  });
+
+  it('shows a folded repeat once, as its latest version', async () => {
+    const store = new LogStore(root, () => NOW);
+    await store.append({ ...entry(NOW, REPO, 'x'), status: 'error' });
+    await store.append({ ...entry(NOW, REPO, 'x'), status: 'error', count: 2 });
+    const listed = await store.list(REPO);
+    expect(listed).toHaveLength(1);
+    expect(listed[0].count).toBe(2);
+  });
+
+  it('counts writes that failed instead of dropping them silently', async () => {
+    const file = path.join(root, 'blocked');
+    fs.writeFileSync(file, '');
+    const store = new LogStore(file, () => NOW);
+    await store.append(entry(NOW));
+    const stats = await store.stats(REPO);
+    expect(stats.writeErrors).toBe(1);
+    expect(stats.lastWriteError).toBeTruthy();
+  });
 });

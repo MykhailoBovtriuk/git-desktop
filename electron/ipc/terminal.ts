@@ -1,5 +1,5 @@
 import { ipcMain, shell } from 'electron';
-import { wrap, sendToRenderer, type WindowOptions } from './wrap';
+import { wrap, wrapLoggedFor, sendToRenderer, type WindowOptions, QUIET } from './wrap';
 import { assertDimension, assertRepoPath, assertString } from '../ipc-validators';
 import { loadPty } from '../terminal/pty-loader';
 import { detectShells, type ShellSpec } from '../terminal/shell';
@@ -7,7 +7,6 @@ import { TerminalManager } from '../terminal/terminal-manager';
 import type { TerminalAvailability, TerminalShell } from '../../src/types';
 
 const MAX_WRITE = 1024 * 1024;
-
 export interface TerminalControl {
   killRepo: (repoPath: string) => void;
   killAll: () => void;
@@ -46,23 +45,35 @@ export function registerTerminalHandlers(options: WindowOptions = {}): TerminalC
   ipcMain.handle(
     'term:create',
     (_e, repoPath: unknown, shellId: unknown, cols: unknown, rows: unknown) =>
-      wrap(async () => {
-        assertRepoPath(repoPath);
-        if (shellId !== null && shellId !== undefined) assertString(shellId, 'shellId');
-        assertDimension(cols, 'cols');
-        assertDimension(rows, 'rows');
-        return getManager().create({ repoPath, shellId, cols, rows });
-      }),
+      wrapLoggedFor(
+        'terminal-create',
+        repoPath,
+        shellId ?? 'default shell',
+        async () => {
+          assertRepoPath(repoPath);
+          if (shellId !== null && shellId !== undefined) assertString(shellId, 'shellId');
+          assertDimension(cols, 'cols');
+          assertDimension(rows, 'rows');
+          return getManager().create({ repoPath, shellId, cols, rows });
+        },
+        QUIET,
+      ),
   );
 
   ipcMain.handle('term:write', (_e, id: unknown, data: unknown) =>
-    wrap(async () => {
-      assertString(id, 'id');
-      if (typeof data !== 'string' || data.length > MAX_WRITE) {
-        throw new Error('Invalid argument: data');
-      }
-      getManager().write(id, data);
-    }),
+    wrapLoggedFor(
+      'terminal-io',
+      null,
+      'write',
+      async () => {
+        assertString(id, 'id');
+        if (typeof data !== 'string' || data.length > MAX_WRITE) {
+          throw new Error('Invalid argument: data');
+        }
+        getManager().write(id, data);
+      },
+      QUIET,
+    ),
   );
 
   ipcMain.handle('term:resize', (_e, id: unknown, cols: unknown, rows: unknown) =>
@@ -89,10 +100,16 @@ export function registerTerminalHandlers(options: WindowOptions = {}): TerminalC
   );
 
   ipcMain.handle('term:buffer', (_e, id: unknown) =>
-    wrap(async () => {
-      assertString(id, 'id');
-      return getManager().buffer(id);
-    }),
+    wrapLoggedFor(
+      'terminal-io',
+      null,
+      'restore output',
+      async () => {
+        assertString(id, 'id');
+        return getManager().buffer(id);
+      },
+      QUIET,
+    ),
   );
 
   // Links printed in a terminal can point anywhere, unlike the app's own

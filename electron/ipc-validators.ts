@@ -112,9 +112,13 @@ export function assertHost(value: unknown): asserts value is string {
   }
 }
 
+export function isRepoPath(value: unknown): value is string {
+  return typeof value === 'string' && path.isAbsolute(value) && !/[\r\n\0]/.test(value);
+}
+
 export function assertRepoPath(value: unknown): asserts value is string {
   assertString(value, 'repoPath');
-  if (!path.isAbsolute(value as string) || /[\r\n\0]/.test(value as string)) {
+  if (!isRepoPath(value)) {
     throw new Error('Invalid argument: repoPath is not an absolute path');
   }
 }

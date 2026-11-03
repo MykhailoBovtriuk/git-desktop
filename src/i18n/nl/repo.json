@@ -11,5 +11,6 @@
   "removeCurrentTitle": "Geopende repository verwijderen?",
   "removeCurrentMessage": "\"{{name}}\" is nu geopend. Verwijderen uit de lijst sluit de repository en wist het logboek ervan. De map op schijf blijft onaangeroerd.",
   "removeTitle": "Repository uit de lijst verwijderen?",
-  "removeMessage": "\"{{name}}\" wordt uit de lijst verwijderd en het logboek ervan gewist. De map op schijf blijft onaangeroerd."
+  "removeMessage": "\"{{name}}\" wordt uit de lijst verwijderd en het logboek ervan gewist. De map op schijf blijft onaangeroerd.",
+  "reopenFailed": "Kon {{name}} niet opnieuw openen"
 }

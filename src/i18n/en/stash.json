@@ -24,5 +24,6 @@
     "apply": "Apply (keep stash)",
     "pop": "Pop (restore and delete)",
     "drop": "Drop (delete without restoring)"
-  }
+  },
+  "diffFailed": "Could not load this stash: {{reason}}"
 }

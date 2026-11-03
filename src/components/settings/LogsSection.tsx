@@ -9,29 +9,31 @@ import { Button, SegmentedControl } from '../../shared/ui';
 import { LOG_RETENTIONS, type LogRetention, type LogStats } from '../../types';
 import { SettingsSection } from './SettingsSection';
 import { formatBytes } from '../../lib/format-bytes';
+import { errorMessage } from '../../lib/error-message';
 
 export function LogsSection() {
   const { t } = useTranslation('logs');
   const requestConfirm = useUiStore(s => s.requestConfirm);
-  const confirmClear = useConfirmClearLogs();
+  const confirmClear = useConfirmClearLogs('repo');
+  const confirmClearApp = useConfirmClearLogs('app');
   const entryCount = useLogStore(s => s.entries.length);
   const repoPath = useRepoStore(s => s.repoPath);
   const [retention, setRetention] = useState<LogRetention | null>(null);
   const [stats, setStats] = useState<LogStats | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const refreshStats = useCallback(() => {
-    if (!repoPath) return setStats(null);
     void logApi
       .stats(repoPath)
       .then(setStats)
-      .catch(() => {});
+      .catch((err: unknown) => setFailure(errorMessage(err)));
   }, [repoPath]);
 
   useEffect(() => {
     void logApi
       .getRetention()
       .then(setRetention)
-      .catch(() => {});
+      .catch((err: unknown) => setFailure(errorMessage(err)));
   }, []);
 
   useEffect(refreshStats, [refreshStats, entryCount]);
@@ -55,6 +57,10 @@ export function LogsSection() {
   const clear = async () => {
     if (await confirmClear()) refreshStats();
   };
+  const clearApp = async () => {
+    if (await confirmClearApp()) refreshStats();
+  };
+  const report = (err: unknown) => setFailure(errorMessage(err));
 
   return (
     <>
@@ -63,7 +69,7 @@ export function LogsSection() {
           <SegmentedControl
             label={t('settings.keepTitle')}
             value={retention}
-            onChange={(value: LogRetention) => void change(value).catch(() => {})}
+            onChange={(value: LogRetention) => void change(value).catch(report)}
             options={LOG_RETENTIONS.map(value => ({
               value,
               label: t(`settings.retention.${value}`),
@@ -83,7 +89,7 @@ export function LogsSection() {
               <Button
                 variant="surface"
                 size="sm"
-                onClick={() => void logApi.openFolder(repoPath).catch(() => {})}
+                onClick={() => void logApi.openFolder(repoPath).catch(report)}
               >
                 {t('settings.openFolder')}
               </Button>
@@ -98,6 +104,44 @@ export function LogsSection() {
             </Button>
           </div>
         </SettingsSection>
+      )}
+      <SettingsSection title={t('settings.appTitle')} description={t('settings.appHint')}>
+        <div className="flex items-center gap-2">
+          {stats && (
+            <span className="text-subtext text-xs">
+              {t('settings.usage', {
+                size: formatBytes(stats.app.bytes),
+                count: stats.app.entries,
+              })}
+            </span>
+          )}
+          {retention !== 'session' && (
+            <Button
+              variant="surface"
+              size="sm"
+              onClick={() => void logApi.openFolder(null).catch(report)}
+            >
+              {t('settings.openFolder')}
+            </Button>
+          )}
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => void clearApp()}
+            disabled={!stats?.app.entries}
+          >
+            {t('settings.clear')}
+          </Button>
+        </div>
+      </SettingsSection>
+      {(failure || (stats && stats.writeErrors > 0)) && (
+        <p role="alert" className="text-red text-xs py-2 break-words">
+          {failure ??
+            t('settings.writeErrors', {
+              count: stats?.writeErrors ?? 0,
+              reason: stats?.lastWriteError ?? '',
+            })}
+        </p>
       )}
     </>
   );

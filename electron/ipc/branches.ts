@@ -2,10 +2,12 @@ import { ipcMain } from 'electron';
 import { GitContext } from '../git/context';
 import * as branches from '../git/branches';
 import { assertBranchName, optionalBoolean } from '../ipc-validators';
-import { wrap, wrapLogged } from './wrap';
+import { wrapLogged, wrapRead } from './wrap';
 
 export function registerBranchHandlers(ctx: GitContext) {
-  ipcMain.handle('git:get-branches', () => wrap(() => branches.getBranches(ctx)));
+  ipcMain.handle('git:get-branches', () =>
+    wrapRead(ctx, 'branches', () => branches.getBranches(ctx)),
+  );
 
   ipcMain.handle('git:create-branch', (_e, name: string) =>
     wrapLogged('branch-create', ctx, name, () => {

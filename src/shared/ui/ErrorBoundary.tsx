@@ -3,6 +3,8 @@ import { Button } from './Button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
+  onError?: (error: Error, componentStack: string) => void;
+  fallback?: (error: Error, reset: () => void) => ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -18,7 +20,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Unhandled render error:', error, info.componentStack);
+    this.props.onError?.(error, info.componentStack ?? '');
   }
+
+  private reset = () => this.setState({ error: null });
 
   private handleReload = () => {
     window.location.reload();
@@ -34,6 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    if (this.props.fallback) return this.props.fallback(error, this.reset);
 
     return (
       <div

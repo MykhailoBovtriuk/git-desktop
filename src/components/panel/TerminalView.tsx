@@ -4,8 +4,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { useTerminalStore } from '../../stores/terminal-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useSettingsStore } from '../../stores/settings-store';
-import { useUiStore } from '../../stores/ui-store';
-import { errorMessage } from '../../lib/error-message';
 import { useDismiss } from '../../hooks/use-dismiss';
 import {
   AddIcon,
@@ -18,6 +16,7 @@ import {
   cn,
 } from '../../shared/ui';
 import { TerminalPane } from './TerminalPane';
+import { showErrorToast } from '../../stores/error-toast';
 
 const EMPTY: never[] = [];
 
@@ -25,7 +24,6 @@ export function TerminalView({ visible }: { visible: boolean }) {
   const { t } = useTranslation('terminal');
   const repoPath = useRepoStore(s => s.repoPath);
   const defaultShell = useSettingsStore(s => s.terminalShell);
-  const addToast = useUiStore(s => s.addToast);
   const {
     available,
     unavailableReason,
@@ -63,7 +61,7 @@ export function TerminalView({ visible }: { visible: boolean }) {
     try {
       await create(repoPath, shellId);
     } catch (err) {
-      addToast({ variant: 'error', title: t('createFailed'), message: errorMessage(err) });
+      showErrorToast(t('createFailed'), err);
     }
   };
 
@@ -171,11 +169,7 @@ export function TerminalView({ visible }: { visible: boolean }) {
             onRestart={() =>
               repoPath &&
               void restart(repoPath, session.id, session.shellId).catch(err =>
-                addToast({
-                  variant: 'error',
-                  title: t('createFailed'),
-                  message: errorMessage(err),
-                }),
+                showErrorToast(t('createFailed'), err),
               )
             }
           />

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
+import { openLogEntry } from '../../stores/error-toast';
 import { accountApi } from '../../api/account-api';
 import { Button, Modal, TextInput } from '../../shared/ui';
 import type { ProviderId } from '../../types';
@@ -13,6 +14,7 @@ export function SignInModal() {
     phase,
     target,
     error,
+    errorLogId,
     endpointError,
     busy,
     chooseProvider,
@@ -28,6 +30,7 @@ export function SignInModal() {
       phase: s.phase,
       target: s.target,
       error: s.error,
+      errorLogId: s.errorLogId,
       endpointError: s.endpointError,
       busy: s.busy,
       chooseProvider: s.chooseProvider,
@@ -63,6 +66,26 @@ export function SignInModal() {
     if (target.repoPath && target.repoPath === repoPath) dismissForRepo(repoPath);
     void cancelSignIn();
   };
+
+  // The dialog sits over the panel, so the link closes it to show the entry.
+  const errorLine = (
+    <div className="flex flex-col gap-1">
+      <p className="text-red text-xs">{error}</p>
+      {errorLogId && (
+        <Button
+          size="sm"
+          variant="link"
+          className="self-start"
+          onClick={() => {
+            cancel();
+            openLogEntry(errorLogId);
+          }}
+        >
+          {t('logs:showInLogs')}
+        </Button>
+      )}
+    </div>
+  );
 
   const footer = (primary: React.ReactNode) => (
     <>
@@ -243,7 +266,7 @@ export function SignInModal() {
           {provider?.configured
             ? switchLink('browser', t('token.useBrowser'))
             : provider?.needsClientId && switchLink('browser', t('token.useOwnApp'))}
-          {error && <p className="text-red text-xs">{error}</p>}
+          {error && errorLine}
         </div>
       </Modal>
     );
@@ -260,7 +283,7 @@ export function SignInModal() {
           </Button>,
         )}
       >
-        <p className="text-red text-xs">{error}</p>
+        {errorLine}
       </Modal>
     );
   }
@@ -314,7 +337,7 @@ export function SignInModal() {
 
         {waiting && <p className="text-subtext text-xs">{t('browser.waiting')}</p>}
         {!waiting && switchLink('token', t('browser.useToken'))}
-        {error && <p className="text-red text-xs">{error}</p>}
+        {error && errorLine}
       </div>
     </Modal>
   );

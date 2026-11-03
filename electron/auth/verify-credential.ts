@@ -1,4 +1,5 @@
 import { appFetch, basicAuth } from './http';
+import { errorWithCause } from '../../src/lib/error-message';
 
 /**
  * Prove a credential via the Smart HTTP advertisement, sending Authorization
@@ -28,8 +29,8 @@ export async function verifyAgainstRemote(
         Accept: 'application/x-git-upload-pack-advertisement',
       },
     });
-  } catch {
-    throw new Error('Could not reach the server to check this token');
+  } catch (err) {
+    throw errorWithCause('Could not reach the server to check this token', err);
   }
 
   if (res.ok) return;

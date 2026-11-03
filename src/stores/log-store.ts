@@ -10,16 +10,20 @@ interface LogState {
   entries: LogEntry[];
   hasMore: boolean;
   loadingMore: boolean;
-  unreadErrors: number;
+  unreadProblems: number;
+  unreadHasError: boolean;
   focusId: string | null;
   upsert: (entry: LogEntry, panelOpen: boolean) => void;
   load: (repoPath: string | null) => Promise<void>;
   loadOlder: () => Promise<void>;
-  clear: () => Promise<void>;
+  clear: (scope?: ClearScope) => Promise<void>;
   markRead: () => void;
-  focusLatestError: () => void;
   setFocus: (id: string | null) => void;
 }
+
+export type ClearScope = 'all' | 'repo' | 'app';
+
+export const isProblem = (e: LogEntry) => e.status === 'error' || e.status === 'warning';
 
 function merge(current: LogEntry[], incoming: LogEntry[]): LogEntry[] {
   const byId = new Map(current.map(e => [e.id, e]));
@@ -32,15 +36,16 @@ export const useLogStore = create<LogState>()((set, get) => ({
   entries: [],
   hasMore: false,
   loadingMore: false,
-  unreadErrors: 0,
+  unreadProblems: 0,
+  unreadHasError: false,
   focusId: null,
 
   upsert: (entry, panelOpen) =>
     set(s => {
-      if (entry.repoPath !== s.repoPath) return s;
+      // The app's own entries show next to whichever repository is open.
+      if (entry.repoPath !== s.repoPath && entry.repoPath !== null) return s;
       const index = s.entries.findIndex(e => e.id === entry.id);
-      const settledAsError =
-        entry.status === 'error' && (index < 0 || s.entries[index].status !== 'error');
+      const settledAsError = isProblem(entry) && (index < 0 || !isProblem(s.entries[index]));
       let entries: LogEntry[];
       if (index >= 0) {
         entries = s.entries.slice();
@@ -52,13 +57,21 @@ export const useLogStore = create<LogState>()((set, get) => ({
       return {
         entries: overflow > 0 ? entries.slice(overflow) : entries,
         hasMore: s.hasMore || overflow > 0,
-        unreadErrors: settledAsError && !panelOpen ? s.unreadErrors + 1 : s.unreadErrors,
+        unreadProblems: settledAsError && !panelOpen ? s.unreadProblems + 1 : s.unreadProblems,
+        unreadHasError:
+          s.unreadHasError || (settledAsError && !panelOpen && entry.status === 'error'),
       };
     }),
 
   load: async repoPath => {
-    set({ repoPath, entries: [], hasMore: false, unreadErrors: 0, focusId: null });
-    if (!repoPath) return;
+    set({
+      repoPath,
+      entries: [],
+      hasMore: false,
+      unreadProblems: 0,
+      unreadHasError: false,
+      focusId: null,
+    });
     const page = await logApi.list(repoPath, undefined, PAGE);
     if (get().repoPath !== repoPath) return;
     set(s => ({ entries: merge(s.entries, page), hasMore: page.length === PAGE }));
@@ -66,7 +79,7 @@ export const useLogStore = create<LogState>()((set, get) => ({
 
   loadOlder: async () => {
     const { repoPath, entries, loadingMore, hasMore } = get();
-    if (!repoPath || loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore) return;
     set({ loadingMore: true });
     try {
       const page = await logApi.list(repoPath, entries[0]?.ts, PAGE);
@@ -77,19 +90,19 @@ export const useLogStore = create<LogState>()((set, get) => ({
     }
   },
 
-  clear: async () => {
+  clear: async (scope = 'all') => {
     const { repoPath } = get();
-    if (!repoPath) return;
-    await logApi.clear(repoPath);
-    set({ entries: [], hasMore: false, unreadErrors: 0, focusId: null });
+    if (repoPath && scope !== 'app') await logApi.clear(repoPath);
+    if (scope !== 'repo') await logApi.clear(null);
+    if (scope === 'all') {
+      set({ entries: [], hasMore: false, unreadProblems: 0, unreadHasError: false, focusId: null });
+      return;
+    }
+    const gone = scope === 'app' ? null : repoPath;
+    set(s => ({ entries: s.entries.filter(e => e.repoPath !== gone) }));
   },
 
-  markRead: () => set({ unreadErrors: 0 }),
-
-  focusLatestError: () => {
-    const latest = [...get().entries].reverse().find(e => e.status === 'error');
-    set({ focusId: latest?.id ?? null });
-  },
+  markRead: () => set({ unreadProblems: 0, unreadHasError: false }),
 
   setFocus: id => set({ focusId: id }),
 }));

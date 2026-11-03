@@ -3,22 +3,21 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { errorMessage } from '../../lib/error-message';
 import { useBusy } from '../../hooks/use-busy';
 import { useCurrentAccount } from '../../hooks/use-current-account';
 import { Avatar, Button, Card, Modal, SegmentedControl } from '../../shared/ui';
 import type { SwitchableProtocol } from '../../types';
+import { showErrorToast } from '../../stores/error-toast';
 
 type Protocol = SwitchableProtocol;
 
 export function ConnectionModal() {
   const { t } = useTranslation('account');
-  const { open, close, requestConfirm, addToast } = useUiStore(
+  const { open, close, requestConfirm } = useUiStore(
     useShallow(s => ({
       open: s.connectionOpen,
       close: s.closeConnection,
       requestConfirm: s.requestConfirm,
-      addToast: s.addToast,
     })),
   );
   const { repoPath, remoteUrl, remoteHost, remoteProtocol, switchRemoteProtocol } = useRepoStore(
@@ -49,9 +48,7 @@ export function ConnectionModal() {
     remoteProtocol === 'ssh' || remoteProtocol === 'https' ? remoteProtocol : null;
 
   const act = (fn: () => Promise<void>) =>
-    track(fn).catch((err: unknown) =>
-      addToast({ variant: 'error', title: t('connection.failed'), message: errorMessage(err) }),
-    );
+    track(fn).catch((err: unknown) => showErrorToast(t('connection.failed'), err));
 
   const refresh = () => account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
 
@@ -80,7 +77,7 @@ export function ConnectionModal() {
         danger: true,
       });
       if (!ok) return;
-      await account.forgetSystemCredential(remoteHost);
+      await account.forgetSystemCredential(remoteHost, repoPath);
       await refresh();
     });
 

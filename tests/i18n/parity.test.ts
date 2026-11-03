@@ -2,9 +2,6 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-// Guards locale parity and Ukrainian _few/_many plural keys, without which
-// i18next falls back to English.
-
 const I18N_DIR = path.resolve(__dirname, '../../src/i18n');
 const LANGS = ['en', 'uk', 'nl'] as const;
 

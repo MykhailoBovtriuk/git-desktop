@@ -1,5 +1,7 @@
 import type { AccountGroup, ProviderId, ServerProbe } from '../../../src/types';
 import { basicAuth, getJson, fetchAvatar, probe, sendRevoke } from '../http';
+import { logEvent } from '../../log/git-logger';
+import { errorWithCause } from '../../../src/lib/error-message';
 import type { FetchedAccount, ProviderDefinition } from './types';
 
 interface GitHubUser {
@@ -69,7 +71,16 @@ function makeGitHubProvider(opts: {
 
 async function resolveEmail(api: string, token: string, user: GitHubUser): Promise<string> {
   const emails = await getJson<GitHubEmail[]>(`${api}/user/emails`, token, ACCEPT).catch(
-    () => [] as GitHubEmail[],
+    (err: unknown) => {
+      logEvent({
+        op: 'account-profile',
+        repoPath: null,
+        status: 'warning',
+        detail: user.login,
+        error: errorWithCause('Could not read the account email; using the public one', err),
+      });
+      return [] as GitHubEmail[];
+    },
   );
   const primary = emails.find(e => e.primary && e.verified) ?? emails.find(e => e.verified);
   return primary?.email ?? user.email ?? `${user.id}+${user.login}@users.noreply.github.com`;

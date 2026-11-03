@@ -1,4 +1,6 @@
 import { REDIRECT_URI } from './oauth-config';
+import { markCurrent, recordCommand } from '../log/git-logger';
+import { describeError } from '../../src/lib/error-message';
 
 /** Every outbound request identifies the app; GitHub rejects requests without one. */
 export const USER_AGENT = 'git-desktop';
@@ -24,16 +26,25 @@ export const isRejected = (err: unknown): boolean =>
 export const basicAuth = (user: string, password: string): string =>
   `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`;
 
-export function appFetch(
+// Only method, URL and status reach the log: headers and bodies carry tokens.
+export async function appFetch(
   url: string,
   init: RequestInit = {},
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> {
-  return fetch(url, {
-    ...init,
-    headers: { 'User-Agent': USER_AGENT, ...(init.headers ?? {}) },
-    signal: init.signal ?? AbortSignal.timeout(timeoutMs),
-  });
+  const argv = [init.method ?? 'GET', url];
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: { 'User-Agent': USER_AGENT, ...(init.headers ?? {}) },
+      signal: init.signal ?? AbortSignal.timeout(timeoutMs),
+    });
+    recordCommand(argv, `HTTP ${res.status}`, '');
+    return res;
+  } catch (err) {
+    recordCommand(argv, '', describeError(err));
+    throw err;
+  }
 }
 
 export async function getJson<T>(
@@ -120,10 +131,14 @@ export async function probe(url: string): Promise<ProbeResponse | null> {
   }
 }
 
+// Never throws: a revocation that fails must not undo the sign-out around it.
 export async function sendRevoke(url: string, init: RequestInit): Promise<void> {
   try {
-    await appFetch(url, init, PROBE_TIMEOUT_MS);
-  } catch {}
+    const res = await appFetch(url, init, PROBE_TIMEOUT_MS);
+    if (!res.ok) markCurrent({ status: 'warning', error: `The server answered ${res.status}` });
+  } catch (err) {
+    markCurrent({ status: 'warning', error: describeError(err) });
+  }
 }
 
 const MAX_AVATAR_BYTES = 256 * 1024;

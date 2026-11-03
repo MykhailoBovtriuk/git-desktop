@@ -8,7 +8,7 @@ import type {
   RemoteProtocol,
   SignInPhase,
 } from '../types';
-import { errorMessage } from '../lib/error-message';
+import { errorLogId, errorMessage } from '../lib/error-message';
 import { parseServerAddress, type ServerAddressError } from '../lib/server-address';
 
 interface SignInTarget {
@@ -28,6 +28,7 @@ interface AccountState {
   phase: SignInPhase | null;
   target: SignInTarget | null;
   error: string | null;
+  errorLogId: string | null;
   endpointError: EndpointError | null;
   busy: boolean;
   dismissedRepos: Set<string>;
@@ -52,7 +53,7 @@ interface AccountState {
   cancelSignIn: () => Promise<void>;
   dismissForRepo: (repoPath: string) => void;
   signOut: (repoPath: string) => Promise<void>;
-  forgetSystemCredential: (host: string) => Promise<void>;
+  forgetSystemCredential: (host: string, repoPath: string | null) => Promise<void>;
 }
 
 const HOSTED_INSTEAD: Partial<Record<ProviderId, { host: string; provider: ProviderId }>> = {
@@ -84,11 +85,15 @@ export const useAccountStore = create<AccountState>()((set, get) => {
   };
 
   const guarded = async (fn: () => Promise<void>, { keepPhase = false } = {}) => {
-    set({ busy: true, error: null });
+    set({ busy: true, error: null, errorLogId: null });
     try {
       await fn();
     } catch (err: unknown) {
-      set({ error: errorMessage(err), ...(keepPhase ? {} : { phase: 'error' as const }) });
+      set({
+        error: errorMessage(err),
+        errorLogId: errorLogId(err) ?? null,
+        ...(keepPhase ? {} : { phase: 'error' as const }),
+      });
     } finally {
       set({ busy: false });
     }
@@ -96,7 +101,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
 
   const checkServer = async (providerId: ProviderId, host: string): Promise<boolean> => {
     if (providerId === 'token') return true;
-    const answer = await accountApi.probeServer(providerId, host);
+    const answer = await accountApi.probeServer(providerId, host, get().target?.repoPath ?? null);
     if (answer === 'ok') return true;
     set({ endpointError: answer });
     return false;
@@ -110,6 +115,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     phase: null,
     target: null,
     error: null,
+    errorLogId: null,
     endpointError: null,
     busy: false,
     dismissedRepos: new Set(),
@@ -123,6 +129,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         // A failure reported here came from the browser round trip, which had no
         // IPC call left to throw from. Surface it without clobbering a newer one.
         error: snapshot.error ?? s.error,
+        errorLogId: snapshot.error ? (snapshot.errorLogId ?? null) : s.errorLogId,
         ...(snapshot.error === null && s.phase === 'waiting' && signedIn(snapshot, s)
           ? { phase: null, target: null }
           : {}),
@@ -201,7 +208,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         return { phase: firstMethod(option) };
       }),
 
-    switchMethod: method => set({ phase: method, error: null }),
+    switchMethod: method => set({ phase: method, error: null, errorLogId: null }),
 
     continueWithBrowser: (clientId, clientSecret) =>
       guarded(async () => {
@@ -239,7 +246,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     },
 
     cancelSignIn: async () => {
-      set({ phase: null, target: null, error: null, endpointError: null });
+      set({ phase: null, target: null, error: null, errorLogId: null, endpointError: null });
       await accountApi.cancelSignIn().catch(() => {});
     },
 
@@ -251,8 +258,8 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       await get().loadAccounts();
     },
 
-    forgetSystemCredential: async host => {
-      await accountApi.forgetSystemCredential(host);
+    forgetSystemCredential: async (host, repoPath) => {
+      await accountApi.forgetSystemCredential(host, repoPath);
     },
   };
 });

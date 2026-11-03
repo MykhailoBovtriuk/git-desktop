@@ -18,5 +18,9 @@
   "resizeStashList": "Змінити ширину списку stash",
   "info": "Інфо",
   "hideSidebar": "Сховати бічну панель ({{shortcut}})",
-  "showSidebar": "Показати бічну панель ({{shortcut}})"
+  "showSidebar": "Показати бічну панель ({{shortcut}})",
+  "loadMoreFailed": "Не вдалося завантажити ще коміти",
+  "panelFailed": "Цю частину вікна не вдалося відобразити",
+  "retry": "Спробувати знову",
+  "copyDetails": "Копіювати деталі"
 }

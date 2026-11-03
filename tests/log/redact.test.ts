@@ -29,4 +29,19 @@ describe('redact', () => {
     const out = '   a1b2c3d..e4f5a6b  dev -> dev\nEverything up-to-date';
     expect(redact(out)).toBe(out);
   });
+
+  it('masks OAuth values in query strings and JSON bodies', () => {
+    expect(redact('https://h/cb?code=abc&state=s')).toBe('https://h/cb?code=***&state=s');
+    expect(redact('{"access_token":"gho_x","scope":"repo"}')).toBe(
+      '{"access_token":"***","scope":"repo"}',
+    );
+  });
+
+  it('masks bare basic and bearer credentials', () => {
+    expect(redact('Basic dXNlcjpwYXNzd29yZDEyMzQ1Ng==')).toBe('Basic ***');
+  });
+
+  it('masks a password line from git credential output', () => {
+    expect(redact('username=me\npassword=hunter2\n')).toBe('username=me\npassword=***\n');
+  });
 });

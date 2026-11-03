@@ -44,7 +44,7 @@ beforeEach(() => {
     repoPath: '/repo',
     entries: [push, failed],
     hasMore: false,
-    unreadErrors: 0,
+    unreadProblems: 0,
     focusId: null,
   });
 });
@@ -62,7 +62,7 @@ describe('LogsView', () => {
 
   it('filters to errors', () => {
     render(<LogsView />);
-    fireEvent.click(screen.getByText('errorsOnly'));
+    fireEvent.click(screen.getByText('problemsOnly'));
     expect(screen.queryByText('op.push')).not.toBeInTheDocument();
     expect(screen.getByText('op.pull')).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe('PanelButtons', () => {
   });
 
   it('toggles the logs panel by click and by shortcut, and marks unread errors', () => {
-    useLogStore.setState({ unreadErrors: 2 });
+    useLogStore.setState({ unreadProblems: 2 });
     render(<PanelButtons />);
     const button = screen.getAllByRole('button', { name: /toggle/ })[0];
     expect(button.getAttribute('aria-label')).toContain('unread:2');

@@ -4,6 +4,7 @@ import { gitApi } from '../../api/git-api';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { errorMessage } from '../../lib/error-message';
+import { showInLogs, showErrorToast } from '../../stores/error-toast';
 import { basenameFromPath } from '../../lib/basename';
 import { Button, Switch, TextInput } from '../../shared/ui';
 import type { GitIdentities, GitIdentity } from '../../types';
@@ -58,6 +59,7 @@ export function GitIdentitySection() {
   const [local, setLocal] = useState<GitIdentity>(EMPTY);
   const [override, setOverride] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   useEffect(() => {
     let alive = true;
@@ -69,14 +71,33 @@ export function GitIdentitySection() {
         setGlobal(identities.global);
         setLocal(identities.local ?? EMPTY);
         setOverride(isSet(identities.local));
+        setLoadError(null);
       })
-      .catch(() => {});
+      .catch(err => {
+        if (alive) setLoadError(err);
+      });
     return () => {
       alive = false;
     };
   }, [repoPath]);
 
-  if (!saved) return null;
+  if (!saved) {
+    if (!loadError) return null;
+    const details = showInLogs(loadError);
+    return (
+      <section className="py-4 flex flex-col gap-2">
+        <h2 className="text-text text-sm font-medium">{t('identity.title')}</h2>
+        <p role="alert" className="text-red text-xs break-words">
+          {t('identity.loadFailed', { reason: errorMessage(loadError) })}
+        </p>
+        {details && (
+          <Button size="sm" variant="link" className="self-start" onClick={details.onClick}>
+            {details.label}
+          </Button>
+        )}
+      </section>
+    );
+  }
 
   const savedLocal = saved.local ?? EMPTY;
   const dirty =
@@ -99,7 +120,7 @@ export function GitIdentitySection() {
       await useRepoStore.getState().loadIdentity();
       addToast({ variant: 'success', title: t('identity.title'), message: t('identity.saved') });
     } catch (err) {
-      addToast({ variant: 'error', title: t('identity.title'), message: errorMessage(err) });
+      showErrorToast(t('identity.title'), err);
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useRepoStore } from '../../stores/repo-store';
+import { useUiStore } from '../../stores/ui-store';
 import { BranchDropdown } from '../dropdowns/BranchDropdown';
 import { RepoDropdown } from '../dropdowns/RepoDropdown';
 import { AppMenuButtons } from './AppMenuButtons';
@@ -28,6 +29,7 @@ export function Titlebar() {
   const branchRef = useRef<HTMLDivElement>(null);
   const repoRef = useRef<HTMLDivElement>(null);
 
+  const openRightPanel = useUiStore(s => s.openRightPanel);
   const handleRefresh = () => track(refresh);
 
   useDismiss(branchRef, branchOpen, () => setBranchOpen(false));
@@ -67,13 +69,15 @@ export function Titlebar() {
           />
         </div>
         {lastRefreshError && (
-          <span
+          <button
+            type="button"
             aria-label={t('refreshError')}
             title={lastRefreshError}
-            className="text-yellow text-sm cursor-default select-none shrink-0"
+            onClick={() => openRightPanel('logs')}
+            className="text-yellow text-sm select-none shrink-0"
           >
             ⚠
-          </span>
+          </button>
         )}
       </div>
 

@@ -28,6 +28,13 @@ export function cancelSignIn(): void {
   pending = null;
 }
 
+/** Who the browser round trip is for, read before completing it consumes the flow. */
+export function pendingTarget(): { repoPath: string; providerId: string; host: string } | null {
+  return pending
+    ? { repoPath: pending.repoPath, providerId: pending.providerId, host: pending.host }
+    : null;
+}
+
 interface BeginOptions {
   provider: ProviderDefinition;
   host: string;

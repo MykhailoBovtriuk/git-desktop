@@ -5,6 +5,7 @@ import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useGitAction } from '../../hooks/use-git-action';
 import { gitApi } from '../../api/git-api';
+import { errorMessage } from '../../lib/error-message';
 import { parseDiff } from '../diff/parse-diff';
 import { StashList } from './StashList';
 import { RawDiff } from './RawDiff';
@@ -36,6 +37,7 @@ export function StashView() {
   const [rawDiff, setRawDiff] = useState('');
   const [files, setFiles] = useState<FileDiff[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [diffError, setDiffError] = useState<string | null>(null);
 
   const stashesColumn = useResizableWidth('stash-list-width', 224, 560, 256);
   const filesColumn = useResizableWidth('stash-files-width', 160, 480, 192);
@@ -77,6 +79,7 @@ export function StashView() {
       return;
     }
     let cancelled = false;
+    setDiffError(null);
     gitApi
       .getStashDiff(selectedStash)
       .then(d => {
@@ -86,11 +89,12 @@ export function StashView() {
         setFiles(parsed);
         setSelectedFile(parsed[0]?.path ?? null);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setRawDiff('');
           setFiles([]);
           setSelectedFile(null);
+          setDiffError(errorMessage(err));
         }
       });
     return () => {
@@ -169,9 +173,15 @@ export function StashView() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-subtext text-xs">
-              {stashes.length === 0 ? t('noStashesYet') : t('selectStashHint')}
-            </p>
+            {selectedStash !== null && diffError ? (
+              <p role="alert" className="text-red text-xs px-4 break-words">
+                {t('diffFailed', { reason: diffError })}
+              </p>
+            ) : (
+              <p className="text-subtext text-xs">
+                {stashes.length === 0 ? t('noStashesYet') : t('selectStashHint')}
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -23,6 +23,8 @@ import { SignInModal } from '../account/SignInModal';
 import { ConnectionModal } from '../account/ConnectionModal';
 import { UpdateModal } from '../update/UpdateModal';
 import { RightPanel } from '../panel/RightPanel';
+import { PanelBoundary } from '../common/PanelBoundary';
+import { PanelButtons } from './PanelButtons';
 
 function OverlayContent({ activeView }: { activeView: ActiveView }) {
   if (activeView === 'settings') return <SettingsView />;
@@ -59,11 +61,23 @@ export function Shell() {
           <div className="h-screen flex flex-col bg-base overflow-hidden">
             <BareTitlebar />
             <main className="flex-1 overflow-hidden">
-              <OverlayContent activeView={activeView} />
+              <PanelBoundary>
+                <OverlayContent activeView={activeView} />
+              </PanelBoundary>
             </main>
           </div>
         ) : (
-          <WelcomeScreen />
+          <div className="h-screen flex bg-base overflow-hidden">
+            <div className="relative flex-1 min-w-0">
+              <WelcomeScreen />
+              <div className="absolute bottom-3 right-3">
+                <PanelButtons logsOnly />
+              </div>
+            </div>
+            <PanelBoundary>
+              <RightPanel logsOnly />
+            </PanelBoundary>
+          </div>
         )}
         <GlobalOverlays />
       </>
@@ -77,17 +91,23 @@ export function Shell() {
       <div className="flex flex-1 overflow-hidden">
         {showsOverlay ? (
           <main className="flex-1 overflow-hidden">
-            <OverlayContent activeView={activeView} />
+            <PanelBoundary>
+              <OverlayContent activeView={activeView} />
+            </PanelBoundary>
           </main>
         ) : (
           <>
             {/* Hidden, not unmounted: the commit form keeps an unsent message
                 in local state. */}
             <div className={sidebarOpen ? 'contents' : 'hidden'}>
-              <Sidebar />
+              <PanelBoundary>
+                <Sidebar />
+              </PanelBoundary>
             </div>
             <main className="flex-1 overflow-hidden">
-              <MainContent />
+              <PanelBoundary>
+                <MainContent />
+              </PanelBoundary>
             </main>
           </>
         )}
@@ -95,7 +115,9 @@ export function Shell() {
             tools: the panel steps aside but stays mounted, so terminals keep
             their screens and come back as they were. */}
         <div className={showsOverlay ? 'hidden' : 'contents'}>
-          <RightPanel />
+          <PanelBoundary>
+            <RightPanel />
+          </PanelBoundary>
         </div>
       </div>
       <Footer />

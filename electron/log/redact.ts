@@ -8,6 +8,10 @@ const PATTERNS: [RegExp, string][] = [
   [/\bglpat-[A-Za-z0-9_-]{20,}\b/g, '***'],
   [/\bATBB[A-Za-z0-9]{20,}\b/g, '***'],
   [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, '***'],
+  [/([?&#](?:access_token|refresh_token|id_token|code|client_secret|token)=)[^&#\s]+/gi, '$1***'],
+  [/("(?:access_token|refresh_token|id_token|client_secret|password)"\s*:\s*")[^"]+/gi, '$1***'],
+  [/\b(Basic|Bearer)\s+[A-Za-z0-9+/=._-]{16,}/g, '$1 ***'],
+  [/^password=.*$/gim, 'password=***'],
 ];
 
 export function redact(text: string): string {

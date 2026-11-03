@@ -19,7 +19,8 @@ beforeEach(() => {
     entries: [],
     hasMore: false,
     loadingMore: false,
-    unreadErrors: 0,
+    unreadProblems: 0,
+    unreadHasError: false,
     focusId: null,
   });
 });
@@ -30,19 +31,40 @@ describe('log store', () => {
     upsert(entry('a', 1, 'running'), false);
     upsert(entry('b', 2), false);
     upsert(entry('a', 1, 'error'), false);
-    const { entries, unreadErrors } = useLogStore.getState();
+    const { entries, unreadProblems } = useLogStore.getState();
     expect(entries.map(e => [e.id, e.status])).toEqual([
       ['a', 'error'],
       ['b', 'success'],
     ]);
-    expect(unreadErrors).toBe(1);
+    expect(unreadProblems).toBe(1);
   });
 
   it('does not count errors seen with the panel open, nor the same error twice', () => {
     const { upsert } = useLogStore.getState();
     upsert(entry('a', 1, 'error'), true);
     upsert(entry('a', 1, 'error'), false);
-    expect(useLogStore.getState().unreadErrors).toBe(0);
+    expect(useLogStore.getState().unreadProblems).toBe(0);
+  });
+
+  it('shows the app entries next to the open repository', () => {
+    useLogStore.getState().upsert({ ...entry('app', 1), repoPath: null }, false);
+    useLogStore.getState().upsert({ ...entry('other', 2), repoPath: '/elsewhere' }, false);
+    expect(useLogStore.getState().entries.map(e => e.id)).toEqual(['app']);
+  });
+
+  it('counts warnings as unread problems, coloured apart from errors', () => {
+    useLogStore.getState().upsert(entry('w', 1, 'warning'), false);
+    expect(useLogStore.getState()).toMatchObject({ unreadProblems: 1, unreadHasError: false });
+    useLogStore.getState().upsert(entry('e', 2, 'error'), false);
+    expect(useLogStore.getState()).toMatchObject({ unreadProblems: 2, unreadHasError: true });
+  });
+
+  it('clears only the repository, or only the app, when asked', async () => {
+    useLogStore.setState({ entries: [entry('r', 1), { ...entry('a', 2), repoPath: null }] });
+    await useLogStore.getState().clear('repo');
+    expect(clear).toHaveBeenCalledWith('/r');
+    expect(clear).not.toHaveBeenCalledWith(null);
+    expect(useLogStore.getState().entries.map(e => e.id)).toEqual(['a']);
   });
 
   it('keeps the newest entries within the memory cap', () => {
@@ -55,7 +77,7 @@ describe('log store', () => {
   });
 
   it('loads a repository’s log oldest first, dropping the previous one', async () => {
-    useLogStore.setState({ entries: [entry('old', 5)], unreadErrors: 3 });
+    useLogStore.setState({ entries: [entry('old', 5)], unreadProblems: 3 });
     list.mockResolvedValueOnce([
       { ...entry('b', 20), repoPath: '/other' },
       { ...entry('a', 10), repoPath: '/other' },
@@ -64,7 +86,7 @@ describe('log store', () => {
     expect(list).toHaveBeenCalledWith('/other', undefined, 200);
     const s = useLogStore.getState();
     expect(s.entries.map(e => e.id)).toEqual(['a', 'b']);
-    expect(s.unreadErrors).toBe(0);
+    expect(s.unreadProblems).toBe(0);
   });
 
   it('ignores live entries from other repositories', () => {
@@ -91,19 +113,12 @@ describe('log store', () => {
     expect(useLogStore.getState().hasMore).toBe(false);
   });
 
-  it('focuses the latest error', () => {
-    useLogStore.setState({
-      entries: [entry('a', 1, 'error'), entry('b', 2, 'error'), entry('c', 3)],
-    });
-    useLogStore.getState().focusLatestError();
-    expect(useLogStore.getState().focusId).toBe('b');
-  });
-
   it('clears through the main process', async () => {
-    useLogStore.setState({ entries: [entry('a', 1)], unreadErrors: 2 });
+    useLogStore.setState({ entries: [entry('a', 1)], unreadProblems: 2 });
     await useLogStore.getState().clear();
     expect(clear).toHaveBeenCalledWith('/r');
+    expect(clear).toHaveBeenCalledWith(null);
     expect(useLogStore.getState().entries).toEqual([]);
-    expect(useLogStore.getState().unreadErrors).toBe(0);
+    expect(useLogStore.getState().unreadProblems).toBe(0);
   });
 });

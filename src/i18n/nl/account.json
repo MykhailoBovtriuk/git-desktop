@@ -34,7 +34,8 @@
     "signOut": "Uitloggen",
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
     "repoHint": "Het account waarmee de repository {{repo}} zich aanmeldt. Elke repository meldt zich apart aan; terminals in de map gebruiken dezelfde aanmelding.",
-    "noRepo": "Open een repository om die aan te melden. Elke repository heeft een eigen account."
+    "noRepo": "Open een repository om die aan te melden. Elke repository heeft een eigen account.",
+    "signOutFailed": "Uitloggen mislukt"
   },
   "signedInAs": "Ingelogd als {{name}} op {{host}}",
   "connection": {
