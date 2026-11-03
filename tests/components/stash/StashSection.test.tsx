@@ -40,8 +40,6 @@ import { StashSection } from '../../../src/components/stash/StashSection';
 import { useRepoStore } from '../../../src/stores/repo-store';
 import { useUiStore } from '../../../src/stores/ui-store';
 
-// Selector-aware store mock: StashSection and useGitAction select slices, so
-// the mock must apply the selector instead of returning the whole state.
 const mockState = (store: unknown) => (state: unknown) =>
   vi.mocked(store as any).mockImplementation(((sel: any) => sel(state)) as any);
 
