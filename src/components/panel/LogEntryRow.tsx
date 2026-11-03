@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import type { LogEntry } from '../../types';
 import { useCopy } from '../../hooks/use-copy';
 import {
   cleanOutput,
@@ -9,14 +8,25 @@ import {
   formatTime,
 } from '../../lib/format-log';
 import {
+  Badge,
   CheckIcon,
   ChevronRightIcon,
   CopyIcon,
   ErrorIcon,
   IconButton,
+  InfoIcon,
   SpinnerIcon,
+  WarningIcon,
   cn,
 } from '../../shared/ui';
+import { logCategory, type LogEntry } from '../../types';
+
+const STATUS = {
+  success: { Icon: CheckIcon, icon: 'text-green', title: 'text-text' },
+  info: { Icon: InfoIcon, icon: 'text-subtext', title: 'text-text' },
+  warning: { Icon: WarningIcon, icon: 'text-yellow', title: 'text-yellow' },
+  error: { Icon: ErrorIcon, icon: 'text-red', title: 'text-red' },
+} as const;
 
 interface LogEntryRowProps {
   entry: LogEntry;
@@ -29,6 +39,8 @@ export function LogEntryRow({ entry, expanded, onToggle, highlighted }: LogEntry
   const { t } = useTranslation('logs');
   const { copied, copy: copyText } = useCopy();
   const title = t(`op.${entry.op}`);
+  const category = logCategory(entry.op);
+  const status = STATUS[entry.status === 'running' ? 'success' : entry.status];
   const copy = () => copyText(formatEntry(entry, title));
 
   const errorShown =
@@ -51,23 +63,30 @@ export function LogEntryRow({ entry, expanded, onToggle, highlighted }: LogEntry
             aria-hidden="true"
             className={cn('shrink-0 text-subtext transition-transform', expanded && 'rotate-90')}
           />
-          <span className="font-mono text-subtext shrink-0">{formatTime(entry.ts)}</span>
+          <span className="font-mono text-subtext shrink-0">
+            {formatTime(entry.lastTs ?? entry.ts)}
+          </span>
           {entry.status === 'running' ? (
             <SpinnerIcon
               size={12}
               aria-label={t('running')}
               className="shrink-0 text-blue animate-spin"
             />
-          ) : entry.status === 'error' ? (
-            <ErrorIcon size={12} aria-hidden="true" className="shrink-0 text-red" />
           ) : (
-            <CheckIcon size={12} aria-hidden="true" className="shrink-0 text-green" />
+            <status.Icon
+              size={12}
+              aria-label={t(`status.${entry.status}`)}
+              className={cn('shrink-0', status.icon)}
+            />
           )}
-          <span className={cn('shrink-0', entry.status === 'error' ? 'text-red' : 'text-text')}>
-            {title}
-          </span>
+          <span className={cn('shrink-0', status.title)}>{title}</span>
+          {category !== 'git' && <Badge variant="tag">{t(`category.${category}`)}</Badge>}
+          {entry.errorKind && <Badge variant="problem">{t(`kind.${entry.errorKind}`)}</Badge>}
           {entry.detail && <span className="truncate text-subtext">{entry.detail}</span>}
-          <span className="ml-auto shrink-0 text-subtext font-mono">
+          <span className="ml-auto shrink-0 flex gap-1.5 text-subtext font-mono">
+            {entry.count && (
+              <span title={t('repeated', { count: entry.count })}>×{entry.count}</span>
+            )}
             {formatDuration(entry.durationMs)}
           </span>
         </button>

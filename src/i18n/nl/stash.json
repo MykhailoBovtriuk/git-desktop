@@ -24,5 +24,6 @@
     "apply": "Toepassen (stash behouden)",
     "pop": "Poppen (herstellen en verwijderen)",
     "drop": "Verwijderen (zonder herstellen)"
-  }
+  },
+  "diffFailed": "Kon deze stash niet laden: {{reason}}"
 }

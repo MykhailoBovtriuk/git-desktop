@@ -2,13 +2,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfirmClearLogs } from '../../hooks/use-confirm-clear-logs';
-import { useLogStore } from '../../stores/log-store';
+import { isProblem, useLogStore } from '../../stores/log-store';
+import { LOG_CATEGORIES, logCategory, type LogCategory } from '../../types';
 import { formatEntry } from '../../lib/format-log';
 import { useCopy } from '../../hooks/use-copy';
 import { Button, CheckIcon, CopyIcon, IconButton, TextInput, TrashIcon, cn } from '../../shared/ui';
 import { LogEntryRow } from './LogEntryRow';
 
 const STICK_PX = 24;
+
+type CategoryFilter = LogCategory | 'all';
 
 function Chip({
   pressed,
@@ -47,7 +50,8 @@ export function LogsView() {
     })),
   );
   const [query, setQuery] = useState('');
-  const [errorsOnly, setErrorsOnly] = useState(false);
+  const [problemsOnly, setProblemsOnly] = useState(false);
+  const [category, setCategory] = useState<CategoryFilter>('all');
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const { copied: copiedAll, copy } = useCopy();
   const listRef = useRef<HTMLDivElement>(null);
@@ -56,10 +60,13 @@ export function LogsView() {
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return entries.filter(e => {
-      if (errorsOnly && e.status !== 'error') return false;
+      if (problemsOnly && !isProblem(e)) return false;
+      if (category !== 'all' && logCategory(e.op) !== category) return false;
       if (!needle) return true;
       const haystack = [
         t(`op.${e.op}`),
+        t(`category.${logCategory(e.op)}`),
+        e.errorKind ?? '',
         e.detail ?? '',
         e.error ?? '',
         ...e.commands.flatMap(c => [c.argv.join(' '), c.stdout, c.stderr]),
@@ -68,7 +75,7 @@ export function LogsView() {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [entries, query, errorsOnly, t]);
+  }, [entries, query, problemsOnly, category, t]);
 
   useLayoutEffect(() => {
     const el = listRef.current;
@@ -77,7 +84,8 @@ export function LogsView() {
 
   useEffect(() => {
     if (!focusId) return;
-    setErrorsOnly(false);
+    setProblemsOnly(false);
+    setCategory('all');
     setQuery('');
     setExpanded(prev => new Set(prev).add(focusId));
     const id = requestAnimationFrame(() => {
@@ -119,8 +127,8 @@ export function LogsView() {
           aria-label={t('filter')}
           className="flex-1 min-w-0"
         />
-        <Chip pressed={errorsOnly} onClick={() => setErrorsOnly(v => !v)}>
-          {t('errorsOnly')}
+        <Chip pressed={problemsOnly} onClick={() => setProblemsOnly(v => !v)}>
+          {t('problemsOnly')}
         </Chip>
         <IconButton
           icon={copiedAll ? CheckIcon : CopyIcon}
@@ -136,6 +144,18 @@ export function LogsView() {
           aria-label={t('clear')}
           title={t('clear')}
         />
+      </div>
+
+      <div
+        role="group"
+        aria-label={t('category.label')}
+        className="flex items-center gap-1 px-2 py-1 border-b border-surface0 shrink-0 overflow-x-auto"
+      >
+        {(['all', ...LOG_CATEGORIES] as CategoryFilter[]).map(c => (
+          <Chip key={c} pressed={category === c} onClick={() => setCategory(c)}>
+            {t(`category.${c}`)}
+          </Chip>
+        ))}
       </div>
 
       <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto min-h-0">

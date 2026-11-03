@@ -7,7 +7,7 @@ import { DiscardIcon, IconButton, ResizeHandle, SegmentedControl } from '../../s
 import { LogsView } from './LogsView';
 import { TerminalView } from './TerminalView';
 
-export function RightPanel() {
+export function RightPanel({ logsOnly = false }: { logsOnly?: boolean }) {
   const { t } = useTranslation('logs');
   const { t: tt } = useTranslation('terminal');
   const tab = useUiStore(s => s.rightPanel);
@@ -21,7 +21,7 @@ export function RightPanel() {
     if (tab === 'logs') markRead();
   }, [tab, markRead]);
 
-  if (!tab) return null;
+  if (!tab || (logsOnly && tab !== 'logs')) return null;
 
   return (
     <>
@@ -40,10 +40,14 @@ export function RightPanel() {
             label={t('panel')}
             value={tab}
             onChange={openRightPanel}
-            options={[
-              { value: 'logs', label: t('title') },
-              { value: 'terminal', label: tt('title') },
-            ]}
+            options={
+              logsOnly
+                ? [{ value: 'logs', label: t('title') }]
+                : [
+                    { value: 'logs', label: t('title') },
+                    { value: 'terminal', label: tt('title') },
+                  ]
+            }
           />
           <div className="flex-1" />
           <IconButton
@@ -56,7 +60,7 @@ export function RightPanel() {
         <div className={tab === 'logs' ? 'flex flex-col flex-1 min-h-0' : 'hidden'}>
           <LogsView />
         </div>
-        {terminalMounted && (
+        {terminalMounted && !logsOnly && (
           <div className={tab === 'terminal' ? 'flex flex-col flex-1 min-h-0' : 'hidden'}>
             <TerminalView visible={tab === 'terminal'} />
           </div>

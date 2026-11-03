@@ -23,6 +23,7 @@ export {
   FiChevronRight as ChevronRightIcon,
   FiLoader as SpinnerIcon,
   FiAlertCircle as ErrorIcon,
+  FiAlertTriangle as WarningIcon,
   FiMoreHorizontal as MoreIcon,
 } from 'react-icons/fi';
 

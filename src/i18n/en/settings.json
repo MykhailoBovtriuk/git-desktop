@@ -38,7 +38,8 @@
     "effective": "Next commit here: {{who}}",
     "missing": "No author set: git will refuse to commit.",
     "save": "Save",
-    "saved": "Saved"
+    "saved": "Saved",
+    "loadFailed": "Could not read the commit author: {{reason}}"
   },
   "diff": {
     "fontSize": "Font size",

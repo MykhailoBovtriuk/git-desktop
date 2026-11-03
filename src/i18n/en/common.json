@@ -18,5 +18,9 @@
   "resizeStashList": "Resize stash list",
   "info": "Info",
   "hideSidebar": "Hide sidebar ({{shortcut}})",
-  "showSidebar": "Show sidebar ({{shortcut}})"
+  "showSidebar": "Show sidebar ({{shortcut}})",
+  "loadMoreFailed": "Could not load more commits",
+  "panelFailed": "This part of the window failed to render",
+  "retry": "Try again",
+  "copyDetails": "Copy details"
 }

@@ -18,5 +18,9 @@
   "resizeStashList": "Breedte stashlijst aanpassen",
   "info": "Info",
   "hideSidebar": "Zijbalk verbergen ({{shortcut}})",
-  "showSidebar": "Zijbalk tonen ({{shortcut}})"
+  "showSidebar": "Zijbalk tonen ({{shortcut}})",
+  "loadMoreFailed": "Kon niet meer commits laden",
+  "panelFailed": "Dit deel van het venster kon niet worden weergegeven",
+  "retry": "Opnieuw proberen",
+  "copyDetails": "Details kopiëren"
 }
