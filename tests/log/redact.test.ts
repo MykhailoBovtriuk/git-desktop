@@ -44,4 +44,16 @@ describe('redact', () => {
   it('masks a password line from git credential output', () => {
     expect(redact('username=me\npassword=hunter2\n')).toBe('username=me\npassword=***\n');
   });
+
+  it('masks email addresses but not ssh remotes', () => {
+    expect(redact('user.email = jane.doe@corp.example.com from GitHub')).toBe(
+      'user.email = ***@*** from GitHub',
+    );
+    expect(redact('git@github.com: Permission denied (publickey).')).toBe(
+      'git@github.com: Permission denied (publickey).',
+    );
+    expect(redact('git@ssh.dev.azure.com:v3/o/p/r')).toBe('git@ssh.dev.azure.com:v3/o/p/r');
+    expect(redact('mail jane@x.com.')).toBe('mail ***@***.');
+    expect(redact('user@sub.example.co.uk')).toBe('***@***');
+  });
 });

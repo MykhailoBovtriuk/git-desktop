@@ -2,9 +2,10 @@ import { ipcMain, shell } from 'electron';
 import fs from 'fs/promises';
 import { detailOf, wrap, sendToRenderer, type WindowOptions } from './wrap';
 import { assertRepoPath } from '../ipc-validators';
-import { logEvent, setLogSink } from '../log/git-logger';
+import { logEvent, reclassifyEntry, setLogSink } from '../log/git-logger';
 import { LogStore, isLogRetention } from '../log/log-store';
 import { REPORTABLE_OPS, type ReportableOp } from '../../src/types';
+import type { GitErrorKind } from '../../src/lib/git-error-mapper';
 
 export interface LogHandlerOptions extends WindowOptions {
   logDir?: string;
@@ -20,6 +21,9 @@ const MAX_REPORT_STACK = 8000;
 function assertLogOwner(value: unknown): asserts value is string | null {
   if (value !== null) assertRepoPath(value);
 }
+
+const LOG_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const RENDERER_KINDS: readonly GitErrorKind[] = ['orgAccess'];
 
 function isReportableOp(value: unknown): value is ReportableOp {
   return typeof value === 'string' && (REPORTABLE_OPS as readonly string[]).includes(value);
@@ -100,6 +104,15 @@ export function registerLogHandlers(options: LogHandlerOptions = {}): LogStore {
         detail: detailOf(text),
         error: trace ? `${text}\n${trace}` : text,
       });
+    }),
+  );
+
+  // Only kinds that need the renderer's context (who the repo signs in as).
+  ipcMain.handle('log:mark-kind', (_e, id: unknown, kind: unknown) =>
+    wrap(async () => {
+      if (typeof id !== 'string' || !LOG_ID_RE.test(id)) throw new Error('Invalid argument: id');
+      if (!RENDERER_KINDS.includes(kind as GitErrorKind)) throw new Error('Invalid argument: kind');
+      return reclassifyEntry(id, kind as GitErrorKind);
     }),
   );
 

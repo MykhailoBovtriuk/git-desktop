@@ -6,7 +6,7 @@ import path from 'path';
 import { GitContext } from '../../electron/git/context';
 import * as branchesGit from '../../electron/git/branches';
 import * as statusGit from '../../electron/git/status';
-import { logged, setLogSink } from '../../electron/log/git-logger';
+import { logged, reclassifyEntry, setLogSink } from '../../electron/log/git-logger';
 import type { LogEntry } from '../../src/types';
 
 let tmpDir: string;
@@ -71,5 +71,35 @@ describe('logged', () => {
     expect(done.status).toBe('error');
     expect(done.error).toBeTruthy();
     expect(done.commands.some(c => c.stderr.length > 0)).toBe(true);
+  });
+});
+
+describe('reclassifyEntry', () => {
+  it('re-sends a written failure under the same id with the new kind', async () => {
+    await logged('push', tmpDir, 'origin', () =>
+      Promise.reject(new Error('The requested URL returned error: 403')),
+    ).catch(() => {});
+    const failed = seen[seen.length - 1];
+    expect(failed.errorKind).toBe('auth');
+
+    expect(reclassifyEntry(failed.id, 'orgAccess')).toBe(true);
+    expect(seen[seen.length - 1]).toEqual({ ...failed, errorKind: 'orgAccess' });
+  });
+
+  it('keeps the new kind when the same failure folds into the entry', async () => {
+    const fail = () =>
+      logged('fetch', tmpDir, 'origin', () => Promise.reject(new Error('Repository not found')), {
+        quiet: true,
+      }).catch(() => {});
+    await fail();
+    const first = seen[seen.length - 1];
+    reclassifyEntry(first.id, 'orgAccess');
+    await fail();
+    expect(seen[seen.length - 1]).toMatchObject({ id: first.id, count: 2, errorKind: 'orgAccess' });
+  });
+
+  it('does nothing for an id it does not know', () => {
+    expect(reclassifyEntry('00000000-0000-0000-0000-000000000000', 'orgAccess')).toBe(false);
+    expect(seen).toEqual([]);
   });
 });

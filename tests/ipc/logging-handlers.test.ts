@@ -20,7 +20,7 @@ const { GitContext } = await import('../../electron/git/context');
 const { registerMergeHandlers } = await import('../../electron/ipc/merge');
 const { registerRepoHandlers } = await import('../../electron/ipc/repo');
 const { registerLogHandlers } = await import('../../electron/ipc/logs');
-const { setLogSink } = await import('../../electron/log/git-logger');
+const { logEvent, setLogSink } = await import('../../electron/log/git-logger');
 
 const call = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args);
 
@@ -109,5 +109,20 @@ describe('logging at the IPC boundary', () => {
       detail: 'Cannot read x of undefined',
     });
     expect(done.error).toContain('at Foo');
+  });
+
+  it('lets the renderer mark a logged failure only with an allowed kind', async () => {
+    registerLogHandlers();
+    listen();
+    const id = logEvent({ op: 'push', repoPath: '/work/app', status: 'error', error: 'x' });
+
+    expect(await call('log:mark-kind', 'not-an-id', 'orgAccess')).toEqual({
+      error: 'Invalid argument: id',
+    });
+    expect(await call('log:mark-kind', id, 'auth')).toEqual({ error: 'Invalid argument: kind' });
+    expect(seen).toHaveLength(1);
+
+    expect(await call('log:mark-kind', id, 'orgAccess')).toEqual({ data: true });
+    expect(seen[1]).toMatchObject({ id, errorKind: 'orgAccess' });
   });
 });

@@ -1,4 +1,5 @@
 import { invoke } from './invoke';
+import type { GitErrorKind } from '../lib/git-error-mapper';
 import type { LogEntry, LogRetention, LogStats, ReportableOp } from '../types';
 
 export const logApi = {
@@ -12,5 +13,7 @@ export const logApi = {
   // Never rejects: reporting a failure must not become one.
   report: (op: ReportableOp, message: string, stack?: string): Promise<string | null> =>
     invoke<string>('log:report', op, message, stack).catch(() => null),
+  markKind: (id: string, kind: GitErrorKind): Promise<boolean | null> =>
+    invoke<boolean>('log:mark-kind', id, kind).catch(() => null),
   onEntry: (cb: (entry: LogEntry) => void): (() => void) => window.electronAPI.onLogEntry(cb),
 };

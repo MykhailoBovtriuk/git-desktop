@@ -8,7 +8,7 @@ import {
   type LogOp,
   type LogStatus,
 } from '../../src/types';
-import { classifyGitError } from '../../src/lib/git-error-mapper';
+import { classifyGitError, type GitErrorKind } from '../../src/lib/git-error-mapper';
 import { describeError } from '../../src/lib/error-message';
 import { redact } from './redact';
 
@@ -22,11 +22,13 @@ type LogSink = (entry: LogEntry) => void;
 const current = new AsyncLocalStorage<LogEntry>();
 let sink: LogSink = () => {};
 const lastProblem = new Map<string, LogEntry>();
+const recentProblems = new Map<string, LogEntry>();
 const errorLogIds = new WeakMap<object, string>();
 
 export function setLogSink(fn: LogSink): void {
   sink = fn;
   lastProblem.clear();
+  recentProblems.clear();
 }
 
 export function logIdOf(err: unknown): string | undefined {
@@ -69,6 +71,10 @@ export function recordCommand(argv: string[], stdout: string, stderr: string): v
   entry.commands.push({ argv: [...argv], stdout: clip(stdout), stderr: clip(stderr) });
 }
 
+export function currentLogId(): string | undefined {
+  return current.getStore()?.id;
+}
+
 export function markCurrent(patch: { status: 'warning'; error: string }): void {
   const entry = current.getStore();
   if (!entry) return;
@@ -76,13 +82,22 @@ export function markCurrent(patch: { status: 'warning'; error: string }): void {
   entry.error = patch.error;
 }
 
+/** For a kind only the caller can tell, such as one that depends on who signed in. */
+export function markErrorKind(kind: GitErrorKind): void {
+  const entry = current.getStore();
+  if (entry) entry.errorKind = kind;
+}
+
 function finalize(entry: LogEntry): LogEntry {
   const error = entry.error === undefined ? undefined : redact(entry.error);
   // Git's own wording is what the classifier knows; elsewhere it would guess.
   const kind =
-    entry.status === 'error' && error && logCategory(entry.op) === 'git'
+    entry.errorKind ??
+    (entry.status === 'error' &&
+    error &&
+    (logCategory(entry.op) === 'git' || entry.op === 'auth-test')
       ? classifyGitError(error).kind
-      : undefined;
+      : undefined);
   return {
     ...entry,
     detail: entry.detail === undefined ? undefined : redact(entry.detail),
@@ -94,6 +109,32 @@ function finalize(entry: LogEntry): LogEntry {
       stderr: redact(c.stderr),
     })),
   };
+}
+
+function remember(entry: LogEntry): void {
+  recentProblems.delete(entry.id);
+  if (recentProblems.size >= FOLD_KEYS_CAP) {
+    const oldest = recentProblems.keys().next().value;
+    if (oldest !== undefined) recentProblems.delete(oldest);
+  }
+  recentProblems.set(entry.id, entry);
+}
+
+/**
+ * Re-sends a failure already written under `id` with a kind main could not
+ * tell on its own (it depends on who the repository signs in as). Entries are
+ * keyed by id, so the store and the panel replace the old copy.
+ */
+export function reclassifyEntry(id: string, kind: GitErrorKind): boolean {
+  const entry = recentProblems.get(id);
+  if (!entry) return false;
+  const updated: LogEntry = { ...entry, errorKind: kind };
+  remember(updated);
+  for (const [key, problem] of lastProblem) {
+    if (problem.id === id) lastProblem.set(key, updated);
+  }
+  sink(updated);
+  return true;
 }
 
 // Repeats of one problem (polling hits it every few seconds) fold into the
@@ -113,12 +154,14 @@ function emit(entry: LogEntry, foldable: boolean): string {
         commands: out.commands,
       };
       lastProblem.set(key, folded);
+      remember(folded);
       sink(folded);
       return folded.id;
     }
     if (lastProblem.size >= FOLD_KEYS_CAP) lastProblem.clear();
     lastProblem.set(key, out);
   }
+  if (out.status === 'error') remember(out);
   sink(out);
   return out.id;
 }

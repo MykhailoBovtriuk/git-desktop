@@ -1,7 +1,11 @@
 // Logs end up pasted into chats and issue trackers, so anything that can carry
-// a credential is masked before an entry leaves the git process handler.
+// a credential, and any email address, is masked before an entry leaves the
+// git process handler.
 const PATTERNS: [RegExp, string][] = [
   [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, '$1***@'],
+  // Not before a colon: `git@github.com:owner/repo` is an ssh remote. The lookahead also
+  // bars a backtracked shorter domain (`git@ssh.dev.azure`) from dodging that check.
+  [/\b[\w.%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?!:|\.?[a-z0-9-])/gi, '***@***'],
   [/(authorization:\s*(?:basic|bearer|token)?\s*)\S+/gi, '$1***'],
   [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, '***'],
   [/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, '***'],
