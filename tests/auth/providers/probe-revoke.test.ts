@@ -64,7 +64,7 @@ describe('GitHub Enterprise probe', () => {
   });
 });
 
-describe('GitLab and Gitea probes', () => {
+describe('GitLab probe', () => {
   it('recognises GitLab from its anonymous 401', async () => {
     stubFetch({ '/api/v4/version': { status: 401, body: { message: '401 Unauthorized' } } });
     expect(await probe('gitlab-self', 'gitlab.acme.com')).toBe('ok');
@@ -73,11 +73,6 @@ describe('GitLab and Gitea probes', () => {
   it('does not take any 401 for GitLab', async () => {
     stubFetch({ '/api/v4/version': { status: 401 } });
     expect(await probe('gitlab-self', 'gitlab.acme.com')).toBe('mismatch');
-  });
-
-  it('recognises Gitea and Forgejo by their public version', async () => {
-    stubFetch({ '/api/v1/version': { status: 200, body: { version: '9.0.0' } } });
-    expect(await probe('gitea', 'git.acme.com')).toBe('ok');
   });
 });
 
@@ -131,57 +126,6 @@ describe('token revocation', () => {
         clientSecret: null,
       }),
     ).resolves.toBeUndefined();
-  });
-});
-
-describe('Bitbucket Data Center', () => {
-  it('recognises the server by its public application properties', async () => {
-    stubFetch({
-      '/rest/api/1.0/application-properties': {
-        status: 200,
-        body: { version: '9.4.0', displayName: 'Bitbucket' },
-      },
-    });
-    expect(await probe('bitbucket-server', 'bitbucket.acme.com')).toBe('ok');
-  });
-
-  it('tells another product apart', async () => {
-    stubFetch({ '/application-properties': { status: 404 } });
-    expect(await probe('bitbucket-server', 'gitlab.acme.com')).toBe('mismatch');
-  });
-
-  it('learns who the token belongs to from X-AUSERNAME', async () => {
-    const calls = stubFetch({
-      '/application-properties': { status: 200, headers: { 'x-ausername': 'jdoe' }, body: {} },
-      '/rest/api/1.0/users/jdoe': {
-        status: 200,
-        body: {
-          name: 'jdoe',
-          slug: 'jdoe',
-          displayName: 'Jane Doe',
-          emailAddress: 'jane@acme.com',
-        },
-      },
-    });
-
-    const account = await providerById('bitbucket-server')!.fetchAccount(
-      'bitbucket.acme.com',
-      'tok',
-    );
-    expect(account).toMatchObject({
-      providerId: 'bitbucket-server',
-      login: 'jdoe',
-      name: 'Jane Doe',
-      email: 'jane@acme.com',
-    });
-    expect((calls[0].init?.headers as Record<string, string>).Authorization).toBe('Bearer tok');
-  });
-
-  it('treats an answer without a user as a rejected token', async () => {
-    stubFetch({ '/application-properties': { status: 200, body: {} } });
-    await expect(
-      providerById('bitbucket-server')!.fetchAccount('bitbucket.acme.com', 'tok'),
-    ).rejects.toThrow(/returned 401/);
   });
 });
 

@@ -290,7 +290,7 @@ git-desktop/
 - **3-panel merge editor** — CURRENT / RESULT / INCOMING panes reading real conflict sides from the Git index (`:2:path`, `:3:path`), "Use this" buttons, write-back to disk before marking resolved
 - **Untracked file diff** — synthesized against `/dev/null` so new files actually render content (instead of empty diff like raw `git diff`)
 - **Stash** — stash staged changes, browse/apply/pop/drop the stash list, preview stash diffs
-- **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed), Azure DevOps, Bitbucket Cloud and Gitea/Forgejo, plus a verified personal-access-token path for any other server. The token goes into the system credential store, so plain `git push` just works — and the app only asks when git cannot already authenticate on its own — see [Authentication](#-authentication)
+- **Sign in to your Git host** — browser-based OAuth for GitHub, GitHub Enterprise, GitLab (hosted and self-managed) and Azure DevOps, or a personal access token for any of them (Azure DevOps Server takes a token only). Other servers work through the system credential store or SSH. The token goes into the system credential store, so plain `git push` just works — and the app only asks when git cannot already authenticate on its own — see [Authentication](#-authentication)
 - **Localization** — English, Ukrainian and Dutch, switchable in Settings and remembered across restarts; new installs start in English
 - **Auto-refresh** — event-driven via `fs.watch` on `.git` (debounced 300 ms), so external `git` activity shows up almost instantly; a configurable poll (off / 10 s / 30 s / 60 s) picks up plain file edits
 - **Persistent state** — remembers last-opened repo and the recent repos list across restarts
@@ -315,32 +315,30 @@ The browser handles the flow and redirects back through
 handed to `git credential`, so ordinary `git push` and `git pull` authenticate
 without any further setup.
 
-Because that is the only job, the app asks only when it would help. Opening a
-repository prompts when the remote is `https`, no account is signed in to the
-host, and git cannot already authenticate to it through the system credential
-helper. An `ssh` remote never prompts — it authenticates with a key.
+Opening a repository never asks to sign in. A push or pull refused for lack of a
+login shows a **Sign in** button on the error; the footer and Settings →
+Accounts start the same sign-in for the open repository's `https` remote. An
+`ssh` remote is never signed in to — it authenticates with a key.
 
-Every token is verified before anything is stored: against the host's API where
-there is one, and otherwise against the repository's own remote, on the same
-Smart HTTP endpoint `git fetch` begins with. A token that fails leaves no
-account and no keychain entry behind.
+Every token is verified against the service's API before anything is stored. A
+token that fails leaves no account and no keychain entry behind. Other servers
+are not signed in to from the app: git uses the system credential store or SSH
+there, as it does in a terminal.
 
-| Provider                   | Flow                         | Needs a client secret                 |
-| -------------------------- | ---------------------------- | ------------------------------------- |
-| GitHub.com                 | OAuth 2.0 authorization code | yes — GitHub has no desktop PKCE flow |
-| GitHub Enterprise Server   | same, against your instance  | yes — registered by your admin        |
-| GitLab.com                 | OAuth 2.0 + PKCE             | no                                    |
-| GitLab self-managed        | same, against your instance  | no                                    |
-| Azure DevOps               | Microsoft Entra ID + PKCE    | no                                    |
-| Bitbucket Cloud            | OAuth 2.0 authorization code | yes                                   |
-| Gitea / Forgejo / Codeberg | OAuth 2.0 + PKCE             | no                                    |
-| Anything else              | personal access token        | —                                     |
+| Provider                 | Flow                         | Needs a client secret                 |
+| ------------------------ | ---------------------------- | ------------------------------------- |
+| GitHub.com               | OAuth 2.0 authorization code | yes — GitHub has no desktop PKCE flow |
+| GitHub Enterprise Server | same, against your instance  | yes — registered by your admin        |
+| GitLab.com               | OAuth 2.0 + PKCE             | no                                    |
+| GitLab self-managed      | same, against your instance  | no                                    |
+| Azure DevOps             | Microsoft Entra ID + PKCE    | no                                    |
+| Azure DevOps Server      | personal access token        | —                                     |
 
 You are signed in **per host**, so GitHub, a work GitLab and Azure DevOps can be
 active at the same time; signing out of one leaves the others alone. One host
 holds one account — `git credential` addresses a credential by host, so a
 second account there is one git could never be told to prefer — and signing in
-again replaces it. Providers whose tokens expire (Bitbucket, GitLab, Entra ID)
+again replaces it. Providers whose tokens expire (GitLab, Entra ID)
 are refreshed automatically before the next network operation.
 
 **Running the browser flow in development (macOS).** macOS routes a URL scheme
@@ -359,11 +357,10 @@ back. GitHub matches `redirect_uri` against the registered value, so a separate
 development scheme is not an option.
 
 **Building your own copy.** Client ids are baked in at build time from
-`OAUTH_GITHUB_ID`, `OAUTH_GITHUB_SECRET`, `OAUTH_GITLAB_ID`, `OAUTH_AZURE_ID`,
-`OAUTH_BITBUCKET_ID`, `OAUTH_BITBUCKET_SECRET` and `OAUTH_GITEA_ID` — from the
-environment or a local `.env.local`. A build without them still works: the
-providers it cannot complete simply are not offered, and token sign-in covers
-everything. Register the callback URL `git-desktop-auth://oauth`.
+`OAUTH_GITHUB_ID`, `OAUTH_GITHUB_SECRET`, `OAUTH_GITLAB_ID` and `OAUTH_AZURE_ID`
+— from the environment or a local `.env.local`. A build without them still
+works: the providers it cannot complete simply are not offered, and token
+sign-in covers them. Register the callback URL `git-desktop-auth://oauth`.
 
 On a Linux system with no keyring available, tokens are kept in memory for the
 session only rather than written to disk unencrypted; the app says so.

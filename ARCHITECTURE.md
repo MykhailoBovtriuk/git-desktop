@@ -394,17 +394,15 @@ use PKCE, and the one function that turns a token into a `ProviderAccount`.
 `registry.ts` is the only place that knows the full list.
 
 Everything else — the authorize URL, the code exchange, the refresh, the storage
-— is provider-agnostic. Adding a ninth service is a new file plus one line in
+— is provider-agnostic. Adding another service is a new file plus one line in
 the registry, not an edit spread across the flow.
 
-| Provider                       | PKCE | Notes                                                                                                                                |
-| ------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `github` / `github-enterprise` | no   | Needs a client secret; the enterprise API lives at `/api/v3` on the instance                                                         |
-| `gitlab` / `gitlab-self`       | yes  | Commits use `commit_email`, which is not always the account email                                                                    |
-| `azure-devops`                 | yes  | Microsoft Entra ID, not the retiring Azure DevOps OAuth service; git ignores the username and reads the token as the password        |
-| `bitbucket`                    | no   | Needs a client secret; tokens live two hours                                                                                         |
-| `gitea`                        | yes  | Also covers Forgejo and Codeberg                                                                                                     |
-| `token`                        | —    | No OAuth at all: the account is built from a pasted token, which is the only thing that can work for an arbitrary self-hosted server |
+| Provider                       | PKCE | Notes                                                                                                                         |
+| ------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `github` / `github-enterprise` | no   | Needs a client secret; the enterprise API lives at `/api/v3` on the instance                                                  |
+| `gitlab` / `gitlab-self`       | yes  | Commits use `commit_email`, which is not always the account email                                                             |
+| `azure-devops`                 | yes  | Microsoft Entra ID, not the retiring Azure DevOps OAuth service; git ignores the username and reads the token as the password |
+| `azure-devops-server`          | —    | No OAuth: a pasted personal access token only                                                                                 |
 
 ### The round trip
 

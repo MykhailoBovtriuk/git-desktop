@@ -35,34 +35,30 @@ overwrites values you have already set.
 
 Signing in exists for one reason: to put a credential where git can read it,
 so `push`/`pull`/`fetch` work from a window with no terminal to prompt you.
-The app therefore only asks when that is actually missing. Opening a
-repository prompts you when **all** of the following hold — the remote is an
-`https` address, no account is signed in to that host, and git cannot already
-authenticate to it through your system credential helper. An `ssh` remote
-never prompts: it authenticates with your key, and a token has nothing to do
-there. You can dismiss the offer — it also lives behind the **Sign in** link in
-the footer and under **Settings → Accounts → Add account**.
+Opening a repository never asks you to sign in. When a push or pull is refused
+for lack of a login, the error carries a **Sign in** button; the same sign-in
+lives behind the **Sign in** link in the footer and under **Settings →
+Accounts** for the open repository. Only an `https` remote is signed in to: an
+`ssh` remote authenticates with your key, and a token has nothing to do there.
 
-- **GitHub, GitLab, Azure DevOps, Bitbucket, Gitea/Forgejo/Codeberg** — the
+- **GitHub, GitLab, Azure DevOps** — the
   sign-in opens your browser; after you approve, the browser redirects back to
   the app. The token is encrypted with the OS keychain and handed to git's
   credential store, so `push`/`pull`/`fetch` from then on just work — both in
   the app and in your terminal.
-- **Self-hosted instances** (GitHub Enterprise, self-managed GitLab, Gitea) —
-  same flow, but you provide the server address (and, where the platform
-  requires it, an OAuth client id registered on that server).
-- **Any other server** — paste a username and a personal access token; the
-  "Where do I get a token?" link opens the right settings page for known
-  hosts.
+- **Self-hosted instances** (GitHub Enterprise, self-managed GitLab) —
+  same flow, started from the repository's remote; you pick what the server
+  runs (and, where the platform requires it, enter an OAuth client id
+  registered on that server).
+- **A personal access token** works for any of them instead of the browser
+  (Azure DevOps Server takes a token only); the "Where do I get a token?" link
+  opens the right settings page.
+- **Any other server** has no sign-in in the app: git uses the system
+  credential store or your SSH key there, as it does in a terminal.
 
-Every token is **checked before it is stored**. On a host the app knows, it
-asks that host's API who the token belongs to and takes the name and avatar
-from the answer. On any other server it asks the repository's own remote —
-the same endpoint `git fetch` starts from — with the credential attached, and
-believes the answer. A token that fails leaves nothing behind: no account, no
-keychain entry. This is why signing in to an unknown server has to be started
-from a repository on it, over `https`: without a remote there is nothing to
-check against.
+Every token is **checked before it is stored**: the app asks the service's API
+who the token belongs to and takes the name and avatar from the answer. A token
+that fails leaves nothing behind: no account, no keychain entry.
 
 Accounts are **per host**: github.com, a work GitLab and Azure DevOps can be
 signed in at the same time, and signing out of one does not touch the others.
@@ -70,7 +66,7 @@ One host holds one account, because `git credential` addresses a credential by
 host — signing in again replaces it. The footer shows it (`@login`), and
 clicking the name opens the Accounts screen.
 
-Tokens that expire (GitLab, Bitbucket, Azure) are refreshed automatically
+Tokens that expire (GitLab, Azure) are refreshed automatically
 before network operations. On Linux without a keyring, tokens live only for
 the session — the Accounts screen says so explicitly.
 

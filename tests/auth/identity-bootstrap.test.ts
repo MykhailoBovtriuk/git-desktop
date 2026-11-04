@@ -189,14 +189,24 @@ describe('stripLegacyProfileKeys', () => {
   };
 
   it('removes the keys an older build wrote', async () => {
-    execFileSync('git', ['config', '--local', 'core.sshCommand', 'ssh -i ~/.ssh/old'], {
-      cwd: repo,
-    });
+    execFileSync(
+      'git',
+      ['config', '--local', 'core.sshCommand', 'ssh -i "/Users/me/.ssh/old" -o IdentitiesOnly=yes'],
+      { cwd: repo },
+    );
     execFileSync('git', ['config', '--local', 'gitdesktop.profile', 'abc123'], { cwd: repo });
 
     await stripLegacyProfileKeys(repo);
     expect(local('core.sshCommand')).toBe('');
     expect(local('gitdesktop.profile')).toBe('');
+  });
+
+  it('keeps an sshCommand the user set', async () => {
+    execFileSync('git', ['config', '--local', 'core.sshCommand', 'ssh -i ~/.ssh/work'], {
+      cwd: repo,
+    });
+    await stripLegacyProfileKeys(repo);
+    expect(local('core.sshCommand')).toBe('ssh -i ~/.ssh/work');
   });
 
   it('leaves every other setting alone', async () => {

@@ -36,7 +36,10 @@ interface PersistedEntry {
 
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
+type UnsupportedCredential = Pick<StoredCredential, 'repoPath' | 'host' | 'account'>;
+
 const memory = new Map<string, StoredCredential>();
+let unsupported: UnsupportedCredential[] = [];
 let loaded = false;
 
 function storeFile(): string {
@@ -83,14 +86,22 @@ async function load(): Promise<void> {
       // Older files kept one account per host, for no repository in
       // particular: each repository now signs in again on its own.
       const repoPath = entry.repoPath;
-      if (!repoPath) continue;
+      if (!repoPath || !entry.account) continue;
+      const account = { ...entry.account, id: repoPath, repoPath };
+      // Kept out of memory, whether or not the token still decrypts: nothing
+      // may sign in, refresh or revoke through a provider the app no longer
+      // has. dropUnsupportedAccounts cleans them up.
+      if (!providerById(account.providerId)) {
+        unsupported.push({ repoPath, host: entry.host, account });
+        continue;
+      }
       const accessToken = decrypt(entry.accessTokenEnc);
       if (!accessToken) skipped++;
       if (!accessToken || memory.has(repoPath)) continue;
       memory.set(repoPath, {
         repoPath,
         host: entry.host,
-        account: { ...entry.account, id: repoPath, repoPath },
+        account,
         accessToken,
         refreshToken: decrypt(entry.refreshTokenEnc),
         expiresAt: entry.expiresAt,
@@ -211,7 +222,21 @@ export async function getFreshToken(repoPath: string): Promise<string | null> {
   }
 }
 
+/**
+ * Accounts of providers the app no longer supports, handed out once: the file
+ * is rewritten without them, so the next start finds none.
+ */
+export async function takeUnsupportedCredentials(): Promise<UnsupportedCredential[]> {
+  await load();
+  const taken = unsupported;
+  if (taken.length === 0) return taken;
+  unsupported = [];
+  await persist();
+  return taken;
+}
+
 export function resetStoreCache(): void {
   memory.clear();
+  unsupported = [];
   loaded = false;
 }

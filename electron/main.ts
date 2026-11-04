@@ -6,6 +6,7 @@ import { resolveAppAssetPath } from './app-asset-path';
 import { RepoWatcher } from './repo-watcher';
 import { initDeepLinks, registerProtocol } from './auth/deep-link';
 import { handleAuthCallback } from './ipc/account';
+import { dropUnsupportedAccounts } from './auth/legacy-cleanup';
 import { logEvent } from './log/git-logger';
 import { errorWithCause } from '../src/lib/error-message';
 
@@ -214,6 +215,7 @@ app.whenReady().then(() => {
     getWindow: () => mainWindow,
     logDir: path.join(app.getPath('userData'), 'logs'),
   });
+  void dropUnsupportedAccounts();
   createWindow();
 });
 

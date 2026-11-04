@@ -19,15 +19,7 @@ function loadEnvFile() {
   return out;
 }
 
-const VARS = [
-  'OAUTH_GITHUB_ID',
-  'OAUTH_GITHUB_SECRET',
-  'OAUTH_GITLAB_ID',
-  'OAUTH_AZURE_ID',
-  'OAUTH_BITBUCKET_ID',
-  'OAUTH_BITBUCKET_SECRET',
-  'OAUTH_GITEA_ID',
-];
+const VARS = ['OAUTH_GITHUB_ID', 'OAUTH_GITHUB_SECRET', 'OAUTH_GITLAB_ID', 'OAUTH_AZURE_ID'];
 
 const fromFile = loadEnvFile();
 const keys = {};

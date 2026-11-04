@@ -221,6 +221,73 @@ describe('token store', () => {
     expect(await store.listAccounts()).toEqual([]);
   });
 
+  it('keeps accounts of removed providers out, and hands them over once', async () => {
+    await store.saveCredential(credential('github.com'));
+    const file = path.join(userData.dir, 'accounts.json');
+    const saved = JSON.parse(await fs.readFile(file, 'utf8')) as { accounts: object[] };
+    const removed = (providerId: string, host: string) => ({
+      ...saved.accounts[0],
+      repoPath: repo(host),
+      host,
+      account: { ...account(host), providerId },
+    });
+    saved.accounts.push(removed('bitbucket', 'bitbucket.org'), removed('token', 'git.acme.com'));
+    await fs.writeFile(file, JSON.stringify(saved));
+    store.resetStoreCache();
+
+    expect((await store.listAccounts()).map(a => a.host)).toEqual(['github.com']);
+    expect(await store.getFreshToken(repo('bitbucket.org'))).toBeNull();
+
+    const taken = await store.takeUnsupportedCredentials();
+    expect(taken.map(c => [c.account.providerId, c.host, c.repoPath])).toEqual([
+      ['bitbucket', 'bitbucket.org', repo('bitbucket.org')],
+      ['token', 'git.acme.com', repo('git.acme.com')],
+    ]);
+    expect(await store.takeUnsupportedCredentials()).toEqual([]);
+
+    store.resetStoreCache();
+    expect(await store.takeUnsupportedCredentials()).toEqual([]);
+    expect((await store.listAccounts()).map(a => a.host)).toEqual(['github.com']);
+  });
+
+  it('hands over a removed provider whose token is gone or unreadable', async () => {
+    await store.saveCredential(credential('github.com'));
+    const file = path.join(userData.dir, 'accounts.json');
+    const saved = JSON.parse(await fs.readFile(file, 'utf8')) as { accounts: object[] };
+    const removed = (providerId: string, host: string, accessTokenEnc: string | null) => ({
+      ...saved.accounts[0],
+      repoPath: repo(host),
+      host,
+      account: { ...account(host), providerId },
+      accessTokenEnc,
+    });
+    saved.accounts.push(
+      removed('bitbucket', 'bitbucket.org', null),
+      removed('gitea', 'codeberg.org', Buffer.from('not ours').toString('base64')),
+    );
+    await fs.writeFile(file, JSON.stringify(saved));
+    store.resetStoreCache();
+
+    const taken = await store.takeUnsupportedCredentials();
+    expect(taken.map(c => [c.account.providerId, c.host, c.account.login])).toEqual([
+      ['bitbucket', 'bitbucket.org', 'me'],
+      ['gitea', 'codeberg.org', 'me'],
+    ]);
+    store.resetStoreCache();
+    expect(await store.takeUnsupportedCredentials()).toEqual([]);
+  });
+
+  it('skips an entry with no account rather than failing the whole file', async () => {
+    await store.saveCredential(credential('github.com'));
+    const file = path.join(userData.dir, 'accounts.json');
+    const saved = JSON.parse(await fs.readFile(file, 'utf8')) as { accounts: object[] };
+    saved.accounts.unshift({ ...saved.accounts[0], repoPath: '/src/broken', account: null });
+    await fs.writeFile(file, JSON.stringify(saved));
+    store.resetStoreCache();
+
+    expect((await store.listAccounts()).map(a => a.host)).toEqual(['github.com']);
+  });
+
   it('reports no token for a host nobody signed in to', async () => {
     expect(await store.getFreshToken(repo('nowhere.example'))).toBeNull();
   });

@@ -85,42 +85,6 @@ describe('gitlab', () => {
   });
 });
 
-describe('bitbucket', () => {
-  it('takes the confirmed primary email from the separate endpoint', async () => {
-    stubJson({
-      '/2.0/user/emails': {
-        values: [
-          { email: 'other@example.com', is_primary: false, is_confirmed: true },
-          { email: 'me@example.com', is_primary: true, is_confirmed: true },
-        ],
-      },
-      '/2.0/user': {
-        username: 'janed',
-        nickname: 'jane',
-        display_name: 'Jane Doe',
-        links: { avatar: {} },
-      },
-    });
-    const account = await providerById('bitbucket')!.fetchAccount('bitbucket.org', 'tok');
-    expect(account).toMatchObject({ login: 'janed', name: 'Jane Doe', email: 'me@example.com' });
-  });
-});
-
-describe('gitea', () => {
-  it('reads the Gitea profile shape', async () => {
-    stubJson({
-      '/api/v1/user': {
-        login: 'forge',
-        full_name: 'Forge User',
-        email: 'forge@example.com',
-        avatar_url: null,
-      },
-    });
-    const account = await providerById('gitea')!.fetchAccount('codeberg.org', 'tok');
-    expect(account).toMatchObject({ login: 'forge', name: 'Forge User' });
-  });
-});
-
 describe('azure-devops', () => {
   it('reads the Entra profile and uses the email as the login', async () => {
     stubJson({
@@ -135,11 +99,5 @@ describe('azure-devops', () => {
 
   it('asks for offline access so the token can be refreshed', () => {
     expect(providerById('azure-devops')!.scopes).toContain('offline_access');
-  });
-});
-
-describe('token', () => {
-  it('refuses to invent an account', async () => {
-    await expect(providerById('token')!.fetchAccount('git.acme.internal', 'tok')).rejects.toThrow();
   });
 });
