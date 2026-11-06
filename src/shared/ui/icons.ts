@@ -7,6 +7,7 @@ export {
   FiMinus as UnstageIcon,
   FiX as DiscardIcon,
   FiUser as UserIcon,
+  FiKey as KeyIcon,
   FiCopy as StashApplyIcon,
   FiCopy as CopyIcon,
   FiCheck as CheckIcon,

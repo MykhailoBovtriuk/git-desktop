@@ -4,6 +4,7 @@
   "pullFirst_one": "Eerst pullen: de remote heeft {{count}} nieuwe commit",
   "pullFirst_other": "Eerst pullen: de remote heeft {{count}} nieuwe commits",
   "error": {
+    "orgAccess": "Git Desktop kreeg geen toegang tot deze repository. Als die van een organisatie is, moet de organisatie Git Desktop mogelijk goedkeuren. Controleer anders of de repository bestaat.",
     "auth": "Kon niet authenticeren bij de remote. Log in om verder te gaan.",
     "sshKey": "De remote heeft je SSH-sleutel geweigerd. Controleer of de sleutel geladen is (ssh-add -l) en aan je account is toegevoegd.",
     "noUpstream": "Deze branch heeft nog geen upstream. Publiceer hem om te pushen.",
@@ -15,6 +16,8 @@
     "unknown": ""
   },
   "signIn": "Inloggen",
+  "requestAccess": "Toegang aanvragen",
+  "requestAccessFailed": "Kon de GitHub-pagina niet openen",
   "account": {
     "signedInAs": "Ingelogd als {{name}} op {{host}}",
     "viaSystem": "systeemsleutelhanger",

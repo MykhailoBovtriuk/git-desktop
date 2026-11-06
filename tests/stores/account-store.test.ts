@@ -10,11 +10,15 @@ const api = {
   probeServer: vi.fn(),
   cancelSignIn: vi.fn(),
   signOut: vi.fn(),
+  authSource: vi.fn(),
+  identity: vi.fn(),
+  test: vi.fn(),
   onAccountChanged: vi.fn(),
 };
 vi.mock('../../src/api/account-api', () => ({ accountApi: api }));
 
 const { useAccountStore } = await import('../../src/stores/account-store');
+const { testKey } = await import('../../src/lib/test-key');
 
 const REPO = '/src/p';
 
@@ -61,7 +65,7 @@ const OPTIONS: ProviderOption[] = [
   GITLAB_OPTION,
   ENTERPRISE_OPTION,
   option({ id: 'gitlab-self', group: 'gitlab-self' }),
-  option({ id: 'token', needsClientId: false }),
+  option({ id: 'azure-devops-server', needsClientId: false }),
 ];
 
 const answers = (providerId: string | null, host: string | null = null) => ({
@@ -80,7 +84,6 @@ const reset = () =>
     error: null,
     endpointError: null,
     busy: false,
-    dismissedRepos: new Set(),
   });
 
 describe('account store', () => {
@@ -149,79 +152,19 @@ describe('account store', () => {
       expect(store().endpointError).toBe('mismatch');
     });
 
-    it('has nothing to probe for a bare Git server', async () => {
-      await store().openSignIn('git.acme.internal', REPO);
-      await store().chooseProvider('token');
-      expect(api.probeServer).not.toHaveBeenCalled();
-      expect(store().phase).toBe('token');
-    });
-
     it('carries the repository into a sign-in started from it', async () => {
       api.signInWithToken.mockResolvedValue(ACCOUNT);
       await store().openSignIn('git.acme.internal', '/src/p');
       expect(store().target?.repoPath).toBe('/src/p');
 
-      await store().chooseProvider('token');
-      await store().submitToken('me', 'secret');
+      await store().chooseProvider('azure-devops-server');
+      await store().submitToken('secret');
       expect(api.signInWithToken).toHaveBeenCalledWith(
-        'token',
+        'azure-devops-server',
         'git.acme.internal',
-        'me',
         'secret',
         '/src/p',
       );
-    });
-  });
-
-  describe('from Settings', () => {
-    it('signs in to a hosted service at its own address', async () => {
-      await store().beginSignIn('github', REPO);
-      expect(store().phase).toBe('browser');
-      expect(store().target?.host).toBe('github.com');
-    });
-
-    it('asks a self-hosted service for its address first', async () => {
-      await store().beginSignIn('github-enterprise', REPO);
-      expect(store().phase).toBe('endpoint');
-      expect(store().target?.host).toBe('');
-    });
-
-    it('goes on to the browser once the address checks out', async () => {
-      await store().beginSignIn('github-enterprise', REPO);
-      await store().submitEndpoint('https://GHE.acme.com/some/repo');
-
-      expect(api.probeServer).toHaveBeenCalledWith('github-enterprise', 'ghe.acme.com', REPO);
-      expect(store().phase).toBe('browser');
-      expect(store().target).toMatchObject({
-        host: 'ghe.acme.com',
-        providerId: 'github-enterprise',
-      });
-    });
-
-    it.each([
-      ['not a url at all', 'invalid'],
-      ['http://ghe.acme.com', 'insecure'],
-    ])('refuses %s', async (address, error) => {
-      await store().beginSignIn('github-enterprise', REPO);
-      await store().submitEndpoint(address);
-      expect(store().phase).toBe('endpoint');
-      expect(store().endpointError).toBe(error);
-      expect(api.probeServer).not.toHaveBeenCalled();
-    });
-
-    it('says so when nothing answers at the address', async () => {
-      api.probeServer.mockResolvedValue('unreachable');
-      await store().beginSignIn('gitlab-self', REPO);
-      await store().submitEndpoint('gitlab.acme.com');
-      expect(store().phase).toBe('endpoint');
-      expect(store().endpointError).toBe('unreachable');
-    });
-
-    it('treats github.com in the Enterprise step as GitHub', async () => {
-      await store().beginSignIn('github-enterprise', REPO);
-      await store().submitEndpoint('github.com');
-      expect(store().target).toMatchObject({ host: 'github.com', providerId: 'github' });
-      expect(store().phase).toBe('browser');
     });
   });
 
@@ -238,7 +181,7 @@ describe('account store', () => {
     beforeEach(() => useAccountStore.setState({ accounts: [ACCOUNT] }));
 
     it('warns before replacing it', async () => {
-      await store().beginSignIn('github', REPO);
+      await store().openSignIn('github.com', REPO);
       expect(store().phase).toBe('existing');
       expect(store().target?.existing).toEqual(ACCOUNT);
     });
@@ -261,7 +204,7 @@ describe('account store', () => {
   });
 
   it('switches between the browser and a token', async () => {
-    await store().beginSignIn('github', REPO);
+    await store().openSignIn('github.com', REPO);
     store().switchMethod('token');
     expect(store().phase).toBe('token');
     store().switchMethod('browser');
@@ -306,9 +249,9 @@ describe('account store', () => {
   it('signs in with a pasted token for the chosen service and refreshes the list', async () => {
     api.signInWithToken.mockResolvedValue(ACCOUNT);
     await store().openSignIn('gitlab.com', REPO);
-    await store().submitToken('', 'secret');
+    await store().submitToken('secret');
 
-    expect(api.signInWithToken).toHaveBeenCalledWith('gitlab', 'gitlab.com', '', 'secret', REPO);
+    expect(api.signInWithToken).toHaveBeenCalledWith('gitlab', 'gitlab.com', 'secret', REPO);
     expect(store().phase).toBeNull();
     expect(store().accounts).toEqual([ACCOUNT]);
   });
@@ -317,7 +260,7 @@ describe('account store', () => {
     api.signInWithToken.mockRejectedValue(new Error('401 Unauthorized'));
     await store().openSignIn('gitlab.com', REPO);
     store().switchMethod('token');
-    await store().submitToken('', 'bad');
+    await store().submitToken('bad');
 
     expect(store().phase).toBe('token');
     expect(store().error).toBe('401 Unauthorized');
@@ -329,12 +272,6 @@ describe('account store', () => {
 
     expect(api.cancelSignIn).toHaveBeenCalled();
     expect(store().phase).toBeNull();
-  });
-
-  it('remembers which repositories were dismissed', () => {
-    store().dismissForRepo('/tmp/repo');
-    expect(store().dismissedRepos.has('/tmp/repo')).toBe(true);
-    expect(store().dismissedRepos.has('/tmp/other')).toBe(false);
   });
 
   describe('the account shown for the open repository', () => {
@@ -362,5 +299,100 @@ describe('account store', () => {
     await store().signOut(REPO);
     expect(api.signOut).toHaveBeenCalledWith(REPO);
     expect(store().accounts).toEqual([]);
+  });
+
+  describe('identity', () => {
+    const identity = (login: string) => ({
+      source: 'ssh' as const,
+      host: 'github.com',
+      login,
+      name: null,
+      avatarDataUrl: null,
+      ssh: { ok: true, login, reason: 'ok' as const },
+      helpers: [],
+      profile: null,
+    });
+
+    beforeEach(() => {
+      api.authSource.mockResolvedValue('ssh');
+      useAccountStore.setState({ identity: null });
+    });
+
+    it('is refreshed together with the auth source', async () => {
+      api.identity.mockResolvedValue(identity('octocat'));
+      await store().refreshAuthSource('github.com', 'ssh', REPO);
+      await vi.waitFor(() => expect(store().identity?.login).toBe('octocat'));
+      expect(api.identity).toHaveBeenCalledWith(REPO);
+    });
+
+    it('keeps the newest answer when an older one arrives late', async () => {
+      let finishOld: (v: unknown) => void = () => {};
+      api.identity
+        .mockImplementationOnce(() => new Promise(r => (finishOld = r)))
+        .mockResolvedValueOnce(identity('newer'));
+      const old = store().refreshIdentity('/src/old');
+      await store().refreshIdentity(REPO);
+      finishOld(identity('older'));
+      await old;
+      expect(store().identity?.login).toBe('newer');
+    });
+
+    it('is cleared without a remote', async () => {
+      useAccountStore.setState({ identity: identity('octocat') });
+      await store().refreshAuthSource(null, null, REPO);
+      expect(store().identity).toBeNull();
+      expect(api.identity).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('connection test', () => {
+    const passed = (login: string) => ({
+      host: 'github.com',
+      login,
+      ok: true,
+      steps: [{ step: 'who' as const, ok: true, message: 'ok', logId: 'l1' }],
+      at: 1,
+    });
+
+    beforeEach(() => useAccountStore.setState({ tests: {}, testing: {} }));
+
+    it('keeps each result under its host and repository', async () => {
+      api.test.mockResolvedValueOnce(passed('a')).mockResolvedValueOnce(passed('b'));
+      await store().runTest('/src/a', 'github.com');
+      await store().runTest('/src/b', 'github.com');
+
+      expect(api.test).toHaveBeenCalledWith('/src/a');
+      expect(store().tests[testKey('github.com', '/src/a')].login).toBe('a');
+      expect(store().tests[testKey('github.com', '/src/b')].login).toBe('b');
+      expect(store().tests[testKey('gitlab.com', '/src/a')]).toBeUndefined();
+    });
+
+    it('marks the repository busy while the test runs and ignores a second start', async () => {
+      let finish: (v: unknown) => void = () => {};
+      api.test.mockImplementationOnce(() => new Promise(r => (finish = r)));
+      const running = store().runTest(REPO, 'github.com');
+      expect(store().testing[testKey('github.com', REPO)]).toBe(true);
+      await store().runTest(REPO, 'github.com');
+      expect(api.test).toHaveBeenCalledTimes(1);
+
+      finish(passed('octocat'));
+      await running;
+      expect(store().testing[testKey('github.com', REPO)]).toBeUndefined();
+    });
+
+    it('turns a failed call into a failed result with its log entry', async () => {
+      api.test.mockRejectedValueOnce(Object.assign(new Error('no remote'), { logId: 'e1' }));
+      await store().runTest(REPO, 'github.com');
+      const result = store().tests[testKey('github.com', REPO)];
+      expect(result.ok).toBe(false);
+      expect(result.steps[0]).toMatchObject({ ok: false, message: 'no remote', logId: 'e1' });
+    });
+
+    it('forgets a result on request', async () => {
+      api.test.mockResolvedValueOnce(passed('octocat'));
+      await store().runTest(REPO, 'github.com');
+      store().clearTest(REPO, 'github.com');
+      expect(store().tests).toEqual({});
+    });
   });
 });

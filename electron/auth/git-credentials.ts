@@ -19,10 +19,15 @@ export function allowedHelpers(platform: string = process.platform): string[] {
   return ALLOWED_HELPERS[platform] ?? [];
 }
 
-function run(args: string[], stdin?: string, env?: NodeJS.ProcessEnv): Promise<string> {
+function run(
+  args: string[],
+  stdin?: string,
+  env?: NodeJS.ProcessEnv,
+  cwd: string = os.homedir(),
+): Promise<string> {
   return new Promise((resolve, reject) => {
     // A credential manager can block on a UI prompt; never let it stall IPC.
-    const options = { env: env ?? process.env, cwd: os.homedir(), timeout: 10_000 };
+    const options = { env: env ?? process.env, cwd, timeout: 10_000 };
     const child = execFile('git', args, options, (err, stdout, stderr) => {
       // `credential fill` answers with the password itself, so its output
       // never reaches the log; stdin is never recorded at all.
@@ -100,7 +105,26 @@ export async function approveCredentials(
   await run(['credential', 'approve'], describe(host, username, token));
 }
 
-async function lookupStored(host: string): Promise<{ username: string; password: string } | null> {
+interface FillQuery {
+  host: string;
+  path?: string | null;
+  username?: string | null;
+  /** A repository folder, so its `credential.<url>.username` binding and local helpers apply. */
+  cwd?: string;
+}
+
+interface StoredSecret {
+  username: string;
+  password: string;
+}
+
+/** The password stays in the main process. */
+export async function storedCredential({
+  host,
+  path,
+  username,
+  cwd,
+}: FillQuery): Promise<StoredSecret | null> {
   // GCM_INTERACTIVE: Git Credential Manager would otherwise open its own
   // sign-in window for what is meant to be a silent question.
   const env: NodeJS.ProcessEnv = {
@@ -110,7 +134,12 @@ async function lookupStored(host: string): Promise<{ username: string; password:
   };
   delete env.GIT_ASKPASS;
   delete env.SSH_ASKPASS;
-  const out = await run(['credential', 'fill'], `protocol=https\nhost=${host}\n\n`, env).catch(
+  const lines = ['protocol=https', `host=${host}`];
+  // git drops the path itself unless credential.useHttpPath is on (Azure DevOps).
+  if (path) lines.push(`path=${path}`);
+  if (username) lines.push(`username=${username}`);
+  const query = lines.join('\n') + '\n\n';
+  const out = await run(['credential', 'fill'], query, env, cwd).catch(
     (err: { code?: number | string; killed?: boolean }) => {
       // Exit 128 with prompts off is "nothing stored": the normal answer.
       if (err.killed || typeof err.code === 'string') {
@@ -128,10 +157,6 @@ async function lookupStored(host: string): Promise<{ username: string; password:
   const password = /^password=(.+)$/m.exec(out)?.[1];
   if (!password) return null;
   return { username: /^username=(.*)$/m.exec(out)?.[1] ?? '', password };
-}
-
-export async function storedUsername(host: string): Promise<string | null> {
-  return (await lookupStored(host))?.username ?? null;
 }
 
 const usernameKey = (host: string) => `credential.https://${host}.username`;
@@ -165,7 +190,7 @@ export async function unbindRepoUsername(repoPath: string, host: string): Promis
 }
 
 export async function forgetStoredCredential(host: string): Promise<boolean> {
-  const stored = await lookupStored(host);
+  const stored = await storedCredential({ host });
   if (!stored) return false;
   await run(['credential', 'reject'], describe(host, stored.username, stored.password));
   return true;
@@ -192,13 +217,13 @@ function helperCli(helper: string): CredentialHelperEntry['cli'] {
 
 const HELPER_KEY = /^credential\.(?:(.+)\.)?helper$/i;
 
-export async function listCredentialHelpers(): Promise<CredentialHelperEntry[]> {
-  const out = await run([
-    'config',
-    '--show-scope',
-    '--get-regexp',
-    '^credential\\..*helper$',
-  ]).catch((err: { code?: number }) => {
+export async function listCredentialHelpers(cwd?: string): Promise<CredentialHelperEntry[]> {
+  const out = await run(
+    ['config', '--show-scope', '--get-regexp', '^credential\\..*helper$'],
+    undefined,
+    undefined,
+    cwd,
+  ).catch((err: { code?: number }) => {
     if (err.code !== 1) markCurrent({ status: 'warning', error: describeError(err) });
     return '';
   });
@@ -226,4 +251,22 @@ export async function listCredentialHelpers(): Promise<CredentialHelperEntry[]> 
     });
   }
   return entries;
+}
+
+function urlCovers(url: string | null, host: string): boolean {
+  if (url === null) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+export async function credentialHelpersFor(
+  host: string,
+  repoPath: string,
+): Promise<CredentialHelperEntry[]> {
+  const helpers = await listCredentialHelpers(repoPath);
+  return helpers.filter(h => urlCovers(h.url, host));
 }

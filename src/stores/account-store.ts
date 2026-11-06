@@ -6,10 +6,12 @@ import type {
   ProviderId,
   ProviderOption,
   RemoteProtocol,
+  RepoIdentity,
+  RepoTestResult,
   SignInPhase,
 } from '../types';
 import { errorLogId, errorMessage } from '../lib/error-message';
-import { parseServerAddress, type ServerAddressError } from '../lib/server-address';
+import { testKey } from '../lib/test-key';
 
 interface SignInTarget {
   host: string;
@@ -19,7 +21,7 @@ interface SignInTarget {
   existing: ProviderAccount | null;
 }
 
-type EndpointError = ServerAddressError | 'mismatch' | 'unreachable';
+type EndpointError = 'mismatch' | 'unreachable';
 
 interface AccountState {
   accounts: ProviderAccount[];
@@ -31,9 +33,11 @@ interface AccountState {
   errorLogId: string | null;
   endpointError: EndpointError | null;
   busy: boolean;
-  dismissedRepos: Set<string>;
 
   authSource: AuthSource | null;
+  identity: RepoIdentity | null;
+  tests: Record<string, RepoTestResult>;
+  testing: Record<string, boolean>;
 
   loadAccounts: () => Promise<void>;
   accountFor: (repoPath: string | null) => ProviderAccount | null;
@@ -42,32 +46,27 @@ interface AccountState {
     protocol: RemoteProtocol | null,
     repoPath: string | null,
   ) => Promise<void>;
+  refreshIdentity: (repoPath: string | null) => Promise<void>;
   openSignIn: (host: string, repoPath: string) => Promise<void>;
-  beginSignIn: (providerId: ProviderId, repoPath: string) => Promise<void>;
-  submitEndpoint: (address: string) => Promise<void>;
   chooseProvider: (providerId: ProviderId) => Promise<void>;
   confirmReplace: () => void;
   switchMethod: (method: 'browser' | 'token') => void;
   continueWithBrowser: (clientId?: string, clientSecret?: string) => Promise<void>;
-  submitToken: (login: string, token: string) => Promise<void>;
+  submitToken: (token: string) => Promise<void>;
   cancelSignIn: () => Promise<void>;
-  dismissForRepo: (repoPath: string) => void;
   signOut: (repoPath: string) => Promise<void>;
   forgetSystemCredential: (host: string, repoPath: string | null) => Promise<void>;
+  runTest: (repoPath: string, host: string) => Promise<void>;
+  clearTest: (repoPath: string, host: string) => void;
 }
-
-const HOSTED_INSTEAD: Partial<Record<ProviderId, { host: string; provider: ProviderId }>> = {
-  'github-enterprise': { host: 'github.com', provider: 'github' },
-  'gitlab-self': { host: 'gitlab.com', provider: 'gitlab' },
-  'bitbucket-server': { host: 'bitbucket.org', provider: 'bitbucket' },
-  'azure-devops-server': { host: 'dev.azure.com', provider: 'azure-devops' },
-};
 
 function firstMethod(option: ProviderOption | undefined): SignInPhase {
   return option?.configured || option?.needsClientId ? 'browser' : 'token';
 }
 
 export const useAccountStore = create<AccountState>()((set, get) => {
+  let identityRequest = 0;
+
   const setTarget = (target: Omit<SignInTarget, 'existing'>, phase?: SignInPhase) => {
     const existing = get().accountFor(target.repoPath);
     set({
@@ -100,7 +99,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
   };
 
   const checkServer = async (providerId: ProviderId, host: string): Promise<boolean> => {
-    if (providerId === 'token') return true;
     const answer = await accountApi.probeServer(providerId, host, get().target?.repoPath ?? null);
     if (answer === 'ok') return true;
     set({ endpointError: answer });
@@ -110,6 +108,9 @@ export const useAccountStore = create<AccountState>()((set, get) => {
   return {
     accounts: [],
     authSource: null,
+    identity: null,
+    tests: {},
+    testing: {},
     persistent: true,
     loaded: false,
     phase: null,
@@ -118,7 +119,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     errorLogId: null,
     endpointError: null,
     busy: false,
-    dismissedRepos: new Set(),
 
     loadAccounts: async () => {
       const snapshot = await accountApi.list();
@@ -141,12 +141,24 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       repoPath ? (get().accounts.find(a => a.repoPath === repoPath) ?? null) : null,
 
     refreshAuthSource: async (host, protocol, repoPath) => {
+      void get().refreshIdentity(host ? repoPath : null);
       if (!host) {
         set({ authSource: null });
         return;
       }
       const authSource = await accountApi.authSource(host, protocol, repoPath).catch(() => null);
       set({ authSource });
+    },
+
+    refreshIdentity: async repoPath => {
+      const request = ++identityRequest;
+      if (!repoPath) {
+        set({ identity: null });
+        return;
+      }
+      const identity = await accountApi.identity(repoPath).catch(() => null);
+      // ssh -T can take seconds: an older reply must not overwrite a newer one.
+      if (request === identityRequest) set({ identity });
     },
 
     openSignIn: (host, repoPath) =>
@@ -157,40 +169,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           return;
         }
         setTarget({ host, providerId: null, options: info.options, repoPath }, 'choose');
-      }),
-
-    beginSignIn: (providerId, repoPath) =>
-      guarded(async () => {
-        const info = await accountApi.providersFor(null);
-        const option = info.options.find(o => o.id === providerId);
-        if (!option) throw new Error(`Unknown provider: ${providerId}`);
-        if (!option.needsHost && option.defaultHost) {
-          await proceed(providerId, option.defaultHost, repoPath);
-          return;
-        }
-        setTarget(
-          { host: option.defaultHost ?? '', providerId, options: info.options, repoPath },
-          'endpoint',
-        );
-      }),
-
-    submitEndpoint: address =>
-      guarded(async () => {
-        const target = get().target;
-        if (!target?.providerId) return;
-        const parsed = parseServerAddress(address);
-        if (parsed.error) {
-          set({ endpointError: parsed.error });
-          return;
-        }
-        const hosted = HOSTED_INSTEAD[target.providerId];
-        if (hosted && parsed.host === hosted.host) {
-          await proceed(hosted.provider, hosted.host, target.repoPath);
-          return;
-        }
-        set({ target: { ...target, host: parsed.host }, endpointError: null });
-        if (!(await checkServer(target.providerId, parsed.host))) return;
-        await proceed(target.providerId, parsed.host, target.repoPath);
       }),
 
     chooseProvider: providerId =>
@@ -226,18 +204,13 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         set({ phase: 'waiting' });
       }),
 
-    submitToken: async (login, token) => {
+    submitToken: async token => {
       const target = get().target;
-      if (!target) return;
+      if (!target?.providerId) return;
+      const { providerId } = target;
       await guarded(
         async () => {
-          await accountApi.signInWithToken(
-            target.providerId ?? 'token',
-            target.host,
-            login,
-            token,
-            target.repoPath,
-          );
+          await accountApi.signInWithToken(providerId, target.host, token, target.repoPath);
           set({ phase: null, target: null });
           await get().loadAccounts();
         },
@@ -250,9 +223,6 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       await accountApi.cancelSignIn().catch(() => {});
     },
 
-    dismissForRepo: repoPath =>
-      set(s => ({ dismissedRepos: new Set(s.dismissedRepos).add(repoPath) })),
-
     signOut: async repoPath => {
       await accountApi.signOut(repoPath);
       await get().loadAccounts();
@@ -261,6 +231,31 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     forgetSystemCredential: async (host, repoPath) => {
       await accountApi.forgetSystemCredential(host, repoPath);
     },
+
+    runTest: async (repoPath, host) => {
+      const key = testKey(host, repoPath);
+      if (get().testing[key]) return;
+      set(s => ({ testing: { ...s.testing, [key]: true } }));
+      const result = await accountApi.test(repoPath).catch((err: unknown): RepoTestResult => ({
+        host,
+        login: null,
+        ok: false,
+        steps: [
+          { step: 'who', ok: false, message: errorMessage(err), logId: errorLogId(err) ?? null },
+        ],
+        at: Date.now(),
+      }));
+      set(s => {
+        const { [key]: _, ...testing } = s.testing;
+        return { testing, tests: { ...s.tests, [key]: result } };
+      });
+    },
+
+    clearTest: (repoPath, host) =>
+      set(s => {
+        const { [testKey(host, repoPath)]: _, ...tests } = s.tests;
+        return { tests };
+      }),
   };
 });
 

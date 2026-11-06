@@ -3,83 +3,25 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { useUiStore } from '../../stores/ui-store';
-import { useBusy } from '../../hooks/use-busy';
-import { useCurrentAccount } from '../../hooks/use-current-account';
-import { Avatar, Button, Card, Modal, SegmentedControl } from '../../shared/ui';
-import type { SwitchableProtocol } from '../../types';
-import { showErrorToast } from '../../stores/error-toast';
-
-type Protocol = SwitchableProtocol;
+import { Button, Modal } from '../../shared/ui';
+import { AccountCard } from './AccountCard';
 
 export function ConnectionModal() {
   const { t } = useTranslation('account');
-  const { open, close, requestConfirm } = useUiStore(
-    useShallow(s => ({
-      open: s.connectionOpen,
-      close: s.closeConnection,
-      requestConfirm: s.requestConfirm,
-    })),
+  const { open, close } = useUiStore(
+    useShallow(s => ({ open: s.connectionOpen, close: s.closeConnection })),
   );
-  const { repoPath, remoteUrl, remoteHost, remoteProtocol, switchRemoteProtocol } = useRepoStore(
+  const { repoPath, remoteUrl, remoteHost, remoteProtocol } = useRepoStore(
     useShallow(s => ({
       repoPath: s.repoPath,
       remoteUrl: s.remoteUrl,
       remoteHost: s.remoteHost,
       remoteProtocol: s.remoteProtocol,
-      switchRemoteProtocol: s.switchRemoteProtocol,
     })),
   );
-  const current = useCurrentAccount();
-  const account = useAccountStore(
-    useShallow(s => ({
-      authSource: s.authSource,
-      persistent: s.persistent,
-      openSignIn: s.openSignIn,
-      signOut: s.signOut,
-      forgetSystemCredential: s.forgetSystemCredential,
-      refreshAuthSource: s.refreshAuthSource,
-    })),
-  );
-  const [busy, track] = useBusy();
+  const persistent = useAccountStore(s => s.persistent);
 
   if (!open || !remoteHost || !repoPath) return null;
-
-  const protocol: Protocol | null =
-    remoteProtocol === 'ssh' || remoteProtocol === 'https' ? remoteProtocol : null;
-
-  const act = (fn: () => Promise<void>) =>
-    track(fn).catch((err: unknown) => showErrorToast(t('connection.failed'), err));
-
-  const refresh = () => account.refreshAuthSource(remoteHost, remoteProtocol, repoPath);
-
-  const switchTo = (to: Protocol) => {
-    if (busy || to === protocol) return;
-    void act(() => switchRemoteProtocol(to));
-  };
-
-  const signIn = () => {
-    close();
-    void account.openSignIn(remoteHost, repoPath);
-  };
-
-  const signOut = (accountId: string) =>
-    void act(async () => {
-      await account.signOut(accountId);
-      await refresh();
-    });
-
-  const forget = () =>
-    void act(async () => {
-      const ok = await requestConfirm({
-        title: t('connection.forgetTitle'),
-        message: t('connection.forgetConfirm', { host: remoteHost }),
-        confirmLabel: t('connection.forget'),
-        danger: true,
-      });
-      if (!ok) return;
-      await account.forgetSystemCredential(remoteHost, repoPath);
-      await refresh();
-    });
 
   return (
     <Modal
@@ -94,99 +36,11 @@ export function ConnectionModal() {
       }
     >
       <div className="flex flex-col gap-4">
-        {protocol ? (
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-text text-xs">{t('connection.protocol')}</p>
-              <p className="text-subtext text-xs">{t('connection.protocolHint')}</p>
-            </div>
-            <SegmentedControl
-              label={t('connection.protocol')}
-              value={protocol}
-              onChange={switchTo}
-              options={[
-                { value: 'ssh', label: 'SSH' },
-                { value: 'https', label: 'HTTPS' },
-              ]}
-              className={busy ? 'opacity-50 pointer-events-none' : undefined}
-            />
-          </div>
-        ) : null}
-
-        <Card>
-          <AuthCard protocol={protocol} host={remoteHost} />
-          <div className="flex items-center gap-2 shrink-0">
-            {protocol === 'https' && current && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                title={t('connection.signOutHint', { host: remoteHost })}
-                onClick={() => signOut(current!.repoPath)}
-              >
-                {t('section.signOut')}
-              </Button>
-            )}
-            {protocol === 'https' && !current && account.authSource === 'system' && (
-              <Button variant="secondary" size="sm" disabled={busy} onClick={forget}>
-                {t('connection.forget')}
-              </Button>
-            )}
-            {protocol === 'https' &&
-              !current &&
-              (account.authSource === 'system' || account.authSource === 'none') && (
-                <Button
-                  variant={account.authSource === 'none' ? 'primary' : 'secondary'}
-                  size="sm"
-                  disabled={busy}
-                  onClick={signIn}
-                >
-                  {t('connection.signIn')}
-                </Button>
-              )}
-          </div>
-        </Card>
-
-        {protocol === 'https' && !account.persistent && (
+        <AccountCard onSignIn={close} />
+        {remoteProtocol === 'https' && !persistent && (
           <p className="text-yellow text-xs">{t('section.notPersistent')}</p>
         )}
       </div>
     </Modal>
-  );
-}
-
-function AuthCard({ protocol, host }: { protocol: Protocol | null; host: string }) {
-  const { t } = useTranslation('account');
-  const current = useCurrentAccount();
-  const authSource = useAccountStore(s => s.authSource);
-
-  let title: string;
-  let detail: string | null = null;
-  if (!protocol) {
-    title = t('connection.local');
-  } else if (protocol === 'ssh') {
-    title = t('connection.ssh');
-    detail = t('connection.sshHint');
-  } else if (current) {
-    title = t('signedInAs', { name: current.name || current.login, host });
-    detail = `@${current.login}`;
-  } else if (authSource === 'system') {
-    title = t('connection.system');
-    detail = t('connection.systemHint');
-  } else if (authSource === 'none') {
-    title = t('connection.none');
-    detail = t('connection.noneHint');
-  } else {
-    title = t('common:loading');
-  }
-
-  return (
-    <div className="flex items-center gap-3 min-w-0">
-      <Avatar src={protocol === 'https' ? current?.avatarDataUrl : null} size="md" />
-      <div className="min-w-0">
-        <p className="text-text text-sm">{title}</p>
-        {detail && <p className="text-subtext text-xs">{detail}</p>}
-      </div>
-    </div>
   );
 }

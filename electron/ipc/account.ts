@@ -5,44 +5,51 @@ import type {
   ProviderAccount,
   ProviderId,
   ProvidersForHost,
+  RepoIdentity,
+  RepoTestResult,
   ServerProbe,
 } from '../../src/types';
 import { assertCredentialField, assertHost, assertRepoPath, assertString } from '../ipc-validators';
 import { isRejected } from '../auth/http';
 import { QUIET, wrap, wrapLoggedFor, sendToRenderer, type WindowOptions } from './wrap';
 import { beginSignIn, cancelSignIn, completeSignIn, pendingTarget } from '../auth/oauth-flow';
-import { logged, logIdOf, markCurrent } from '../log/git-logger';
+import { logEvent, logged, logIdOf, markCurrent } from '../log/git-logger';
 import { errorMessage, errorWithCause } from '../../src/lib/error-message';
 import { providerById, providerForHost, providerOptions } from '../auth/providers/registry';
 import {
   accountForRepo,
   clearCredential,
-  credentialsOnHost,
   isPersistent,
   listAccounts,
   saveCredential,
   type StoredCredential,
 } from '../auth/token-store';
-import { hostFromRemoteUrl, originUrlFor } from '../auth/remote-host';
-import { verifyAgainstRemote } from '../auth/verify-credential';
 import {
   approveCredentials,
   bindRepoUsername,
   forgetStoredCredential,
   gitUsernameFor,
-  listCredentialHelpers,
-  rejectCredentials,
-  storedUsername,
   unbindRepoUsername,
 } from '../auth/git-credentials';
+import { releaseGitCredential } from '../auth/release-git-credential';
 import type { ProviderDefinition } from '../auth/providers/types';
 import { ensureGlobalIdentity } from '../auth/identity-bootstrap';
+import { clearIdentityCache, resolveIdentity, systemCredentialFor } from '../auth/repo-identity';
+import { runRepoTest } from '../auth/repo-test';
+import { githubOrgAccessUrl } from '../auth/oauth-config';
 
 let notify: () => void = () => {};
 
 function signInDetail(providerId: unknown, host: unknown): string | undefined {
   const parts = [providerId, host].filter((p): p is string => typeof p === 'string' && !!p);
   return parts.length ? parts.join(' · ') : undefined;
+}
+
+const ORG_ACCESS_DETAIL = 'github · github.com · org access';
+
+// These run QUIET, which logs only failures; a page opened is still a sign-in step (§5.5).
+function logOpened(repoPath: string | null, detail: string): void {
+  logEvent({ op: 'sign-in-browser', repoPath, status: 'info', detail });
 }
 
 function requireProvider(id: unknown): ProviderDefinition {
@@ -53,44 +60,20 @@ function requireProvider(id: unknown): ProviderDefinition {
 }
 
 async function accountFromToken(
-  providerId: ProviderId,
+  provider: ProviderDefinition,
   host: string,
-  login: string,
   token: string,
   repoPath: string,
 ): Promise<ProviderAccount> {
-  const provider = providerId === 'token' ? providerForHost(host) : providerById(providerId);
-  if (provider) {
-    const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
-      throw errorWithCause(
-        isRejected(err)
-          ? `${provider.displayName} rejected this token`
-          : `Could not check this token with ${provider.displayName}`,
-        err,
-      );
-    });
-    return { ...fetched, id: repoPath, repoPath };
-  }
-
-  const remoteUrl = await originUrlFor(repoPath);
-  if (!remoteUrl || !/^https:\/\//i.test(remoteUrl) || hostFromRemoteUrl(remoteUrl) !== host) {
-    throw new Error(
-      `Sign in from a repository whose remote is an https address on ${host} — ` +
-        'there is no other way to check a token for this server',
+  const fetched = await provider.fetchAccount(host, token).catch((err: unknown) => {
+    throw errorWithCause(
+      isRejected(err)
+        ? `${provider.displayName} rejected this token`
+        : `Could not check this token with ${provider.displayName}`,
+      err,
     );
-  }
-  await verifyAgainstRemote(remoteUrl, login, token);
-  return {
-    id: repoPath,
-    repoPath,
-    providerId: 'token',
-    host,
-    displayName: host,
-    login,
-    name: null,
-    email: '',
-    avatarDataUrl: null,
-  };
+  });
+  return { ...fetched, id: repoPath, repoPath };
 }
 
 type Grant = Pick<
@@ -124,11 +107,7 @@ async function releaseRepo(
   if (!stored) return null;
   const username = gitUsernameFor(stored.account);
   await unbindRepoUsername(repoPath, stored.host);
-  const sharing = (await credentialsOnHost(stored.host)).find(
-    c => gitUsernameFor(c.account) === username,
-  );
-  if (sharing) await approveCredentials(stored.host, username, sharing.accessToken);
-  else await rejectCredentials(stored.host, username);
+  const sharing = await releaseGitCredential(stored.host, username);
   if (opts.revokeToken && stored.accessToken !== sharing?.accessToken) {
     // A forgotten repository's log is already deleted: the app log takes the entry.
     const logTo = opts.forgotten ? null : repoPath;
@@ -196,19 +175,29 @@ async function revoke(
 let lastFailure: { message: string; logId: string | null } | null = null;
 
 export function registerAccountHandlers(options: WindowOptions = {}) {
-  notify = () => sendToRenderer(options, 'account:changed');
+  notify = () => {
+    clearIdentityCache();
+    sendToRenderer(options, 'account:changed');
+  };
 
   ipcMain.handle('account:list', () =>
-    wrap(async (): Promise<AccountsSnapshot> => {
-      const failure = lastFailure;
-      lastFailure = null;
-      return {
-        accounts: await listAccounts(),
-        persistent: isPersistent(),
-        error: failure?.message ?? null,
-        errorLogId: failure?.logId ?? null,
-      };
-    }),
+    wrapLoggedFor(
+      'accounts-load',
+      null,
+      undefined,
+      async (): Promise<AccountsSnapshot> => {
+        const accounts = await listAccounts();
+        const failure = lastFailure;
+        lastFailure = null;
+        return {
+          accounts,
+          persistent: isPersistent(),
+          error: failure?.message ?? null,
+          errorLogId: failure?.logId ?? null,
+        };
+      },
+      QUIET,
+    ),
   );
 
   ipcMain.handle('account:providers', (_e, host: unknown) =>
@@ -217,7 +206,7 @@ export function registerAccountHandlers(options: WindowOptions = {}) {
       return {
         host: known,
         providerId: known ? (providerForHost(known)?.id ?? null) : null,
-        options: providerOptions(known),
+        options: providerOptions(),
       };
     }),
   );
@@ -235,14 +224,21 @@ export function registerAccountHandlers(options: WindowOptions = {}) {
           if ((await accountForRepo(repoPath))?.host === host) return 'account';
         }
         if (protocol !== 'https') return 'ssh';
-        const username = await storedUsername(host);
-        if (username === null) return 'none';
-        // The app's own entry for another repository is not this one's login:
-        // each repository signs in for itself.
-        const ours = (await credentialsOnHost(host)).some(
-          c => gitUsernameFor(c.account) === username,
-        );
-        return ours ? 'none' : 'system';
+        const ownRepo = typeof repoPath === 'string' && repoPath ? repoPath : null;
+        return (await systemCredentialFor(host, ownRepo)) ? 'system' : 'none';
+      },
+      QUIET,
+    ),
+  );
+
+  ipcMain.handle('account:identity', (_e, repoPath: unknown) =>
+    wrapLoggedFor(
+      'account-profile',
+      repoPath,
+      undefined,
+      async (): Promise<RepoIdentity> => {
+        assertRepoPath(repoPath);
+        return resolveIdentity(repoPath);
       },
       QUIET,
     ),
@@ -276,14 +272,13 @@ export function registerAccountHandlers(options: WindowOptions = {}) {
 
   ipcMain.handle(
     'account:sign-in-token',
-    (_e, providerId: unknown, host: unknown, login: unknown, token: unknown, repoPath: unknown) =>
+    (_e, providerId: unknown, host: unknown, token: unknown, repoPath: unknown) =>
       wrapLoggedFor('sign-in-token', repoPath, signInDetail(providerId, host), async () => {
-        const { id } = requireProvider(providerId);
+        const provider = requireProvider(providerId);
         assertHost(host);
-        if (providerId === 'token' || login !== '') assertCredentialField(login, 'login');
         assertCredentialField(token, 'token');
         assertRepoPath(repoPath);
-        const account = await accountFromToken(id, host, login as string, token, repoPath);
+        const account = await accountFromToken(provider, host, token, repoPath);
         return adoptAccount(account, {
           accessToken: token,
           refreshToken: null,
@@ -320,32 +315,75 @@ export function registerAccountHandlers(options: WindowOptions = {}) {
       ),
   );
 
-  ipcMain.handle('account:credential-helpers', () =>
-    wrapLoggedFor('credential-store', null, 'credential helpers', listCredentialHelpers, QUIET),
+  ipcMain.handle('account:test', (_e, repoPath: unknown) =>
+    wrapLoggedFor(
+      'auth-test',
+      repoPath,
+      undefined,
+      async (): Promise<RepoTestResult> => {
+        assertRepoPath(repoPath);
+        return runRepoTest(repoPath);
+      },
+      QUIET,
+    ),
   );
 
   ipcMain.handle('account:open-token-help', (_e, providerId: unknown, host: unknown) =>
     wrapLoggedFor(
       'sign-in-browser',
       null,
-      signInDetail(providerId, host),
+      `${signInDetail(providerId, host) ?? 'unknown'} · token help`,
       async () => {
         const provider = requireProvider(providerId);
         assertHost(host);
         // Built here, from a validated host — so this cannot become a way for the
         // renderer to open an arbitrary address.
         await shell.openExternal(provider.tokenHelpUrl(host));
+        logOpened(null, `${provider.id} · ${host} · token help`);
       },
       QUIET,
     ),
   );
 
-  ipcMain.handle('account:cancel-sign-in', () =>
-    wrap(async () => {
-      cancelSignIn();
-      lastFailure = null;
-    }),
+  ipcMain.handle('account:open-org-access', (_e, repoPath: unknown) =>
+    wrapLoggedFor(
+      'sign-in-browser',
+      repoPath,
+      ORG_ACCESS_DETAIL,
+      async () => {
+        if (repoPath != null) assertRepoPath(repoPath);
+        // Never a URL from the renderer: the address is built here from the
+        // client id baked into the build.
+        await shell.openExternal(githubOrgAccessUrl());
+        logOpened(repoPath ?? null, ORG_ACCESS_DETAIL);
+      },
+      QUIET,
+    ),
   );
+
+  ipcMain.handle('account:cancel-sign-in', () => {
+    const target = pendingTarget();
+    const detail = target ? signInDetail(target.providerId, target.host) : undefined;
+    return wrapLoggedFor(
+      'sign-in-browser',
+      target?.repoPath ?? null,
+      detail,
+      async () => {
+        cancelSignIn();
+        lastFailure = null;
+        if (target) {
+          logEvent({
+            op: 'sign-in-browser',
+            repoPath: target.repoPath,
+            status: 'info',
+            detail,
+            error: 'Cancelled before the browser answered',
+          });
+        }
+      },
+      QUIET,
+    );
+  });
 
   ipcMain.handle('account:forget-system-credential', (_e, host: unknown, repoPath: unknown) =>
     wrapLoggedFor('credential-forget', repoPath, host, async () => {

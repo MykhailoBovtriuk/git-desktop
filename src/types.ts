@@ -94,11 +94,7 @@ export type ProviderId =
   | 'gitlab'
   | 'gitlab-self'
   | 'azure-devops'
-  | 'azure-devops-server'
-  | 'bitbucket'
-  | 'bitbucket-server'
-  | 'gitea'
-  | 'token';
+  | 'azure-devops-server';
 
 /**
  * A signed-in account as the renderer sees it; tokens never leave the main
@@ -155,10 +151,52 @@ export interface ProvidersForHost {
   options: ProviderOption[];
 }
 
-export type AuthSource = 'account' | 'ssh' | 'system' | 'none';
+export type AuthSource = 'account' | 'ssh' | 'system' | 'gcm' | 'none';
 
-export type SignInPhase =
-  'choose' | 'endpoint' | 'existing' | 'browser' | 'waiting' | 'token' | 'error';
+export type SshCheckReason = 'ok' | 'host-key' | 'key-rejected' | 'unreachable' | 'unknown';
+
+export interface SshCheck {
+  ok: boolean;
+  login: string | null;
+  reason: SshCheckReason;
+}
+
+export interface RepoIdentity {
+  source: AuthSource;
+  host: string | null;
+  login: string | null;
+  name: string | null;
+  avatarDataUrl: string | null;
+  ssh: SshCheck | null;
+  helpers: CredentialHelperEntry[];
+  /** What the service said about a stored credential; null when it was not asked. */
+  profile: 'ok' | 'rejected' | 'unavailable' | null;
+}
+
+export type RepoTestStep = 'who' | 'read' | 'write';
+export type RepoTestSkip = 'detached' | 'no-commits';
+
+export interface RepoTestStepResult {
+  step: RepoTestStep;
+  ok: boolean;
+  skipped?: RepoTestSkip;
+  /** The write step passed auth, but the branch is behind the remote. */
+  behind?: boolean;
+  reasonKind?: GitErrorKind;
+  sshReason?: SshCheckReason;
+  message: string;
+  logId: string | null;
+}
+
+export interface RepoTestResult {
+  host: string | null;
+  login: string | null;
+  ok: boolean;
+  steps: RepoTestStepResult[];
+  at: number;
+}
+
+export type SignInPhase = 'choose' | 'existing' | 'browser' | 'waiting' | 'token' | 'error';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -256,6 +294,9 @@ const LOG_OP_CATEGORY = {
   'probe-server': 'auth',
   'accounts-load': 'auth',
   'account-profile': 'auth',
+  'account-drop': 'auth',
+  'ssh-check': 'auth',
+  'auth-test': 'auth',
   'update-check': 'update',
   'update-download': 'update',
   'update-install': 'update',

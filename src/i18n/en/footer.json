@@ -4,6 +4,7 @@
   "pullFirst_one": "Pull first: the remote has {{count}} new commit",
   "pullFirst_other": "Pull first: the remote has {{count}} new commits",
   "error": {
+    "orgAccess": "Git Desktop could not access this repository. If it belongs to an organization, the organization may need to approve Git Desktop. Otherwise check that the repository exists.",
     "auth": "Could not authenticate with the remote. Sign in to continue.",
     "sshKey": "The remote refused your SSH key. Check that the key is loaded (ssh-add -l) and added to your account.",
     "noUpstream": "This branch has no upstream yet. Publish it to push.",
@@ -15,6 +16,8 @@
     "unknown": ""
   },
   "signIn": "Sign in",
+  "requestAccess": "Request access",
+  "requestAccessFailed": "Could not open the GitHub page",
   "account": {
     "signedInAs": "Signed in as {{name}} on {{host}}",
     "viaSystem": "system keychain",

@@ -1,264 +1,124 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { showErrorToast } from '../../stores/error-toast';
-import { useAsync } from '../../hooks/use-async';
 import { useShallow } from 'zustand/react/shallow';
+import { showErrorToast } from '../../stores/error-toast';
 import { useAccountStore } from '../../stores/account-store';
 import { useRepoStore } from '../../stores/repo-store';
 import { basenameFromPath } from '../../lib/basename';
-import { accountApi } from '../../api/account-api';
-import { Avatar, Badge, Button, Card, TruncatedText, cn } from '../../shared/ui';
-import type { ProviderAccount, ProviderId } from '../../types';
+import { AccountCard, TestButton } from '../account/AccountCard';
+import { TestStatus } from '../account/TestStatus';
+import { Avatar, Button, TruncatedText } from '../../shared/ui';
+import type { ProviderAccount, RemoteProtocol } from '../../types';
 
-type ServiceId = 'github' | 'gitlab' | 'bitbucket' | 'azure' | 'other';
-
-interface ServiceDef {
-  id: ServiceId;
-  name: string | null;
-  cloud: ProviderId;
-  self: { provider: ProviderId; label: string } | null;
-}
-
-const SERVICES: ServiceDef[] = [
-  {
-    id: 'github',
-    name: 'GitHub',
-    cloud: 'github',
-    self: { provider: 'github-enterprise', label: 'Enterprise' },
-  },
-  {
-    id: 'gitlab',
-    name: 'GitLab',
-    cloud: 'gitlab',
-    self: { provider: 'gitlab-self', label: 'Self-Managed' },
-  },
-  {
-    id: 'bitbucket',
-    name: 'Bitbucket',
-    cloud: 'bitbucket',
-    self: { provider: 'bitbucket-server', label: 'Data Center' },
-  },
-  {
-    id: 'azure',
-    name: 'Azure DevOps',
-    cloud: 'azure-devops',
-    self: { provider: 'azure-devops-server', label: 'Server' },
-  },
-  { id: 'other', name: null, cloud: 'token', self: null },
-];
-
-const providersOf = (service: ServiceDef): ProviderId[] =>
-  service.self ? [service.cloud, service.self.provider] : [service.cloud];
-
-function choiceFor(providerId: ProviderId): { service: ServiceDef; selfHosted: boolean } {
-  const service = SERVICES.find(s => providersOf(s).includes(providerId)) ?? SERVICES[0];
-  return { service, selfHosted: service.self?.provider === providerId };
+function noCardHintKey(protocol: RemoteProtocol | null, remoteUrl: string | null): string {
+  if (protocol === 'ssh') return 'section.ssh';
+  if (remoteUrl) return 'section.noSignIn';
+  return 'section.noRemote';
 }
 
 export function AccountsSection() {
   const { t } = useTranslation('account');
-  const repoPath = useRepoStore(s => s.repoPath);
-  const { accounts, persistent, beginSignIn, signOut } = useAccountStore(
+  const { repoPath, remoteUrl, remoteHost, remoteProtocol } = useRepoStore(
     useShallow(s => ({
-      accounts: s.accounts,
-      persistent: s.persistent,
-      beginSignIn: s.beginSignIn,
-      signOut: s.signOut,
+      repoPath: s.repoPath,
+      remoteUrl: s.remoteUrl,
+      remoteHost: s.remoteHost,
+      remoteProtocol: s.remoteProtocol,
     })),
   );
-  const current = repoPath ? (accounts.find(a => a.repoPath === repoPath) ?? null) : null;
-  const [serviceId, setServiceId] = useState<ServiceId>('github');
-  const [selfHostedPick, setSelfHostedPick] = useState(false);
-
-  useEffect(() => {
-    if (!current) return;
-    const choice = choiceFor(current.providerId);
-    setServiceId(choice.service.id);
-    setSelfHostedPick(choice.selfHosted);
-  }, [current]);
-
-  const locked = !!current;
-  const choice = current
-    ? choiceFor(current.providerId)
-    : {
-        service: SERVICES.find(s => s.id === serviceId) ?? SERVICES[0],
-        selfHosted: selfHostedPick,
-      };
-  const { service, selfHosted } = choice;
-  const provider = selfHosted && service.self ? service.self.provider : service.cloud;
-  const serviceName = (s: ServiceDef) => s.name ?? t('service.other');
-  const title =
-    selfHosted && service.self
-      ? `${serviceName(service)} ${service.self.label}`
-      : serviceName(service);
-
-  const pick = (next: ServiceDef) => {
-    setServiceId(next.id);
-    setSelfHostedPick(false);
-  };
+  const persistent = useAccountStore(s => s.persistent);
 
   return (
     <section className="py-4 flex flex-col gap-4">
       {repoPath ? (
-        <p className="text-subtext text-xs">
-          {t('section.repoHint', { repo: basenameFromPath(repoPath) })}
-        </p>
-      ) : (
-        <p className="text-subtext text-xs">{t('section.noRepo')}</p>
-      )}
-
-      {repoPath && (
-        <>
-          <div
-            role="radiogroup"
-            aria-label={t('service.label')}
-            className={cn('flex flex-wrap gap-x-5 gap-y-2', locked && 'opacity-60')}
-          >
-            {SERVICES.map(s => (
-              <label
-                key={s.id}
-                className={cn(
-                  'flex items-center gap-2 text-sm text-text',
-                  locked ? 'cursor-default' : 'cursor-pointer',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="account-service"
-                  className="accent-blue"
-                  checked={s.id === service.id}
-                  disabled={locked}
-                  onChange={() => pick(s)}
-                />
-                {serviceName(s)}
-              </label>
-            ))}
-          </div>
-
-          {service.self && (
-            <label
-              className={cn(
-                'flex items-center gap-2 text-sm text-text',
-                locked ? 'cursor-default opacity-60' : 'cursor-pointer',
-              )}
-            >
-              <input
-                type="checkbox"
-                className="accent-blue"
-                checked={selfHosted}
-                disabled={locked}
-                onChange={e => setSelfHostedPick(e.target.checked)}
-              />
-              {service.self.label}
-            </label>
+        <div className="flex flex-col gap-4">
+          {remoteProtocol === 'https' && (
+            <p className="text-subtext text-xs">
+              {t('section.repoHint', { repo: basenameFromPath(repoPath) })}
+            </p>
           )}
-
-          <div className="flex flex-col gap-2 border-t border-surface0 pt-4">
-            <h2 className="text-text text-sm font-medium">{title}</h2>
-
-            {current ? (
-              <AccountRow
-                account={current}
-                showHost={!service.self || selfHosted}
-                onSignOut={() =>
-                  void signOut(current.repoPath).catch(err =>
-                    showErrorToast(t('section.signOutFailed'), err),
-                  )
-                }
-              />
-            ) : (
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-subtext text-xs">{t(`service.hint.${provider}`)}</p>
-                <Button
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => void beginSignIn(provider, repoPath)}
-                >
-                  {provider === 'token'
-                    ? t('service.signInOther')
-                    : t('service.signIn', { service: title })}
-                </Button>
-              </div>
-            )}
-          </div>
-        </>
+          {remoteHost ? (
+            <AccountCard />
+          ) : (
+            <p className="text-subtext text-xs">{t(noCardHintKey(remoteProtocol, remoteUrl))}</p>
+          )}
+        </div>
+      ) : (
+        <SignedInRepos />
       )}
-
-      <SystemCredentials />
 
       {!persistent && <p className="text-yellow text-xs">{t('section.notPersistent')}</p>}
     </section>
   );
 }
 
-function AccountRow({
+function SignedInRepos() {
+  const { t } = useTranslation('account');
+  const { accounts, signOut } = useAccountStore(
+    useShallow(s => ({ accounts: s.accounts, signOut: s.signOut })),
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-subtext text-xs">{t('section.noRepo')}</p>
+      {accounts.length > 0 && (
+        <>
+          <h2 className="text-text text-sm font-medium mt-2">{t('section.signedInRepos')}</h2>
+          <ul className="flex flex-col gap-2">
+            {accounts.map(account => (
+              <RepoAccountRow
+                key={account.repoPath}
+                account={account}
+                onSignOut={() =>
+                  void signOut(account.repoPath).catch(err =>
+                    showErrorToast(t('section.signOutFailed'), err),
+                  )
+                }
+              />
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RepoAccountRow({
   account,
-  showHost,
   onSignOut,
 }: {
   account: ProviderAccount;
-  showHost: boolean;
   onSignOut: () => void;
 }) {
   const { t } = useTranslation('account');
   return (
-    <Card>
-      <div className="flex items-center gap-3 min-w-0">
-        <Avatar src={account.avatarDataUrl} size="md" />
-        <div className="min-w-0">
-          <TruncatedText as="p" className="text-text text-sm">
-            {account.name || account.login}
-          </TruncatedText>
-          <TruncatedText as="p" className="text-subtext text-xs">
-            {showHost ? `@${account.login} · ${account.host}` : `@${account.login}`}
-          </TruncatedText>
+    <li className="bg-mantle rounded flex flex-col">
+      <div className="p-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar src={account.avatarDataUrl} size="md" />
+          <div className="min-w-0">
+            <TruncatedText as="p" className="text-text text-sm">
+              {basenameFromPath(account.repoPath)}
+            </TruncatedText>
+            <TruncatedText as="p" className="text-subtext text-xs font-mono">
+              {account.repoPath}
+            </TruncatedText>
+            <TruncatedText as="p" className="text-subtext text-xs">
+              {`@${account.login} · ${account.host}`}
+            </TruncatedText>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <TestButton repoPath={account.repoPath} host={account.host} />
+          <Button variant="secondary" size="sm" onClick={onSignOut}>
+            {t('section.signOut')}
+          </Button>
         </div>
       </div>
-      <Button variant="secondary" size="sm" onClick={onSignOut}>
-        {t('section.signOut')}
-      </Button>
-    </Card>
-  );
-}
-
-function SystemCredentials() {
-  const { t } = useTranslation('account');
-  const helpers = useAsync(() => accountApi.credentialHelpers().catch(() => []), []) ?? null;
-
-  return (
-    <div className="flex flex-col gap-2 border-t border-surface0 pt-4">
-      <h2 className="text-text text-sm font-medium">{t('system.title')}</h2>
-      <p className="text-subtext text-xs">{t('system.hint')}</p>
-
-      {helpers && helpers.length === 0 && (
-        <p className="text-subtext text-xs">{t('system.none')}</p>
-      )}
-
-      {helpers && helpers.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {helpers.map((entry, i) => (
-            <li
-              key={`${entry.scope}-${entry.url ?? '*'}-${i}`}
-              className="bg-mantle rounded px-3 py-2 flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0">
-                <TruncatedText as="p" className="text-text text-sm">
-                  {entry.cli ? t(`system.cli.${entry.cli}`) : entry.helper}
-                </TruncatedText>
-                <TruncatedText as="p" className="text-subtext text-xs">
-                  {entry.url ? t('system.forUrl', { url: entry.url }) : t('system.forAll')}
-                </TruncatedText>
-              </div>
-              <Badge className="shrink-0">{t(`system.scope.${entry.scope}`)}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p className="text-subtext text-xs">
-        {t('system.cliHint')} <code className="font-mono">gh auth login</code>,{' '}
-        <code className="font-mono">glab auth login</code>
-      </p>
-    </div>
+      <TestStatus
+        repoPath={account.repoPath}
+        host={account.host}
+        className="p-3 border-t border-surface0"
+      />
+    </li>
   );
 }

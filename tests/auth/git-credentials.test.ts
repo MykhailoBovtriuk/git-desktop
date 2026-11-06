@@ -4,6 +4,7 @@ interface Call {
   args: string[];
   stdin: string | null;
   env: NodeJS.ProcessEnv;
+  cwd: string | undefined;
 }
 
 const calls: Call[] = [];
@@ -16,10 +17,10 @@ vi.mock('child_process', () => ({
   execFile: (
     _cmd: string,
     args: string[],
-    options: { env: NodeJS.ProcessEnv },
+    options: { env: NodeJS.ProcessEnv; cwd?: string },
     cb: (err: Error | null, stdout: string) => void,
   ) => {
-    const call: Call = { args, stdin: null, env: options.env };
+    const call: Call = { args, stdin: null, env: options.env, cwd: options.cwd };
     calls.push(call);
     // Deferred so the caller has a chance to write to stdin first, exactly as
     // the real execFile behaves.
@@ -127,7 +128,7 @@ describe('gitUsernameFor', () => {
   });
 });
 
-describe('storedUsername', () => {
+describe('storedCredential for a host', () => {
   beforeEach(() => {
     calls.length = 0;
     fillOutput = '';
@@ -136,26 +137,97 @@ describe('storedUsername', () => {
 
   it('names the user when a helper answers with a password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=ghp_x\n';
-    await expect(credentials.storedUsername('github.com')).resolves.toBe('alice');
+    await expect(credentials.storedCredential({ host: 'github.com' })).resolves.toEqual({
+      username: 'alice',
+      password: 'ghp_x',
+    });
     expect(find('credential fill')?.stdin).toBe('protocol=https\nhost=github.com\n\n');
   });
 
   it('is null when the answer carries no password', async () => {
     fillOutput = 'protocol=https\nhost=github.com\nusername=alice\npassword=\n';
-    await expect(credentials.storedUsername('github.com')).resolves.toBeNull();
+    await expect(credentials.storedCredential({ host: 'github.com' })).resolves.toBeNull();
   });
 
   it('is null when git fails rather than asking a terminal', async () => {
     failNext = true;
-    await expect(credentials.storedUsername('github.com')).resolves.toBeNull();
+    await expect(credentials.storedCredential({ host: 'github.com' })).resolves.toBeNull();
   });
 
   it('never lets an askpass answer the question for it', async () => {
     fillOutput = 'password=x\n';
-    await credentials.storedUsername('github.com');
+    await credentials.storedCredential({ host: 'github.com' });
     const env = find('credential fill')?.env ?? {};
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
     expect(env.GIT_ASKPASS).toBeUndefined();
+  });
+});
+
+describe('storedCredential', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    fillOutput = '';
+    failNext = false;
+  });
+
+  it('asks from inside the repository, with the path of its remote', async () => {
+    fillOutput = 'protocol=https\nhost=dev.azure.com\nusername=oauth2\npassword=tok\n';
+    await expect(
+      credentials.storedCredential({
+        host: 'dev.azure.com',
+        path: 'org/proj/_git/repo',
+        cwd: '/src/p',
+      }),
+    ).resolves.toEqual({ username: 'oauth2', password: 'tok' });
+    const fill = find('credential fill');
+    expect(fill?.cwd).toBe('/src/p');
+    expect(fill?.stdin).toBe('protocol=https\nhost=dev.azure.com\npath=org/proj/_git/repo\n\n');
+    expect(fill?.env.GCM_INTERACTIVE).toBe('never');
+    expect(fill?.env.GIT_TERMINAL_PROMPT).toBe('0');
+    expect(fill?.env.GIT_ASKPASS).toBeUndefined();
+  });
+
+  it('passes the username the remote URL names', async () => {
+    await credentials.storedCredential({
+      host: 'github.com',
+      path: 'a/b.git',
+      username: 'jane',
+      cwd: '/src/p',
+    });
+    expect(find('credential fill')?.stdin).toBe(
+      'protocol=https\nhost=github.com\npath=a/b.git\nusername=jane\n\n',
+    );
+  });
+
+  it('is null when nothing is stored', async () => {
+    await expect(
+      credentials.storedCredential({ host: 'github.com', cwd: '/src/p' }),
+    ).resolves.toBeNull();
+  });
+});
+
+describe('credentialHelpersFor', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    regexpOutput = '';
+  });
+
+  it('reads the helpers from inside the repository', async () => {
+    regexpOutput = 'local\tcredential.helper manager';
+    const helpers = await credentials.credentialHelpersFor('github.com', '/src/p');
+    expect(helpers.map(h => h.cli)).toEqual(['gcm']);
+    expect(find('--get-regexp')?.cwd).toBe('/src/p');
+  });
+
+  it('keeps only the helpers that apply to the host', async () => {
+    regexpOutput = [
+      'global\tcredential.helper osxkeychain',
+      'global\tcredential.https://dev.azure.com.helper /usr/local/bin/git-credential-manager',
+    ].join('\n');
+    const github = await credentials.credentialHelpersFor('github.com', '/src/p');
+    expect(github.map(h => h.helper)).toEqual(['osxkeychain']);
+    const azure = await credentials.credentialHelpersFor('dev.azure.com', '/src/p');
+    expect(azure.map(h => h.cli)).toEqual([null, 'gcm']);
   });
 });
 
@@ -245,7 +317,7 @@ describe('the silent credential lookup', () => {
   });
 
   it('keeps Git Credential Manager from asking', async () => {
-    await credentials.storedUsername('github.com');
+    await credentials.storedCredential({ host: 'github.com' });
     expect(find('credential fill')?.env.GCM_INTERACTIVE).toBe('never');
   });
 });
@@ -283,12 +355,5 @@ describe('binding a repository to a login', () => {
     expect(
       find('-C /gone config --local --unset-all credential.https://github.com.username'),
     ).toBeDefined();
-  });
-
-  it('reports which username git would use for a host', async () => {
-    fillOutput = 'protocol=https\nhost=github.com\nusername=octocat\npassword=tok\n';
-    expect(await credentials.storedUsername('github.com')).toBe('octocat');
-    fillOutput = '';
-    expect(await credentials.storedUsername('github.com')).toBeNull();
   });
 });

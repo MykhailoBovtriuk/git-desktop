@@ -13,6 +13,11 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../src/stores/account-store', () => ({ useAccountStore: vi.fn() }));
 vi.mock('../../../src/stores/repo-store', () => ({ useRepoStore: vi.fn() }));
 vi.mock('../../../src/stores/ui-store', () => ({ useUiStore: vi.fn() }));
+vi.mock('../../../src/api/account-api', () => ({
+  accountApi: {
+    providersFor: vi.fn().mockResolvedValue({ host: null, providerId: null, options: [] }),
+  },
+}));
 
 const ACCOUNT: ProviderAccount = {
   id: 'github.com',
@@ -56,10 +61,16 @@ function setup({
     signOut: vi.fn().mockResolvedValue(undefined),
     forgetSystemCredential: vi.fn().mockResolvedValue(undefined),
     refreshAuthSource: vi.fn().mockResolvedValue(undefined),
+    identity: null,
+    tests: {},
+    testing: {},
+    runTest: vi.fn().mockResolvedValue(undefined),
+    clearTest: vi.fn(),
   };
   vi.mocked(useUiStore).mockImplementation(((sel: any) => sel(ui)) as any);
   (useUiStore as unknown as { getState: () => unknown }).getState = () => ui;
   vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel(repo)) as any);
+  (useRepoStore as unknown as { getState: () => unknown }).getState = () => repo;
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(account)) as any);
   return { ui, repo, account };
 }
@@ -85,6 +96,7 @@ describe('ConnectionModal', () => {
 
     expect(screen.getByText('connection.ssh')).toBeTruthy();
     expect(screen.queryByText('connection.signIn')).toBeNull();
+    expect(screen.queryByText('section.signOut')).toBeNull();
     expect(screen.getByRole('radio', { name: 'SSH' }).getAttribute('aria-checked')).toBe('true');
 
     fireEvent.click(screen.getByRole('radio', { name: 'HTTPS' }));
@@ -113,7 +125,7 @@ describe('ConnectionModal', () => {
     render(<ConnectionModal />);
 
     expect(screen.getByText('connection.system')).toBeTruthy();
-    expect(screen.getByText('connection.signIn')).toBeTruthy();
+    expect(screen.getByText('card.signInInstead')).toBeTruthy();
     fireEvent.click(screen.getByText('connection.forget'));
 
     await waitFor(() =>
@@ -136,7 +148,7 @@ describe('ConnectionModal', () => {
     const { account } = setup({ authSource: 'account', current: ACCOUNT });
     render(<ConnectionModal />);
 
-    expect(screen.getByText('signedInAs')).toBeTruthy();
+    expect(screen.getByText('octocat')).toBeTruthy();
     expect(screen.queryByText('connection.forget')).toBeNull();
     fireEvent.click(screen.getByText('section.signOut'));
 

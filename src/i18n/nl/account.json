@@ -18,11 +18,10 @@
   "token": {
     "title": "Inloggen bij {{host}}",
     "hint": "Plak een persoonlijk toegangstoken met rechten om repositories te lezen en te schrijven.",
-    "usernamePlaceholder": "Gebruikersnaam",
     "tokenPlaceholder": "Persoonlijk toegangstoken",
     "where": "Waar vind ik een token?",
+    "helpFailed": "Kon de tokenpagina niet openen",
     "submit": "Inloggen",
-    "otherServer": "Andere Git-server",
     "useBrowser": "Liever via de browser aanmelden",
     "useOwnApp": "Liever met je eigen OAuth-app aanmelden"
   },
@@ -35,45 +34,32 @@
     "notPersistent": "Dit systeem heeft geen sleutelhanger die Git Desktop kan gebruiken, dus tokens worden alleen in het geheugen bewaard — na een herstart moet je opnieuw inloggen.",
     "repoHint": "Het account waarmee de repository {{repo}} zich aanmeldt. Elke repository meldt zich apart aan; terminals in de map gebruiken dezelfde aanmelding.",
     "noRepo": "Open een repository om die aan te melden. Elke repository heeft een eigen account.",
-    "signOutFailed": "Uitloggen mislukt"
+    "signOutFailed": "Uitloggen mislukt",
+    "signInTo": "Inloggen bij {{service}}",
+    "ssh": "Deze repository verbindt via SSH met je sleutel uit ~/.ssh en heeft dus geen account nodig.",
+    "noSignIn": "Deze remote heeft geen login nodig.",
+    "noRemote": "Deze repository heeft geen remote, dus er is niets om bij in te loggen.",
+    "signedInRepos": "Aangemelde repositories"
   },
-  "signedInAs": "Ingelogd als {{name}} op {{host}}",
   "connection": {
     "title": "Repositoryverbinding",
     "protocol": "Protocol",
     "protocolHint": "SSH gebruikt je sleutel uit ~/.ssh; HTTPS een account of de systeemopslag voor credentials",
     "ssh": "Gebruikt je SSH-sleutel",
-    "sshHint": "Schakel over naar HTTPS om met een account te authenticeren",
     "system": "Git gebruikt een login uit de systeemopslag voor credentials",
-    "systemHint": "Buiten deze app aangemaakt. Mislukt pushen, vergeet hem dan en log opnieuw in",
     "none": "Niets om mee in te loggen",
     "noneHint": "Push en pull mislukken tot je inlogt",
     "local": "Deze remote heeft geen login nodig",
     "signIn": "Inloggen",
-    "signOutHint": "Logt uit bij {{host}} voor elke repository daarop",
+    "signOutHint": "Logt alleen deze repository uit bij {{host}}; andere repositories houden hun account",
     "forget": "Vergeten",
     "forgetTitle": "Opgeslagen login vergeten",
     "forgetConfirm": "De login voor {{host}} uit de systeemopslag wissen? Git in een terminal gebruikt hem ook.",
-    "failed": "Verbinding bijwerken is mislukt"
+    "failed": "Verbinding bijwerken is mislukt",
+    "switchFailed": "Kon het protocol niet wijzigen"
   },
   "endpoint": {
-    "title": "Aanmelden bij {{service}}",
-    "label": "Serveradres",
-    "hint": {
-      "enterprise": "Voer het adres van je server in, bijvoorbeeld het adres dat je in de browser opent.",
-      "other": "Voer het adres van de server in."
-    },
-    "placeholder": {
-      "github-enterprise": "https://github.example.com",
-      "gitlab-self": "https://gitlab.example.com",
-      "gitea": "https://codeberg.org",
-      "token": "https://git.example.com",
-      "bitbucket-server": "https://bitbucket.example.com",
-      "azure-devops-server": "https://devops.example.com"
-    },
     "error": {
-      "invalid": "Dat lijkt geen serveradres. We verwachten iets als https://git.example.com.",
-      "insecure": "Alleen https wordt ondersteund: een token mag niet onversleuteld verstuurd worden.",
       "mismatch": "Deze server lijkt geen {{service}}. Controleer het adres of kies een andere dienst.",
       "unreachable": "De server is niet bereikbaar. Controleer het adres en je verbinding."
     }
@@ -83,40 +69,58 @@
     "body": "Hij meldt zich aan bij {{host}} als {{name}} (@{{login}}). Opnieuw aanmelden vervangt dat account alleen voor deze repository.",
     "continue": "Opnieuw aanmelden"
   },
-  "system": {
-    "title": "Inloggegevens van het systeem",
-    "hint": "Aanmeldingen die git zelf vindt, zonder account hier: een aanmelding in een terminal, Git Credential Manager of de systeemsleutelhanger. Repositories op die servers werken zo al.",
-    "none": "Git heeft geen credential helper ingesteld.",
-    "forUrl": "Voor {{url}}",
-    "forAll": "Voor elke server",
-    "cliHint": "Aanmelden vanuit een terminal:",
-    "cli": {
+  "card": {
+    "source": "Bron: {{source}}",
+    "sourceVia": "Bron: {{source}} · via {{via}}",
+    "sources": {
+      "account": "Account in de app",
+      "system": "Systeemsleutelhanger",
+      "gcm": "Git Credential Manager",
+      "ssh": "SSH-sleutel",
+      "none": "Niet ingelogd"
+    },
+    "helper": {
       "gh": "GitHub CLI (gh)",
       "glab": "GitLab CLI (glab)",
       "gcm": "Git Credential Manager"
     },
-    "scope": {
-      "system": "systeem",
-      "global": "globaal",
-      "local": "lokaal"
-    }
+    "test": "Testen",
+    "signInInstead": "In plaats daarvan inloggen",
+    "rejected": "De dienst heeft deze opgeslagen login geweigerd"
   },
-  "service": {
-    "label": "Dienst",
-    "signIn": "Aanmelden bij {{service}}",
-    "signInOther": "Aanmelden met een token",
-    "hint": {
-      "github": "Meld je aan bij je GitHub.com-account om bij je repositories te kunnen.",
-      "github-enterprise": "Gebruik je GitHub Enterprise op je werk, meld je daar dan aan om bij je repositories te kunnen.",
-      "gitlab": "Meld je aan bij je GitLab.com-account om bij je repositories te kunnen.",
-      "gitlab-self": "Meld je aan bij een GitLab-server die je bedrijf of team zelf beheert.",
-      "bitbucket": "Meld je aan bij je Bitbucket Cloud-account (bitbucket.org).",
-      "bitbucket-server": "Meld je aan bij een Bitbucket Data Center-server met een HTTP access token.",
-      "azure-devops": "Meld je aan bij Azure DevOps Services (dev.azure.com) met je werk- of schoolaccount.",
-      "azure-devops-server": "Meld je aan bij een on-premises Azure DevOps Server met een personal access token.",
-      "gitea": "Meld je aan bij Codeberg of bij je eigen Gitea- of Forgejo-server.",
-      "token": "Elke andere Git-server via https: een gebruikersnaam en token, gecontroleerd tegen de geopende repository."
+  "test": {
+    "running": "Verbinding testen…",
+    "passed": "Test geslaagd: {{summary}}",
+    "failed": "Test mislukt: {{reason}}",
+    "user": "@{{login}}, {{access}}",
+    "readWrite": "lezen + schrijven",
+    "readWriteBehind": "lezen + schrijven (de branch loopt achter op de remote)",
+    "readOnly": "lezen; schrijven overgeslagen: {{why}}",
+    "skip": {
+      "detached": "HEAD is losgekoppeld (detached)",
+      "no-commits": "nog geen commits"
     },
-    "other": "Overig"
+    "reason": {
+      "orgAccess": "de server gaf geen toegang tot deze repository",
+      "auth": "de server accepteerde de login niet",
+      "sshKey": "de SSH-sleutel werkte niet",
+      "network": "kon de server niet bereiken",
+      "hook": "een git-hook hield het tegen",
+      "notRepo": "deze map is geen git-repository"
+    },
+    "ssh": {
+      "host-key": "de hostsleutel van deze server is nog niet vertrouwd",
+      "key-rejected": "de SSH-sleutel werd niet geaccepteerd",
+      "unreachable": "kon de server niet bereiken via SSH",
+      "unknown": "kon niet bepalen of de SSH-sleutel werkt"
+    },
+    "sshHint": {
+      "host-key": "Maak één keer verbinding vanuit een terminal (ssh -T git@{{host}}) en bevestig de hostsleutel.",
+      "key-rejected": "Voeg je publieke sleutel toe aan je account op {{host}} onder SSH keys. Heeft de sleutel een wachtwoord, voeg hem dan toe aan ssh-agent.",
+      "unreachable": "Controleer je netwerkverbinding en het adres van de remote.",
+      "unknown": "Voer ssh -T git@{{host}} uit in een terminal om te zien wat de server zegt."
+    },
+    "orgAccessHint": "Als deze repository van een organisatie is, moet die Git Desktop mogelijk goedkeuren. Controleer anders of de repository bestaat.",
+    "authHint": "Log opnieuw in, of vergeet de opgeslagen login en log in."
   }
 }
