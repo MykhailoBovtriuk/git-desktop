@@ -47,17 +47,12 @@ vi.mock('../../src/api/git-api', () => ({
 }));
 
 const accountState = {
-  loaded: false,
   phase: null as string | null,
-  dismissedRepos: new Set<string>(),
   accounts: [] as unknown[],
   accountFor: () => null,
   authSource: null as string | null,
   refreshAuthSource: vi.fn(async (host: string | null, protocol: string | null) => {
     accountState.authSource = host ? await authSource(host, protocol) : null;
-  }),
-  loadAccounts: vi.fn(async () => {
-    accountState.loaded = true;
   }),
   openSignIn: vi.fn(async () => {}),
 };
@@ -651,7 +646,7 @@ describe('creating a branch', () => {
   });
 });
 
-describe('sign-in prompt on opening a repository', () => {
+describe('opening a repository', () => {
   beforeEach(async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.openRepo as any).mockResolvedValue({
@@ -659,10 +654,7 @@ describe('sign-in prompt on opening a repository', () => {
       remoteHost: 'github.com',
       remoteProtocol: 'https',
     });
-    accountState.loaded = false;
     accountState.phase = null;
-    accountState.dismissedRepos = new Set();
-    accountState.loadAccounts.mockClear();
     accountState.openSignIn.mockClear();
     accountState.refreshAuthSource.mockClear();
     accountState.authSource = null;
@@ -670,65 +662,27 @@ describe('sign-in prompt on opening a repository', () => {
     authSource.mockResolvedValue('none');
   });
 
-  it('waits for the account list instead of skipping the prompt', async () => {
+  it('learns what authenticates the remote without asking to sign in', async () => {
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(accountState.loadAccounts).toHaveBeenCalled();
-    expect(accountState.openSignIn).toHaveBeenCalledWith('github.com', '/tmp/r');
+    expect(accountState.refreshAuthSource).toHaveBeenCalledWith('github.com', 'https', '/tmp/r');
+    expect(accountState.authSource).toBe('none');
+    expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 
-  it('says nothing for a repository with no remote', async () => {
+  it('clears the auth source for a repository with no remote', async () => {
     const { gitApi } = await import('../../src/api/git-api');
     (gitApi.openRepo as any).mockResolvedValue({
       root: '/tmp/r',
       remoteHost: null,
       remoteProtocol: null,
     });
+    accountState.authSource = 'account';
     await useRepoStore.getState().openRepo('/tmp/r');
     await new Promise(r => setTimeout(r, 0));
 
-    expect(accountState.openSignIn).not.toHaveBeenCalled();
-  });
-
-  it('says nothing for an ssh remote, but still learns what authenticates it', async () => {
-    const { gitApi } = await import('../../src/api/git-api');
-    (gitApi.openRepo as any).mockResolvedValue({
-      root: '/tmp/r',
-      remoteHost: 'github.com',
-      remoteProtocol: 'ssh',
-    });
-    authSource.mockResolvedValue('ssh');
-    await useRepoStore.getState().openRepo('/tmp/r');
-    await new Promise(r => setTimeout(r, 0));
-
-    expect(authSource).toHaveBeenCalledWith('github.com', 'ssh');
-    expect(accountState.openSignIn).not.toHaveBeenCalled();
-  });
-
-  it('says nothing when git can already authenticate on its own', async () => {
-    authSource.mockResolvedValue('system');
-    await useRepoStore.getState().openRepo('/tmp/r');
-    await new Promise(r => setTimeout(r, 0));
-
-    expect(authSource).toHaveBeenCalledWith('github.com', 'https');
-    expect(accountState.openSignIn).not.toHaveBeenCalled();
-  });
-
-  it('says nothing when an account for the host is already signed in', async () => {
-    authSource.mockResolvedValue('account');
-    await useRepoStore.getState().openRepo('/tmp/r');
-    await new Promise(r => setTimeout(r, 0));
-
-    expect(accountState.openSignIn).not.toHaveBeenCalled();
-  });
-
-  it('does not nag about a repository the user already dismissed', async () => {
-    accountState.loaded = true;
-    accountState.dismissedRepos = new Set(['/tmp/r']);
-    await useRepoStore.getState().openRepo('/tmp/r');
-    await new Promise(r => setTimeout(r, 0));
-
+    expect(accountState.authSource).toBeNull();
     expect(accountState.openSignIn).not.toHaveBeenCalled();
   });
 });
@@ -767,7 +721,6 @@ describe('switching the remote protocol', () => {
   beforeEach(() => {
     useRepoStore.setState({ repoPath: '/tmp/r', remoteHost: 'github.com', remoteProtocol: 'ssh' });
     accountState.phase = null;
-    accountState.dismissedRepos = new Set(['/tmp/r']);
     accountState.openSignIn.mockClear();
     accountState.authSource = 'ssh';
     authSource.mockClear();

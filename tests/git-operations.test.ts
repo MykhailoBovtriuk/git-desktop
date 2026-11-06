@@ -411,8 +411,32 @@ describe('switchRemoteProtocol', () => {
     execSync('git remote add origin https://github.com/owner/repo.git', { cwd: tmpDir });
     await git.openRepo(tmpDir);
 
-    await expect(remoteGit.switchRemoteProtocol(git, 'https')).rejects.toThrow();
+    await expect(remoteGit.switchRemoteProtocol(git, 'https')).rejects.toThrow(
+      'The remote is not an ssh address',
+    );
     expect(urls().fetch).toBe('https://github.com/owner/repo.git');
+  });
+
+  it('tells an unconvertible ssh remote apart from a remote that is not ssh', async () => {
+    execSync('git remote add origin git@ssh.dev.azure.com:v3/org/onlytwo', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    await expect(remoteGit.switchRemoteProtocol(git, 'https')).rejects.toThrow(
+      'Could not build an https address from this remote',
+    );
+    await expect(remoteGit.switchRemoteProtocol(git, 'ssh')).rejects.toThrow(
+      'The remote is not an https address',
+    );
+    expect(urls().fetch).toBe('git@ssh.dev.azure.com:v3/org/onlytwo');
+  });
+
+  it('reports an https remote it cannot map to ssh', async () => {
+    execSync('git remote add origin https://dev.azure.com/org/project', { cwd: tmpDir });
+    await git.openRepo(tmpDir);
+
+    await expect(remoteGit.switchRemoteProtocol(git, 'ssh')).rejects.toThrow(
+      'Could not build an ssh address from this remote',
+    );
   });
 });
 

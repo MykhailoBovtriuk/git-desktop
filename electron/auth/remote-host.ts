@@ -1,6 +1,5 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { gitConfigGet, runGit } from '../git/exec';
 import type { RemoteProtocol } from '../../src/types';
 import { logEvent } from '../log/git-logger';
 
@@ -65,7 +64,36 @@ export function httpsUrlFromSshRemote(
   repoPath = repoPath.replace(/^\/+/, '');
   // `~user/repo` is relative to a home directory, which https has no notion of.
   if (!repoPath || repoPath.startsWith('~')) return null;
+  const azure = azureHttpsFromSsh(host, repoPath);
+  if (azure !== undefined) return azure;
   return `https://${host}/${repoPath}`;
+}
+
+const AZURE_SSH_PATH = /^v3\/([^/]+)\/([^/]+)\/([^/]+?)\/?$/;
+
+/** Azure DevOps puts ssh and https on different hosts with different path layouts. */
+function azureHttpsFromSsh(host: string, repoPath: string): string | null | undefined {
+  const legacy = host === 'vs-ssh.visualstudio.com';
+  if (!legacy && host !== 'ssh.dev.azure.com') return undefined;
+  const m = AZURE_SSH_PATH.exec(repoPath);
+  if (!m) return null;
+  const [, org, project, repo] = m;
+  const base = legacy ? `https://${org}.visualstudio.com` : `https://dev.azure.com/${org}`;
+  return `${base}/${project}/_git/${repo}`;
+}
+
+function azureSshFromHttps(hostname: string, repoPath: string): string | null | undefined {
+  const legacyOrg = /^([^.]+)\.visualstudio\.com$/.exec(hostname)?.[1];
+  if (!legacyOrg && hostname !== 'dev.azure.com') return undefined;
+  const parts = repoPath.replace(/\/+$/, '').split('/');
+  if (legacyOrg) {
+    if (parts.length === 4 && parts[0].toLowerCase() === 'defaultcollection') parts.shift();
+    parts.unshift(legacyOrg);
+  }
+  if (parts.length !== 4 || parts[2] !== '_git') return null;
+  const [org, project, , repo] = parts;
+  const sshHost = legacyOrg ? `${org}@vs-ssh.visualstudio.com` : 'git@ssh.dev.azure.com';
+  return `${sshHost}:v3/${org}/${project}/${repo}`;
 }
 
 export function sshUrlFromHttpsRemote(remoteUrl: string | null | undefined): string | null {
@@ -78,11 +106,18 @@ export function sshUrlFromHttpsRemote(remoteUrl: string | null | undefined): str
   }
   const repoPath = url.pathname.replace(/^\/+/, '');
   if (!url.hostname || !repoPath) return null;
+  const azure = azureSshFromHttps(url.hostname.toLowerCase(), repoPath);
+  if (azure !== undefined) return azure;
   return `git@${url.hostname}:${repoPath}`;
 }
 
 export function isNetworkHost(host: string | null): host is string {
   return !!host && host.length > 0 && !host.startsWith('.') && !host.includes('/');
+}
+
+export function preferredRemote(remoteOutput: string | null): string | null {
+  const names = remoteOutput?.split('\n').map(n => n.trim()) ?? [];
+  return names.includes('origin') ? 'origin' : (names[0] ?? null);
 }
 
 const aliasCache = new Map<string, string>();
@@ -135,19 +170,4 @@ export async function resolveRemote(remoteUrl: string | null | undefined): Promi
     host: await resolveRemoteHost(remoteUrl),
     protocol: protocolFromRemoteUrl(remoteUrl),
   };
-}
-
-// Read here, not taken from the renderer, since it is passed to `git ls-remote`.
-export async function originUrlFor(repoRoot: string): Promise<string | null> {
-  try {
-    const names = (await runGit(['-C', repoRoot, 'remote']))
-      .split('\n')
-      .map(n => n.trim())
-      .filter(Boolean);
-    const chosen = names.includes('origin') ? 'origin' : names[0];
-    if (!chosen) return null;
-    return (await gitConfigGet({ kind: 'effective', repoRoot }, `remote.${chosen}.url`)) || null;
-  } catch {
-    return null;
-  }
 }

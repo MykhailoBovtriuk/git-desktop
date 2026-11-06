@@ -130,3 +130,39 @@ describe('sshUrlFromHttpsRemote', () => {
     expect(sshUrlFromHttpsRemote(null)).toBeNull();
   });
 });
+
+describe('Azure DevOps remotes', () => {
+  it('maps the ssh host and v3 path onto the https layout', () => {
+    expect(
+      httpsUrlFromSshRemote('git@ssh.dev.azure.com:v3/org/project/repo', 'ssh.dev.azure.com'),
+    ).toBe('https://dev.azure.com/org/project/_git/repo');
+    expect(
+      httpsUrlFromSshRemote(
+        'org@vs-ssh.visualstudio.com:v3/org/project/repo',
+        'vs-ssh.visualstudio.com',
+      ),
+    ).toBe('https://org.visualstudio.com/project/_git/repo');
+  });
+
+  it('maps the https layout back onto the ssh host and v3 path', () => {
+    expect(sshUrlFromHttpsRemote('https://org@dev.azure.com/org/project/_git/repo')).toBe(
+      'git@ssh.dev.azure.com:v3/org/project/repo',
+    );
+    expect(sshUrlFromHttpsRemote('https://org.visualstudio.com/project/_git/repo')).toBe(
+      'org@vs-ssh.visualstudio.com:v3/org/project/repo',
+    );
+    expect(
+      sshUrlFromHttpsRemote('https://org.visualstudio.com/DefaultCollection/project/_git/repo'),
+    ).toBe('org@vs-ssh.visualstudio.com:v3/org/project/repo');
+  });
+
+  it('round-trips, so a switch back lands on the original address', () => {
+    const ssh = 'git@ssh.dev.azure.com:v3/org/My%20Project/repo';
+    expect(sshUrlFromHttpsRemote(httpsUrlFromSshRemote(ssh, 'ssh.dev.azure.com'))).toBe(ssh);
+  });
+
+  it('refuses Azure addresses it cannot map rather than guessing', () => {
+    expect(httpsUrlFromSshRemote('git@ssh.dev.azure.com:org/repo', 'ssh.dev.azure.com')).toBeNull();
+    expect(sshUrlFromHttpsRemote('https://dev.azure.com/org/project')).toBeNull();
+  });
+});

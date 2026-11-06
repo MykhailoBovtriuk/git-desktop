@@ -3,14 +3,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SignInModal } from '../../../src/components/account/SignInModal';
 import { useAccountStore } from '../../../src/stores/account-store';
-import { useRepoStore } from '../../../src/stores/repo-store';
+import { accountApi } from '../../../src/api/account-api';
+import { showErrorToast } from '../../../src/stores/error-toast';
 import type { ProviderOption, SignInPhase } from '../../../src/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 vi.mock('../../../src/stores/account-store', () => ({ useAccountStore: vi.fn() }));
-vi.mock('../../../src/stores/repo-store', () => ({ useRepoStore: vi.fn() }));
+vi.mock('../../../src/stores/error-toast', () => ({
+  openLogEntry: vi.fn(),
+  showErrorToast: vi.fn(),
+}));
 vi.mock('../../../src/api/account-api', () => ({
   accountApi: { openTokenHelp: vi.fn().mockResolvedValue(null) },
 }));
@@ -35,11 +39,6 @@ const OPTIONS: ProviderOption[] = [
     needsClientSecret: true,
   }),
   option({ id: 'azure-devops-server', displayName: 'Azure DevOps Server', needsClientId: false }),
-  option({
-    id: 'token',
-    displayName: 'Personal access token',
-    needsClientId: false,
-  }),
   option({
     id: 'github',
     displayName: 'GitHub',
@@ -73,13 +72,11 @@ function setup({
 } = {}) {
   const actions = {
     chooseProvider: vi.fn(),
-    submitEndpoint: vi.fn(),
     confirmReplace: vi.fn(),
     switchMethod: vi.fn(),
     continueWithBrowser: vi.fn().mockResolvedValue(undefined),
     submitToken: vi.fn().mockResolvedValue(undefined),
     cancelSignIn: vi.fn().mockResolvedValue(undefined),
-    dismissForRepo: vi.fn(),
   };
   const state = {
     phase,
@@ -90,7 +87,6 @@ function setup({
     ...actions,
   };
   vi.mocked(useAccountStore).mockImplementation(((sel: any) => sel(state)) as any);
-  vi.mocked(useRepoStore).mockImplementation(((sel: any) => sel({ repoPath: '/tmp/repo' })) as any);
   return actions;
 }
 
@@ -154,7 +150,7 @@ describe('SignInModal', () => {
     render(<SignInModal />);
 
     expect(screen.getByText('GitLab (self-managed)')).toBeTruthy();
-    expect(screen.getByText('token.otherServer')).toBeTruthy();
+    expect(screen.getByText('Azure DevOps Server')).toBeTruthy();
     expect(screen.queryByText('GitHub')).toBeNull();
 
     fireEvent.click(screen.getByText('GitLab (self-managed)'));
@@ -162,22 +158,8 @@ describe('SignInModal', () => {
     expect(actions.chooseProvider).toHaveBeenCalledWith('gitlab-self');
   });
 
-  it('takes a username and token on the manual path', () => {
-    const actions = setup({ phase: 'token', providerId: 'token', host: 'git.acme.internal' });
-    render(<SignInModal />);
-
-    fireEvent.change(screen.getByPlaceholderText('token.usernamePlaceholder'), {
-      target: { value: 'jane' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('token.tokenPlaceholder'), {
-      target: { value: 'glpat-xxx' },
-    });
-    fireEvent.click(screen.getByText('token.submit'));
-    expect(actions.submitToken).toHaveBeenCalledWith('jane', 'glpat-xxx');
-  });
-
-  it('keeps the manual submit disabled until both fields are filled', () => {
-    setup({ phase: 'token', providerId: 'token', host: 'git.acme.internal' });
+  it('keeps the token submit disabled until a token is pasted', () => {
+    setup({ phase: 'token', providerId: 'azure-devops-server', host: 'devops.acme.com' });
     render(<SignInModal />);
     expect(screen.getByText('token.submit').closest('button')).toBeDisabled();
   });
@@ -191,40 +173,18 @@ describe('SignInModal', () => {
     expect(actions.switchMethod).toHaveBeenCalledWith('token');
   });
 
-  it('remembers the repository when the dialog is dismissed', () => {
+  it('cancels the sign-in when the dialog is dismissed', () => {
     const actions = setup();
     render(<SignInModal />);
-
     fireEvent.click(screen.getByText('common:cancel'));
-    expect(actions.dismissForRepo).toHaveBeenCalledWith('/tmp/repo');
     expect(actions.cancelSignIn).toHaveBeenCalled();
   });
 
-  it('does not remember a repository for a sign-in started from Settings', () => {
-    const actions = setup({ repoPath: null });
-    render(<SignInModal />);
-    fireEvent.click(screen.getByText('common:cancel'));
-    expect(actions.dismissForRepo).not.toHaveBeenCalled();
-  });
-
-  it('asks a self-hosted service for its address', () => {
-    const actions = setup({ phase: 'endpoint', providerId: 'github-enterprise', host: '' });
-    render(<SignInModal />);
-
-    expect(screen.getByText('endpoint.title')).toBeTruthy();
-    expect(screen.getByText('choose.continue').closest('button')).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('endpoint.label'), {
-      target: { value: 'ghe.acme.com' },
-    });
-    fireEvent.click(screen.getByText('choose.continue'));
-    expect(actions.submitEndpoint).toHaveBeenCalledWith('ghe.acme.com');
-  });
-
-  it('explains an address that was not accepted', () => {
+  it('explains a server that is not the chosen service', () => {
     setup({
-      phase: 'endpoint',
-      providerId: 'github-enterprise',
-      host: 'x',
+      phase: 'choose',
+      providerId: null,
+      host: 'git.acme.internal',
       endpointError: 'mismatch',
     });
     render(<SignInModal />);
@@ -240,7 +200,7 @@ describe('SignInModal', () => {
     expect(actions.confirmReplace).toHaveBeenCalled();
   });
 
-  it('asks only for the token when the service names the user itself', () => {
+  it('asks only for the token: the service names the user itself', () => {
     const actions = setup({
       phase: 'token',
       providerId: 'github-enterprise',
@@ -248,12 +208,12 @@ describe('SignInModal', () => {
     });
     render(<SignInModal />);
 
-    expect(screen.queryByPlaceholderText('token.usernamePlaceholder')).toBeNull();
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
     fireEvent.change(screen.getByPlaceholderText('token.tokenPlaceholder'), {
       target: { value: 'ghp_x' },
     });
     fireEvent.click(screen.getByText('token.submit'));
-    expect(actions.submitToken).toHaveBeenCalledWith('', 'ghp_x');
+    expect(actions.submitToken).toHaveBeenCalledWith('ghp_x');
   });
 
   it('offers the own-OAuth-app way in for a self-hosted service', () => {
@@ -272,6 +232,15 @@ describe('SignInModal', () => {
     render(<SignInModal />);
     fireEvent.click(screen.getByText('browser.useToken'));
     expect(actions.switchMethod).toHaveBeenCalledWith('token');
+  });
+
+  it('shows an error toast when the token page cannot be opened', async () => {
+    const err = new Error('no browser');
+    vi.mocked(accountApi.openTokenHelp).mockRejectedValueOnce(err);
+    setup({ phase: 'token', providerId: 'github', host: 'github.com' });
+    render(<SignInModal />);
+    fireEvent.click(screen.getByText('token.where'));
+    await vi.waitFor(() => expect(showErrorToast).toHaveBeenCalledWith('token.helpFailed', err));
   });
 
   it('offers no browser for a token-only service', () => {

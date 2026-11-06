@@ -1,7 +1,6 @@
 import { gitApi } from '../../api/git-api';
 import { useAccountStore } from '../account-store';
 import { useUiStore } from '../ui-store';
-import type { RemoteProtocol } from '../../types';
 import type { RepoState, RepoSlice } from './types';
 import { whileCurrent } from './epoch';
 import { mergeStateFrom } from './merge.slice';
@@ -39,31 +38,6 @@ const NO_REPO = {
 // same round of loaders instead of firing duplicate IPC. Module-level because
 // there is a single store instance.
 let refreshInFlight: { epoch: number; promise: Promise<void> } | null = null;
-
-async function promptSignInIfNeeded(
-  root: string,
-  remoteHost: string | null,
-  remoteProtocol: RemoteProtocol | null,
-): Promise<void> {
-  if (!remoteHost) return;
-
-  // Wait for the account list: at startup the last repository reopens before it
-  // arrives, so skipping would lose the prompt.
-  if (!useAccountStore.getState().loaded) {
-    await useAccountStore
-      .getState()
-      .loadAccounts()
-      .catch(() => {});
-  }
-
-  const account = useAccountStore.getState();
-  await account.refreshAuthSource(remoteHost, remoteProtocol, root);
-
-  if (account.dismissedRepos.has(root)) return;
-  if (account.phase) return;
-  if (useAccountStore.getState().authSource !== 'none') return;
-  await account.openSignIn(remoteHost, root);
-}
 
 export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
   epoch: 0,
@@ -106,7 +80,9 @@ export const createLifecycleSlice: RepoSlice<LifecycleSlice> = (set, get) => ({
       recentRepos: [root, ...s.recentRepos.filter(r => r && r !== root)].slice(0, 10),
     }));
     await get().refresh();
-    void promptSignInIfNeeded(root, opened?.remoteHost ?? null, opened?.remoteProtocol ?? null);
+    void useAccountStore
+      .getState()
+      .refreshAuthSource(opened?.remoteHost ?? null, opened?.remoteProtocol ?? null, root);
     if (get().merging && !get().mergeState) {
       try {
         const conflicts = await gitApi.getMergeConflicts();

@@ -2,6 +2,7 @@ import { GitContext } from './context';
 import { accountForRepo, getFreshToken } from '../auth/token-store';
 import {
   httpsUrlFromSshRemote,
+  protocolFromRemoteUrl,
   sshUrlFromHttpsRemote,
   resolveRemote,
   resolveRemoteHost,
@@ -40,19 +41,23 @@ export async function switchRemoteProtocol(
     if (push) await repo.remote(['set-url', '--push', origin.name, pushUrl ?? fetchUrl]);
   };
 
+  const from = to === 'https' ? 'ssh' : 'https';
+  if (protocolFromRemoteUrl(fetch) !== from)
+    throw new Error(`The remote is not an ${from} address`);
+
   if (to === 'https') {
     const toHttps = async (url: string) => {
       const host = await resolveRemoteHost(url);
       return host ? httpsUrlFromSshRemote(url, host) : null;
     };
     const fetchUrl = await toHttps(fetch);
-    if (!fetchUrl) throw new Error('The remote is not an ssh address');
+    if (!fetchUrl) throw new Error('Could not build an https address from this remote');
     await repo.addConfig(config(SSH_URL_KEY), fetch);
     if (push) await repo.addConfig(config(SSH_PUSH_URL_KEY), push);
     await setUrls(fetchUrl, push && (await toHttps(push)));
   } else {
     const fetchUrl = sshUrlFromHttpsRemote(fetch);
-    if (!fetchUrl) throw new Error('The remote is not an https address');
+    if (!fetchUrl) throw new Error('Could not build an ssh address from this remote');
     const remembered = async (key: string, httpsUrl: string) => {
       const url = (await repo.raw(['config', '--get', config(key)]).catch(() => '')).trim();
       if (!url) return null;

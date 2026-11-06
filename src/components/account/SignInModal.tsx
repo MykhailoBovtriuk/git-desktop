@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccountStore } from '../../stores/account-store';
-import { useRepoStore } from '../../stores/repo-store';
-import { openLogEntry } from '../../stores/error-toast';
+import { openLogEntry, showErrorToast } from '../../stores/error-toast';
 import { accountApi } from '../../api/account-api';
 import { Button, Modal, TextInput } from '../../shared/ui';
 import type { ProviderId } from '../../types';
@@ -18,13 +17,11 @@ export function SignInModal() {
     endpointError,
     busy,
     chooseProvider,
-    submitEndpoint,
     confirmReplace,
     switchMethod,
     continueWithBrowser,
     submitToken,
     cancelSignIn,
-    dismissForRepo,
   } = useAccountStore(
     useShallow(s => ({
       phase: s.phase,
@@ -34,36 +31,27 @@ export function SignInModal() {
       endpointError: s.endpointError,
       busy: s.busy,
       chooseProvider: s.chooseProvider,
-      submitEndpoint: s.submitEndpoint,
       confirmReplace: s.confirmReplace,
       switchMethod: s.switchMethod,
       continueWithBrowser: s.continueWithBrowser,
       submitToken: s.submitToken,
       cancelSignIn: s.cancelSignIn,
-      dismissForRepo: s.dismissForRepo,
     })),
   );
-  const repoPath = useRepoStore(s => s.repoPath);
 
   const [picked, setPicked] = useState<string | null>(null);
-  const [address, setAddress] = useState<string | null>(null);
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
-  const [login, setLogin] = useState('');
   const [token, setToken] = useState('');
 
   if (!phase || !target) return null;
 
   const provider = target.options.find(o => o.id === (target.providerId ?? picked));
-  const service = provider?.displayName ?? target.host;
   const cancel = () => {
     setPicked(null);
-    setAddress(null);
     setClientId('');
     setClientSecret('');
-    setLogin('');
     setToken('');
-    if (target.repoPath && target.repoPath === repoPath) dismissForRepo(repoPath);
     void cancelSignIn();
   };
 
@@ -130,48 +118,10 @@ export function SignInModal() {
                   checked={picked === option.id}
                   onChange={() => setPicked(option.id)}
                 />
-                <span className="text-text text-sm">
-                  {option.id === 'token' ? t('token.otherServer') : option.displayName}
-                </span>
+                <span className="text-text text-sm">{option.displayName}</span>
               </label>
             ))}
           {endpointMessage && <p className="text-red text-xs mt-2">{endpointMessage}</p>}
-        </div>
-      </Modal>
-    );
-  }
-
-  if (phase === 'endpoint') {
-    const value = address ?? target.host;
-    const submit = () => void submitEndpoint(value);
-    return (
-      <Modal
-        title={t('endpoint.title', {
-          service: provider?.id === 'token' ? t('token.otherServer') : service,
-        })}
-        subtitle={t(`endpoint.hint.${provider?.group === 'other' ? 'other' : 'enterprise'}`)}
-        onClose={cancel}
-        footer={footer(
-          <Button variant="primary" size="sm" disabled={busy || !value.trim()} onClick={submit}>
-            {t('choose.continue')}
-          </Button>,
-        )}
-      >
-        <div className="flex flex-col gap-2">
-          <TextInput
-            variant="modal"
-            autoFocus
-            aria-label={t('endpoint.label')}
-            value={value}
-            onChange={e => setAddress(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && value.trim() && !busy) submit();
-            }}
-            placeholder={t(`endpoint.placeholder.${provider?.id ?? 'token'}`, {
-              defaultValue: t('endpoint.placeholder.token'),
-            })}
-          />
-          {endpointMessage && <p className="text-red text-xs">{endpointMessage}</p>}
         </div>
       </Modal>
     );
@@ -213,9 +163,8 @@ export function SignInModal() {
   );
 
   if (phase === 'token') {
-    const needsLogin = !target.providerId || target.providerId === 'token';
-    const ready = !!token.trim() && (!needsLogin || !!login.trim());
-    const submit = () => void submitToken(needsLogin ? login.trim() : '', token.trim());
+    const ready = !!token.trim();
+    const submit = () => void submitToken(token.trim());
     return (
       <Modal
         title={t('token.title', { host: target.host })}
@@ -228,20 +177,10 @@ export function SignInModal() {
         )}
       >
         <div className="flex flex-col gap-2">
-          {needsLogin && (
-            <TextInput
-              variant="modal"
-              autoFocus
-              aria-label={t('token.usernamePlaceholder')}
-              value={login}
-              onChange={e => setLogin(e.target.value)}
-              placeholder={t('token.usernamePlaceholder')}
-            />
-          )}
           <TextInput
             variant="modal"
             type="password"
-            autoFocus={!needsLogin}
+            autoFocus
             aria-label={t('token.tokenPlaceholder')}
             value={token}
             onChange={e => setToken(e.target.value)}
@@ -250,13 +189,15 @@ export function SignInModal() {
             }}
             placeholder={t('token.tokenPlaceholder')}
           />
-          {provider?.id && provider.id !== 'token' && (
+          {provider && (
             <Button
               type="button"
               variant="link"
               size="xs"
               onClick={() =>
-                void accountApi.openTokenHelp(provider.id, target.host).catch(() => {})
+                void accountApi
+                  .openTokenHelp(provider.id, target.host)
+                  .catch(err => showErrorToast(t('token.helpFailed'), err))
               }
               className="self-start"
             >
