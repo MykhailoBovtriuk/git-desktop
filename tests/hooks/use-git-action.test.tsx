@@ -8,6 +8,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => (k === 'error.unknown' ? '' : `friendly:${k}`) }),
 }));
 
+const { openOrgAccess } = vi.hoisted(() => ({
+  openOrgAccess: vi.fn(() => Promise.resolve(null)),
+}));
+vi.mock('../../src/api/account-api', () => ({ accountApi: { openOrgAccess } }));
+const { markKind } = vi.hoisted(() => ({ markKind: vi.fn(() => Promise.resolve(true)) }));
+vi.mock('../../src/api/log-api', () => ({ logApi: { markKind } }));
+
 import { useGitAction } from '../../src/hooks/use-git-action';
 import { useUiStore } from '../../src/stores/ui-store';
 import { useLogStore } from '../../src/stores/log-store';
@@ -114,31 +121,9 @@ describe('useGitAction', () => {
     expect(useUiStore.getState().toasts).toHaveLength(0);
   });
 
-  it('offers a way out of an authentication failure', async () => {
+  it('offers sign-in on an authentication failure without opening it', async () => {
     useRepoStore.setState({
       remoteHost: 'github.com',
-      remoteProtocol: 'https',
-      repoPath: '/src/p',
-    });
-    const openSignIn = vi.fn().mockResolvedValue(undefined);
-    useAccountStore.setState({ openSignIn });
-    const { result } = renderHook(() => useGitAction());
-
-    await result.current(() => Promise.reject(new Error('Authentication failed')), {
-      title: 'Push',
-    });
-
-    const toast = lastToast();
-    expect(toast.variant).toBe('error');
-    expect(toast.action).toBeDefined();
-
-    toast.action!.onClick();
-    expect(openSignIn).toHaveBeenCalledWith('github.com', '/src/p');
-  });
-
-  it('opens the sign-in for the refusing server straight away', async () => {
-    useRepoStore.setState({
-      remoteHost: 'gitlab.acme.com',
       remoteProtocol: 'https',
       repoPath: '/src/p',
     });
@@ -149,20 +134,73 @@ describe('useGitAction', () => {
     await result.current(() => Promise.reject(new Error('Authentication failed')), {
       title: 'Push',
     });
-    expect(openSignIn).toHaveBeenCalledWith('gitlab.acme.com', '/src/p');
+
+    const toast = lastToast();
+    expect(toast.variant).toBe('error');
+    expect(toast.action?.label).toBe('friendly:signIn');
+    expect(openSignIn).not.toHaveBeenCalled();
+
+    toast.action!.onClick();
+    expect(openSignIn).toHaveBeenCalledWith('github.com', '/src/p');
   });
 
-  it('leaves a sign-in already on screen alone', async () => {
-    useRepoStore.setState({ remoteHost: 'github.com', remoteProtocol: 'https' });
+  it('offers to request organization access for a refused repo on the app account', async () => {
+    useRepoStore.setState({
+      remoteHost: 'github.com',
+      remoteProtocol: 'https',
+      repoPath: '/src/p',
+    });
     const openSignIn = vi.fn().mockResolvedValue(undefined);
-    useAccountStore.setState({ openSignIn, phase: 'waiting' });
+    useAccountStore.setState({ openSignIn, phase: null, authSource: 'account' });
     const { result } = renderHook(() => useGitAction());
 
-    await result.current(() => Promise.reject(new Error('Authentication failed')), {
-      title: 'Push',
-    });
+    await result.current(
+      () =>
+        Promise.reject(new Error('fatal: unable to access: The requested URL returned error: 403')),
+      { title: 'Push' },
+    );
+
+    const toast = lastToast();
+    expect(toast.message).toBe('friendly:error.orgAccess');
+    expect(toast.action?.label).toBe('friendly:requestAccess');
+    toast.action!.onClick();
+    expect(openOrgAccess).toHaveBeenCalledWith('/src/p');
     expect(openSignIn).not.toHaveBeenCalled();
-    useAccountStore.setState({ phase: null });
+    useAccountStore.setState({ authSource: null });
+  });
+
+  it('marks the logged failure as org access and toasts a page that would not open', async () => {
+    useRepoStore.setState({
+      remoteHost: 'github.com',
+      remoteProtocol: 'https',
+      repoPath: '/src/p',
+    });
+    useAccountStore.setState({ authSource: 'account' });
+    openOrgAccess.mockRejectedValueOnce(Object.assign(new Error('no browser'), { logId: 'e-2' }));
+    const { result } = renderHook(() => useGitAction());
+
+    const err = Object.assign(new Error('remote: Repository not found.'), { logId: 'e-1' });
+    await result.current(() => Promise.reject(err), { title: 'Fetch' });
+    expect(markKind).toHaveBeenCalledWith('e-1', 'orgAccess');
+
+    lastToast().action!.onClick();
+    await vi.waitFor(() =>
+      expect(lastToast()).toMatchObject({
+        variant: 'error',
+        title: 'friendly:requestAccessFailed',
+        message: 'no browser',
+      }),
+    );
+    expect(lastToast().details).toBeDefined();
+    useAccountStore.setState({ authSource: null });
+  });
+
+  it('leaves the log alone for a plain auth failure', async () => {
+    markKind.mockClear();
+    const err = Object.assign(new Error('Authentication failed'), { logId: 'e-3' });
+    const { result } = renderHook(() => useGitAction());
+    await result.current(() => Promise.reject(err), { title: 'Push' });
+    expect(markKind).not.toHaveBeenCalled();
   });
 
   it('omits the action when the repository has no remote', async () => {

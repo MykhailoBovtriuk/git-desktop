@@ -1,4 +1,7 @@
+import type { AuthSource } from '../types';
+
 export type GitErrorKind =
+  | 'orgAccess'
   | 'auth'
   | 'sshKey'
   | 'noUpstream'
@@ -9,20 +12,41 @@ export type GitErrorKind =
   | 'hook'
   | 'unknown';
 
-type GitErrorAction = 'publishBranch' | 'signIn';
+export type GitErrorAction = 'publishBranch' | 'signIn' | 'requestOrgAccess';
 
 interface ClassifiedGitError {
   kind: GitErrorKind;
   action?: GitErrorAction;
 }
 
-const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> = [
+export interface GitErrorContext {
+  host: string | null;
+  authSource: AuthSource | null;
+}
+
+interface Rule {
+  kind: GitErrorKind;
+  action?: GitErrorAction;
+  re: RegExp;
+  when?: (ctx: GitErrorContext) => boolean;
+}
+
+const RULES: Rule[] = [
   { kind: 'notRepo', re: /not a git repository/i },
   // Before `auth` and without a sign-in action: a token cannot fix an ssh key
   // problem.
   {
     kind: 'sshKey',
     re: /permission denied \(publickey\)|enter passphrase for|incorrect passphrase|couldn't load public key|identity file .* not accessible|host key verification failed/i,
+  },
+  // An organization that has not approved our OAuth app answers our token with
+  // 403, or with 404 for a private repo; signing in again cannot fix either. A
+  // repo that really is gone also gives 404, so the hint must not assert why.
+  {
+    kind: 'orgAccess',
+    action: 'requestOrgAccess',
+    when: ctx => ctx.authSource === 'account' && ctx.host?.toLowerCase() === 'github.com',
+    re: /returned error: 40[34]|repository not found|remote: permission to .* denied/i,
   },
   {
     kind: 'auth',
@@ -49,11 +73,15 @@ const RULES: Array<{ kind: GitErrorKind; action?: GitErrorAction; re: RegExp }> 
   },
 ];
 
-export function classifyGitError(input: string | Error | unknown): ClassifiedGitError {
+export function classifyGitError(
+  input: string | Error | unknown,
+  ctx?: GitErrorContext,
+): ClassifiedGitError {
   const text =
     input instanceof Error ? input.message : typeof input === 'string' ? input : String(input);
 
   for (const rule of RULES) {
+    if (rule.when && !(ctx && rule.when(ctx))) continue;
     if (rule.re.test(text)) {
       return rule.action ? { kind: rule.kind, action: rule.action } : { kind: rule.kind };
     }

@@ -120,4 +120,44 @@ describe('classifyGitError', () => {
     expect(r.kind).toBe('auth');
     expect(r.action).toBe('signIn');
   });
+
+  describe('organization access on github.com', () => {
+    const forbidden =
+      "remote: Permission to org/r.git denied to octocat.\nfatal: unable to access 'https://github.com/org/r.git/': The requested URL returned error: 403";
+    const notFound =
+      "remote: Repository not found.\nfatal: repository 'https://github.com/org/r.git/' not found";
+    const app = { host: 'github.com', authSource: 'account' as const };
+
+    it('reads a 403 for an app account as org access, offering no sign-in', () => {
+      expect(classifyGitError(forbidden, app)).toEqual({
+        kind: 'orgAccess',
+        action: 'requestOrgAccess',
+      });
+    });
+
+    it('reads "Repository not found" for an app account as org access', () => {
+      expect(classifyGitError(notFound, app).kind).toBe('orgAccess');
+    });
+
+    it('keeps the old classification without context', () => {
+      expect(classifyGitError(forbidden).kind).toBe('auth');
+      expect(classifyGitError(notFound).kind).toBe('unknown');
+    });
+
+    it('leaves logins that are not the app account alone', () => {
+      expect(classifyGitError(forbidden, { host: 'github.com', authSource: 'system' }).kind).toBe(
+        'auth',
+      );
+    });
+
+    it('leaves other hosts alone', () => {
+      expect(classifyGitError(forbidden, { host: 'gitlab.com', authSource: 'account' }).kind).toBe(
+        'auth',
+      );
+    });
+
+    it('still reports a failed login as auth', () => {
+      expect(classifyGitError("fatal: Authentication failed for 'x'", app).kind).toBe('auth');
+    });
+  });
 });
